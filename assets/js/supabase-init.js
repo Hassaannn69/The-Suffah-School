@@ -14,4 +14,8 @@ window.supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, 
     }
 });
 
+// Expose config for modules to create secondary clients
+window.SUPABASE_URL = SUPABASE_URL;
+window.SUPABASE_ANON_KEY = SUPABASE_ANON_KEY;
+
 console.log('✅ Supabase client initialized:', SUPABASE_URL);
