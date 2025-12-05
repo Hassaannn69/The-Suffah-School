@@ -1,5 +1,0 @@
-{
-  "name": "The Suffah School Management System",
-  "description": "A comprehensive Full-Stack style Student Management System for The Suffah School, featuring Role-Based Access Control, Dark/Light mode, Recharts data visualization, and Supabase backend integration.",
-  "requestFramePermissions": []
-}
