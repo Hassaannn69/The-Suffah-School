@@ -35,14 +35,14 @@ async function initApp() {
     } catch (e) {
         console.error('Supabase client not initialized');
         mainContent.innerHTML = `
-            <div class="text-center py-10 animate-fade-in">
-                <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/30 mb-4">
+            <div class="text-center py-10">
+                <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 dark:bg-red-900 mb-4">
                     <svg class="w-8 h-8 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
                 </div>
-                <p class="text-text font-medium">Initialization Error</p>
-                <p class="text-text-secondary text-sm mt-2">Supabase client not initialized. Please refresh the page.</p>
+                <p class="text-gray-700 dark:text-gray-300 font-medium">Initialization Error</p>
+                <p class="text-gray-500 dark:text-gray-400 text-sm mt-2">Supabase client not initialized. Please refresh the page.</p>
             </div>
         `;
         return;
@@ -71,14 +71,14 @@ async function initApp() {
     } catch (err) {
         console.error('Error initializing app:', err);
         mainContent.innerHTML = `
-            <div class="text-center py-10 animate-fade-in">
-                <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/30 mb-4">
+            <div class="text-center py-10">
+                <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 dark:bg-red-900 mb-4">
                     <svg class="w-8 h-8 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
                 </div>
-                <p class="text-text font-medium">Initialization Error</p>
-                <p class="text-text-secondary text-sm mt-2">${err.message}</p>
+                <p class="text-gray-700 dark:text-gray-300 font-medium">Initialization Error</p>
+                <p class="text-gray-500 dark:text-gray-400 text-sm mt-2">${err.message}</p>
             </div>
         `;
     }
@@ -101,13 +101,13 @@ function renderSidebar() {
         if (item.roles.includes(currentRole)) {
             const link = document.createElement('a');
             link.href = '#';
-            link.className = 'sidebar-link';
+            link.className = 'flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg transition-colors group';
             link.dataset.module = item.id;
             link.innerHTML = `
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400 group-hover:text-indigo-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${item.icon}" />
                 </svg>
-                <span>${item.label}</span>
+                <span class="font-medium">${item.label}</span>
             `;
             link.addEventListener('click', (e) => {
                 e.preventDefault();
@@ -128,9 +128,11 @@ async function loadModule(moduleId) {
     // Update active state in sidebar
     document.querySelectorAll('#navLinks a').forEach(el => {
         if (el.dataset.module === moduleId) {
-            el.classList.add('active');
+            el.classList.add('bg-indigo-50', 'text-indigo-600');
+            el.querySelector('svg').classList.add('text-indigo-600');
         } else {
-            el.classList.remove('active');
+            el.classList.remove('bg-indigo-50', 'text-indigo-600');
+            el.querySelector('svg').classList.remove('text-indigo-600');
         }
     });
 
@@ -150,15 +152,15 @@ async function loadModule(moduleId) {
     const pageTransition = new PageTransition(mainContent);
 
     await pageTransition.transition(async () => {
-        // Show loading with modern design
+        // Show loading
         mainContent.innerHTML = `
-            <div class="flex items-center justify-center h-64 animate-fade-in">
+            <div class="flex items-center justify-center h-64">
                 <div class="flex flex-col items-center gap-4">
-                    <div class="relative w-16 h-16">
-                        <div class="absolute inset-0 border-4 border-indigo-200 dark:border-indigo-800 rounded-full"></div>
-                        <div class="absolute inset-0 border-4 border-transparent border-t-indigo-600 dark:border-t-indigo-400 rounded-full animate-spin"></div>
+                    <div class="relative">
+                        <div class="w-16 h-16 border-4 border-indigo-200 dark:border-indigo-900 rounded-full"></div>
+                        <div class="w-16 h-16 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin absolute top-0"></div>
                     </div>
-                    <p class="text-text-secondary font-medium">Loading...</p>
+                    <p class="text-gray-600 dark:text-gray-400 font-medium">Loading...</p>
                 </div>
             </div>
         `;
@@ -175,28 +177,28 @@ async function loadModule(moduleId) {
                 await module.render(mainContent);
             } else {
                 mainContent.innerHTML = `
-                    <div class="text-center py-10 animate-fade-in">
-                        <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/30 mb-4">
+                    <div class="text-center py-10">
+                        <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 dark:bg-red-900 mb-4">
                             <svg class="w-8 h-8 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                             </svg>
                         </div>
-                        <p class="text-text font-medium">Module not found</p>
-                        <p class="text-text-secondary text-sm mt-2">The ${moduleId} module doesn't have a render function.</p>
+                        <p class="text-gray-700 dark:text-gray-300 font-medium">Module not found</p>
+                        <p class="text-gray-500 dark:text-gray-400 text-sm mt-2">The ${moduleId} module doesn't have a render function.</p>
                     </div>
                 `;
             }
         } catch (error) {
             console.error(`Error loading module ${moduleId}:`, error);
             mainContent.innerHTML = `
-                <div class="text-center py-10 animate-fade-in">
-                    <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-yellow-100 dark:bg-yellow-900/30 mb-4">
+                <div class="text-center py-10">
+                    <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-yellow-100 dark:bg-yellow-900 mb-4">
                         <svg class="w-8 h-8 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
                         </svg>
                     </div>
-                    <p class="text-text font-medium">Module under construction</p>
-                    <p class="text-text-secondary text-sm mt-2">${error.message}</p>
+                    <p class="text-gray-700 dark:text-gray-300 font-medium">Module under construction</p>
+                    <p class="text-gray-500 dark:text-gray-400 text-sm mt-2">${error.message}</p>
                 </div>
             `;
         }

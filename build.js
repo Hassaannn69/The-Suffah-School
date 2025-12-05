@@ -1,38 +1,27 @@
-const { execSync } = require('child_process');
-const path = require('path');
-const fs = require('fs');
+const esbuild = require('esbuild');
 
-console.log('🔨 Building project...\n');
-
-// Source and output files
-const inputFile = './assets/css/styles.source.css';
-const outputFile = './assets/css/styles.css';
-
-// Check if source file exists
-if (!fs.existsSync(inputFile)) {
-    console.error('❌ Source file not found:', inputFile);
-    console.error('Please ensure assets/css/styles.source.css exists');
+// Build app.js bundle with Supabase as external global
+esbuild.build({
+    entryPoints: ['assets/js/app.js'],
+    bundle: true,
+    format: 'iife',
+    globalName: 'App',
+    outfile: 'assets/js/app.bundle.js',
+    platform: 'browser',
+    target: 'es2015',
+    // Mark Supabase imports as external - they'll be loaded from CDN
+    external: ['./supabase-client.js', '../supabase-client.js'],
+    // Replace module imports with global window.supabase
+    define: {
+        'import.meta.url': '"https://example.com"'
+    },
+    banner: {
+        js: '// Supabase client should be loaded from CDN before this script\n'
+    }
+}).then(() => {
+    console.log('✅ app.bundle.js created successfully');
+    console.log('⚠️  Make sure Supabase CDN is loaded before this bundle!');
+}).catch((error) => {
+    console.error('❌ Build failed:', error);
     process.exit(1);
-}
-
-// Build Tailwind CSS using PostCSS
-try {
-    console.log('📦 Compiling Tailwind CSS...');
-    const postcssPath = path.join(__dirname, 'node_modules', '.bin', 'postcss');
-    const command = process.platform === 'win32' 
-        ? `"${postcssPath}.cmd" ${inputFile} -o ${outputFile} --minify`
-        : `${postcssPath} ${inputFile} -o ${outputFile} --minify`;
-    
-    execSync(command, {
-        stdio: 'inherit',
-        cwd: __dirname,
-        shell: true
-    });
-    
-    console.log('✅ Tailwind CSS compiled successfully\n');
-} catch (error) {
-    console.error('❌ Tailwind CSS build failed:', error.message);
-    process.exit(1);
-}
-
-console.log('✅ Build completed successfully!');
+});
