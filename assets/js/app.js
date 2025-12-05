@@ -101,13 +101,13 @@ function renderSidebar() {
         if (item.roles.includes(currentRole)) {
             const link = document.createElement('a');
             link.href = '#';
-            link.className = 'flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg transition-colors group';
+            link.className = 'sidebar-link';
             link.dataset.module = item.id;
             link.innerHTML = `
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400 group-hover:text-indigo-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${item.icon}" />
                 </svg>
-                <span class="font-medium">${item.label}</span>
+                <span>${item.label}</span>
             `;
             link.addEventListener('click', (e) => {
                 e.preventDefault();
@@ -128,11 +128,9 @@ async function loadModule(moduleId) {
     // Update active state in sidebar
     document.querySelectorAll('#navLinks a').forEach(el => {
         if (el.dataset.module === moduleId) {
-            el.classList.add('bg-indigo-50', 'text-indigo-600');
-            el.querySelector('svg').classList.add('text-indigo-600');
+            el.classList.add('active');
         } else {
-            el.classList.remove('bg-indigo-50', 'text-indigo-600');
-            el.querySelector('svg').classList.remove('text-indigo-600');
+            el.classList.remove('active');
         }
     });
 

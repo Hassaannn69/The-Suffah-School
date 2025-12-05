@@ -12,19 +12,24 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 
-<body class="bg-surface min-h-screen flex transition-colors duration-200">
-
-    <!-- Sidebar -->
+<body class="bg-surface min-h-screen flex transition-all duration-300">
+    <!-- Modern Sidebar -->
     <aside
-        class="w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col fixed h-full z-10 transition-transform transform -translate-x-full md:translate-x-0"
+        class="sidebar-modern w-72 flex flex-col fixed h-full z-30 transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out"
         id="sidebar">
-        <div class="p-6 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+        <!-- Sidebar Header -->
+        <div class="p-6 border-b border-custom flex items-center justify-between bg-gradient-to-r from-indigo-600 to-purple-600">
             <div class="flex items-center space-x-3">
-                <img src="assets/images/school-logo.jpg" alt="The Suffah School"
-                    class="w-10 h-10 rounded-lg object-cover">
-                <span class="font-bold text-gray-800 dark:text-white text-lg">The Suffah School</span>
+                <div class="w-12 h-12 rounded-xl overflow-hidden ring-2 ring-white/20 shadow-lg">
+                    <img src="assets/images/school-logo.jpg" alt="The Suffah School"
+                        class="w-full h-full object-cover">
+                </div>
+                <div>
+                    <span class="font-bold text-white text-lg block">The Suffah School</span>
+                    <span class="text-indigo-100 text-xs">Management System</span>
+                </div>
             </div>
-            <button class="md:hidden text-gray-500 dark:text-gray-400" id="closeSidebar">
+            <button class="md:hidden text-white/80 hover:text-white p-2 rounded-lg hover:bg-white/10 transition-colors" id="closeSidebar">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
                     stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -32,23 +37,25 @@
             </button>
         </div>
 
+        <!-- Navigation Links -->
         <nav class="flex-1 overflow-y-auto p-4 space-y-1" id="navLinks">
             <!-- Nav links will be injected here based on role -->
         </nav>
 
-        <div class="p-4 border-t border-gray-100 dark:border-gray-700">
+        <!-- User Profile Section -->
+        <div class="p-4 border-t border-custom bg-surface-elevated">
             <div class="flex items-center space-x-3 mb-4 px-2">
-                <div class="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center text-indigo-600 dark:text-indigo-300 font-bold text-sm"
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white font-bold text-sm shadow-lg ring-2 ring-indigo-200 dark:ring-indigo-800"
                     id="userAvatar">
                     U
                 </div>
                 <div class="flex-1 min-w-0">
-                    <p class="text-sm font-medium text-gray-900 dark:text-white truncate" id="userName">User</p>
-                    <p class="text-xs text-gray-500 dark:text-gray-400 truncate" id="userRole">Role</p>
+                    <p class="text-sm font-semibold text-text truncate" id="userName">User</p>
+                    <p class="text-xs text-text-secondary truncate" id="userRole">Role</p>
                 </div>
             </div>
             <button id="logoutBtn"
-                class="w-full flex items-center justify-center space-x-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                class="w-full flex items-center justify-center space-x-2 px-4 py-2.5 border border-custom rounded-lg text-sm font-medium text-text-secondary hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 hover:border-red-200 dark:hover:border-red-800 transition-all duration-200">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
                     stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -59,28 +66,30 @@
         </div>
     </aside>
 
-    <!-- Main Content -->
-    <main class="flex-1 md:ml-64 min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
-        <!-- Header -->
+    <!-- Main Content Area -->
+    <main class="flex-1 md:ml-72 min-h-screen flex flex-col bg-gradient-to-br from-gray-50 via-white to-indigo-50/30 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 transition-all duration-300">
+        <!-- Modern Header -->
         <header
-            class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 h-16 flex items-center justify-between px-6 sticky top-0 z-10 transition-colors duration-200">
-            <button class="md:hidden text-gray-500 dark:text-gray-400 p-2 -ml-2" id="openSidebar">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
-                    stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-            </button>
-            <h1 class="text-xl font-semibold text-gray-800 dark:text-white" id="pageTitle">Dashboard</h1>
+            class="bg-surface border-b border-custom h-16 flex items-center justify-between px-4 md:px-6 sticky top-0 z-20 backdrop-blur-lg bg-opacity-95 dark:bg-opacity-95 shadow-sm">
             <div class="flex items-center space-x-4">
+                <button class="md:hidden text-text-secondary hover:text-text p-2 rounded-lg hover:bg-surface-elevated transition-colors" id="openSidebar">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+                </button>
+                <h1 class="text-xl md:text-2xl font-bold text-text" id="pageTitle">Dashboard</h1>
+            </div>
+            <div class="flex items-center space-x-3">
                 <!-- Dark Mode Toggle -->
                 <button id="themeToggle"
-                    class="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors">
+                    class="p-2.5 rounded-xl text-text-secondary hover:text-text hover:bg-surface-elevated focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-all duration-200">
                     <!-- Sun Icon (for Dark Mode) -->
                     <svg id="themeToggleLightIcon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20"
                         xmlns="http://www.w3.org/2000/svg">
-                        <path
+                        <path fill-rule="evenodd"
                             d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z"
-                            fill-rule="evenodd" clip-rule="evenodd"></path>
+                            clip-rule="evenodd"></path>
                     </svg>
                     <!-- Moon Icon (for Light Mode) -->
                     <svg id="themeToggleDarkIcon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20"
@@ -91,11 +100,17 @@
             </div>
         </header>
 
-        <!-- Content Area -->
-        <div class="p-6 flex-1 overflow-y-auto" id="mainContent">
-            <!-- Dynamic Content Loaded Here -->
+        <!-- Content Area with Smooth Transitions -->
+        <div class="p-4 md:p-6 lg:p-8 flex-1 overflow-y-auto" id="mainContent">
+            <!-- Initial Loading State -->
             <div class="flex items-center justify-center h-full">
-                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+                <div class="text-center">
+                    <div class="relative w-16 h-16 mx-auto mb-4">
+                        <div class="absolute inset-0 border-4 border-indigo-200 dark:border-indigo-800 rounded-full"></div>
+                        <div class="absolute inset-0 border-4 border-transparent border-t-indigo-600 dark:border-t-indigo-400 rounded-full animate-spin"></div>
+                    </div>
+                    <p class="text-text-secondary font-medium">Loading dashboard...</p>
+                </div>
             </div>
         </div>
     </main>
