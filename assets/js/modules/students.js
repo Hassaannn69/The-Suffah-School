@@ -6,6 +6,7 @@ const supabase = window.supabase || (() => {
 
 let currentStudents = [];
 let availableClasses = []; // Store classes and their sections
+let parsedStudents = []; // Store parsed Excel data
 
 export async function render(container) {
     container.innerHTML = `
