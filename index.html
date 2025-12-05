@@ -279,6 +279,10 @@
             if (urlParams.get('action') === 'logout') {
                 console.log('User explicitly logged out. Skipping auto-login.');
 
+                // Explicitly clear storage to prevent loops
+                window.localStorage.clear();
+                window.sessionStorage.clear();
+
                 // Clean up URL without refreshing
                 window.history.replaceState({}, document.title, window.location.pathname);
 
