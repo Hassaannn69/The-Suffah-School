@@ -171,7 +171,7 @@ async function loadModule(moduleId) {
             if (!window.supabase) {
                 throw new Error('Supabase client not initialized. Please refresh the page.');
             }
-            
+
             const module = await import(`./modules/${moduleId}.js`);
             if (module && module.render) {
                 await module.render(mainContent);
@@ -208,9 +208,29 @@ async function loadModule(moduleId) {
 
 // Logout Logic
 logoutBtn.addEventListener('click', async () => {
-    const supabaseClient = getSupabase();
-    await supabaseClient.auth.signOut();
-    window.location.href = 'index.html';
+    try {
+        const supabaseClient = getSupabase();
+
+        // Sign out with local scope to clear session completely
+        const { error } = await supabaseClient.auth.signOut({ scope: 'local' });
+
+        if (error) {
+            console.error('Logout error:', error);
+            // Still redirect even if there's an error
+        }
+
+        // Clear any local storage items related to auth
+        localStorage.removeItem('supabase.auth.token');
+
+        // Small delay to ensure session is cleared before redirect
+        setTimeout(() => {
+            window.location.href = 'index.html';
+        }, 100);
+    } catch (err) {
+        console.error('Unexpected logout error:', err);
+        // Force redirect anyway
+        window.location.href = 'index.html';
+    }
 });
 
 // Mobile Sidebar Toggle
