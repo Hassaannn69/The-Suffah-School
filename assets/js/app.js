@@ -50,7 +50,23 @@ async function initApp() {
 
     try {
         const supabaseClient = getSupabase();
-        const { data: { session }, error } = await supabaseClient.auth.getSession();
+
+        // Retry logic for session check
+        let session = null;
+        let error = null;
+        let retries = 3;
+
+        while (retries > 0 && !session) {
+            const result = await supabaseClient.auth.getSession();
+            session = result.data.session;
+            error = result.error;
+
+            if (session) break;
+
+            // Wait 500ms before retry
+            retries--;
+            if (retries > 0) await new Promise(r => setTimeout(r, 500));
+        }
 
         if (error || !session) {
             // DEBUG: Stop redirect loop and show info

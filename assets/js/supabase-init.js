@@ -10,7 +10,7 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 window.supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     auth: {
         persistSession: true,
-        storage: window.sessionStorage,
+        storage: window.localStorage,
         storageKey: 'school_auth_token', // Force same key
         autoRefreshToken: true,
         detectSessionInUrl: false // Disable to prevent interference
