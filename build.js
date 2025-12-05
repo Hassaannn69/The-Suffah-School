@@ -1,27 +1,44 @@
-const esbuild = require('esbuild');
+const { execSync } = require('child_process');
+const path = require('path');
+const fs = require('fs');
 
-// Build app.js bundle with Supabase as external global
-esbuild.build({
-    entryPoints: ['assets/js/app.js'],
-    bundle: true,
-    format: 'iife',
-    globalName: 'App',
-    outfile: 'assets/js/app.bundle.js',
-    platform: 'browser',
-    target: 'es2015',
-    // Mark Supabase imports as external - they'll be loaded from CDN
-    external: ['./supabase-client.js', '../supabase-client.js'],
-    // Replace module imports with global window.supabase
-    define: {
-        'import.meta.url': '"https://example.com"'
-    },
-    banner: {
-        js: '// Supabase client should be loaded from CDN before this script\n'
+console.log('🔨 Building project...\n');
+
+// Create a temporary input file for Tailwind compilation
+const inputFile = './assets/css/styles.input.css';
+const outputFile = './assets/css/styles.css';
+
+// Read the current styles.css and create input file
+const currentStyles = fs.readFileSync(outputFile, 'utf8');
+fs.writeFileSync(inputFile, currentStyles);
+
+// Build Tailwind CSS using PostCSS
+try {
+    console.log('📦 Compiling Tailwind CSS...');
+    const postcssPath = path.join(__dirname, 'node_modules', '.bin', 'postcss');
+    const command = process.platform === 'win32' 
+        ? `"${postcssPath}.cmd" ${inputFile} -o ${outputFile} --minify`
+        : `${postcssPath} ${inputFile} -o ${outputFile} --minify`;
+    
+    execSync(command, {
+        stdio: 'inherit',
+        cwd: __dirname,
+        shell: true
+    });
+    
+    // Clean up temp file
+    if (fs.existsSync(inputFile)) {
+        fs.unlinkSync(inputFile);
     }
-}).then(() => {
-    console.log('✅ app.bundle.js created successfully');
-    console.log('⚠️  Make sure Supabase CDN is loaded before this bundle!');
-}).catch((error) => {
-    console.error('❌ Build failed:', error);
+    
+    console.log('✅ Tailwind CSS compiled successfully\n');
+} catch (error) {
+    console.error('❌ Tailwind CSS build failed:', error.message);
+    // Clean up temp file on error
+    if (fs.existsSync(inputFile)) {
+        fs.unlinkSync(inputFile);
+    }
     process.exit(1);
-});
+}
+
+console.log('✅ Build completed successfully!');
