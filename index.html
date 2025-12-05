@@ -82,6 +82,19 @@
 
         // Check if already logged in
         async function checkSession() {
+            // 1. Check if we just logged out
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('action') === 'logout') {
+                console.log('User explicitly logged out. Skipping auto-login.');
+
+                // Clean up URL without refreshing
+                window.history.replaceState({}, document.title, window.location.pathname);
+
+                // Ensure Supabase knows we are out
+                await supabase.auth.signOut();
+                return;
+            }
+
             try {
                 const { data: { session }, error } = await supabase.auth.getSession();
 

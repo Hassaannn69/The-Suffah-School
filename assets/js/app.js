@@ -211,25 +211,25 @@ logoutBtn.addEventListener('click', async () => {
     try {
         const supabaseClient = getSupabase();
 
-        // Sign out with local scope to clear session completely
-        const { error } = await supabaseClient.auth.signOut({ scope: 'local' });
+        // 1. Attempt Supabase SignOut
+        await supabaseClient.auth.signOut({ scope: 'local' });
 
-        if (error) {
-            console.error('Logout error:', error);
-            // Still redirect even if there's an error
-        }
+        // 2. Aggressively clear ALL storage
+        localStorage.clear(); // Clear everything in local storage
+        sessionStorage.clear(); // Clear session storage
 
-        // Clear any local storage items related to auth
-        localStorage.removeItem('supabase.auth.token');
+        // 3. Clear cookies (helper function)
+        document.cookie.split(";").forEach((c) => {
+            document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+        });
 
-        // Small delay to ensure session is cleared before redirect
-        setTimeout(() => {
-            window.location.href = 'index.html';
-        }, 100);
+        // 4. Redirect with a flag to prevent auto-login loop
+        window.location.href = 'index.html?action=logout';
+
     } catch (err) {
-        console.error('Unexpected logout error:', err);
-        // Force redirect anyway
-        window.location.href = 'index.html';
+        console.error('Logout error:', err);
+        // Force redirect even on error
+        window.location.href = 'index.html?action=logout';
     }
 });
 
