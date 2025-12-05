@@ -416,6 +416,22 @@ export async function render(container) {
         dropdownMenu.classList.add('hidden');
     });
 
+    // Single student modal
+    document.getElementById('addSingleStudent').addEventListener('click', () => {
+        dropdownMenu.classList.add('hidden');
+        openModal();
+    });
+
+    document.getElementById('closeModalBtn').addEventListener('click', closeModal);
+    document.getElementById('cancelBtn').addEventListener('click', closeModal);
+    document.getElementById('studentForm').addEventListener('submit', handleFormSubmit);
+
+    // Bulk upload modal
+    document.getElementById('addBulkStudents').addEventListener('click', () => {
+        dropdownMenu.classList.add('hidden');
+        openBulkModal();
+    });
+
     document.getElementById('closeBulkModalBtn').addEventListener('click', closeBulkModal);
     document.getElementById('cancelBulkBtn').addEventListener('click', closeBulkModal);
     document.getElementById('downloadTemplateBtn').addEventListener('click', downloadTemplate);
