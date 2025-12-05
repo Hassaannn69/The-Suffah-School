@@ -13,7 +13,7 @@ export async function render(container) {
                     <div class="flex items-center justify-between">
                         <div>
                             <p class="text-sm text-gray-500 dark:text-gray-400">Total Fees</p>
-                            <p class="text-2xl font-bold text-gray-800 dark:text-white" id="statTotalFees">$0</p>
+                            <p class="text-2xl font-bold text-gray-800 dark:text-white" id="statTotalFees">...</p>
                         </div>
                         <div class="p-3 bg-indigo-100 dark:bg-indigo-900 rounded-lg">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-indigo-600 dark:text-indigo-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -26,7 +26,7 @@ export async function render(container) {
                     <div class="flex items-center justify-between">
                         <div>
                             <p class="text-sm text-gray-500 dark:text-gray-400">Collected</p>
-                            <p class="text-2xl font-bold text-green-600 dark:text-green-400" id="statCollected">$0</p>
+                            <p class="text-2xl font-bold text-green-600 dark:text-green-400" id="statCollected">...</p>
                         </div>
                         <div class="p-3 bg-green-100 dark:bg-green-900 rounded-lg">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-600 dark:text-green-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -39,7 +39,7 @@ export async function render(container) {
                     <div class="flex items-center justify-between">
                         <div>
                             <p class="text-sm text-gray-500 dark:text-gray-400">Pending</p>
-                            <p class="text-2xl font-bold text-red-600 dark:text-red-400" id="statPending">$0</p>
+                            <p class="text-2xl font-bold text-red-600 dark:text-red-400" id="statPending">...</p>
                         </div>
                         <div class="p-3 bg-red-100 dark:bg-red-900 rounded-lg">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-red-600 dark:text-red-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -148,15 +148,15 @@ export async function render(container) {
                             </div>
                             <div>
                                 <p class="text-gray-500 dark:text-gray-400">Total Amount</p>
-                                <p class="font-medium text-gray-800 dark:text-white" id="paymentTotalAmount">$0</p>
+                                <p class="font-medium text-gray-800 dark:text-white" id="paymentTotalAmount">...</p>
                             </div>
                             <div>
                                 <p class="text-gray-500 dark:text-gray-400">Already Paid</p>
-                                <p class="font-medium text-green-600 dark:text-green-400" id="paymentAlreadyPaid">$0</p>
+                                <p class="font-medium text-green-600 dark:text-green-400" id="paymentAlreadyPaid">...</p>
                             </div>
                             <div class="col-span-2">
                                 <p class="text-gray-500 dark:text-gray-400">Remaining Balance</p>
-                                <p class="text-2xl font-bold text-red-600 dark:text-red-400" id="paymentBalance">$0</p>
+                                <p class="text-2xl font-bold text-red-600 dark:text-red-400" id="paymentBalance">...</p>
                             </div>
                         </div>
                     </div>
@@ -259,9 +259,9 @@ async function fetchStats() {
     const pending = totalFees - collected;
     const rate = totalFees > 0 ? (collected / totalFees * 100) : 0;
 
-    document.getElementById('statTotalFees').textContent = `$${totalFees.toFixed(2)}`;
-    document.getElementById('statCollected').textContent = `$${collected.toFixed(2)}`;
-    document.getElementById('statPending').textContent = `$${pending.toFixed(2)}`;
+    document.getElementById('statTotalFees').textContent = window.formatCurrency(totalFees);
+    document.getElementById('statCollected').textContent = window.formatCurrency(collected);
+    document.getElementById('statPending').textContent = window.formatCurrency(pending);
     document.getElementById('statRate').textContent = `${rate.toFixed(1)}%`;
 }
 
@@ -331,9 +331,9 @@ async function fetchFees() {
                 </td>
                 <td class="p-4 text-gray-600 dark:text-gray-300">${fee.fee_type}</td>
                 <td class="p-4 text-gray-600 dark:text-gray-300">${fee.month}</td>
-                <td class="p-4 font-medium text-gray-800 dark:text-gray-200">$${finalAmount.toFixed(2)}</td>
-                <td class="p-4 font-medium text-green-600 dark:text-green-400">$${paidAmount.toFixed(2)}</td>
-                <td class="p-4 font-medium ${balance > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-600 dark:text-gray-300'}">$${balance.toFixed(2)}</td>
+                <td class="p-4 font-medium text-gray-800 dark:text-gray-200">${window.formatCurrency(finalAmount)}</td>
+                <td class="p-4 font-medium text-green-600 dark:text-green-400">${window.formatCurrency(paidAmount)}</td>
+                <td class="p-4 font-medium ${balance > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-600 dark:text-gray-300'}">${window.formatCurrency(balance)}</td>
                 <td class="p-4">
                     <span class="px-2 py-1 text-xs font-semibold rounded-full ${fee.status === 'paid' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
                 fee.status === 'partial' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
@@ -362,9 +362,9 @@ window.openPayment = async (feeId, studentId, studentName, feeType, totalAmount,
     document.getElementById('paymentStudentId').value = studentId;
     document.getElementById('paymentStudentName').textContent = studentName;
     document.getElementById('paymentFeeType').textContent = feeType;
-    document.getElementById('paymentTotalAmount').textContent = `$${totalAmount.toFixed(2)}`;
-    document.getElementById('paymentAlreadyPaid').textContent = `$${paidAmount.toFixed(2)}`;
-    document.getElementById('paymentBalance').textContent = `$${balance.toFixed(2)}`;
+    document.getElementById('paymentTotalAmount').textContent = window.formatCurrency(totalAmount);
+    document.getElementById('paymentAlreadyPaid').textContent = window.formatCurrency(paidAmount);
+    document.getElementById('paymentBalance').textContent = window.formatCurrency(balance);
     document.getElementById('paymentAmount').value = balance.toFixed(2);
     document.getElementById('paymentAmount').max = balance;
 
@@ -399,7 +399,7 @@ async function loadPaymentHistory(feeId) {
     container.innerHTML = data.map(payment => `
         <div class="flex justify-between items-center text-sm bg-gray-100 dark:bg-gray-600 p-2 rounded">
             <div>
-                <span class="font-medium text-gray-800 dark:text-white">$${Number(payment.amount_paid).toFixed(2)}</span>
+                <span class="font-medium text-gray-800 dark:text-white">${window.formatCurrency(payment.amount_paid)}</span>
                 <span class="text-gray-500 dark:text-gray-400 ml-2">${payment.payment_method}</span>
             </div>
             <span class="text-gray-500 dark:text-gray-400">${new Date(payment.payment_date).toLocaleDateString()}</span>

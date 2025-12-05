@@ -328,15 +328,15 @@ export async function render(container) {
                                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                     <div class="bg-blue-50 p-3 rounded-lg text-center">
                                         <div class="text-xs text-blue-600 font-medium uppercase">Total Fees</div>
-                                        <div id="feeTotal" class="text-lg font-bold text-blue-800">₹0</div>
+                                        <div id="feeTotal" class="text-lg font-bold text-blue-800">...</div>
                                     </div>
                                     <div class="bg-green-50 p-3 rounded-lg text-center">
                                         <div class="text-xs text-green-600 font-medium uppercase">Paid</div>
-                                        <div id="feePaid" class="text-lg font-bold text-green-800">₹0</div>
+                                        <div id="feePaid" class="text-lg font-bold text-green-800">...</div>
                                     </div>
                                     <div class="bg-red-50 p-3 rounded-lg text-center">
                                         <div class="text-xs text-red-600 font-medium uppercase">Remaining</div>
-                                        <div id="feeRemaining" class="text-lg font-bold text-red-800">₹0</div>
+                                        <div id="feeRemaining" class="text-lg font-bold text-red-800">...</div>
                                     </div>
                                 </div>
                                 <div class="mt-4 text-xs text-gray-500 text-center">
@@ -425,6 +425,7 @@ export async function render(container) {
     document.getElementById('closeModalBtn').addEventListener('click', closeModal);
     document.getElementById('cancelBtn').addEventListener('click', closeModal);
     document.getElementById('studentForm').addEventListener('submit', handleFormSubmit);
+    document.getElementById('class').addEventListener('change', handleClassChange);
 
     // Bulk upload modal
     document.getElementById('addBulkStudents').addEventListener('click', () => {
@@ -616,9 +617,9 @@ async function fetchStudentFees(studentId) {
 
         const remaining = total - paid;
 
-        document.getElementById('feeTotal').textContent = `₹${total.toLocaleString()}`;
-        document.getElementById('feePaid').textContent = `₹${paid.toLocaleString()}`;
-        document.getElementById('feeRemaining').textContent = `₹${remaining.toLocaleString()}`;
+        document.getElementById('feeTotal').textContent = window.formatCurrency(total);
+        document.getElementById('feePaid').textContent = window.formatCurrency(paid);
+        document.getElementById('feeRemaining').textContent = window.formatCurrency(remaining);
         document.getElementById('feeLastPayment').textContent = lastPayment ? lastPayment.toLocaleDateString() : 'Never';
 
     } catch (err) {

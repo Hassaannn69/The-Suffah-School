@@ -26,6 +26,19 @@ export async function render(container) {
                     <p class="text-xs text-gray-400 mt-1">Direct link to your school logo image.</p>
                 </div>
 
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Currency</label>
+                    <select id="currency" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-gray-900">
+                        <option value="PKR">PKR (Rs)</option>
+                        <option value="USD">USD ($)</option>
+                        <option value="INR">INR (₹)</option>
+                        <option value="EUR">EUR (€)</option>
+                        <option value="GBP">GBP (£)</option>
+                        <option value="AED">AED (Dh)</option>
+                        <option value="SAR">SAR (SR)</option>
+                    </select>
+                </div>
+
                 <div class="border-t border-gray-100 pt-6">
                     <h3 class="text-lg font-medium text-gray-800 mb-4">Default Fee Structure</h3>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -69,6 +82,7 @@ async function fetchSettings() {
         document.getElementById('settingsId').value = data.id;
         document.getElementById('schoolName').value = data.school_name || '';
         document.getElementById('logoUrl').value = data.logo_url || '';
+        document.getElementById('currency').value = data.currency || 'PKR';
 
         if (data.default_fee_structure) {
             document.getElementById('defaultTuition').value = data.default_fee_structure.tuition || 0;
@@ -86,12 +100,14 @@ async function handleSave(e) {
     const id = document.getElementById('settingsId').value;
     const schoolName = document.getElementById('schoolName').value;
     const logoUrl = document.getElementById('logoUrl').value;
+    const currency = document.getElementById('currency').value;
     const defaultTuition = document.getElementById('defaultTuition').value;
     const defaultTransport = document.getElementById('defaultTransport').value;
 
     const payload = {
         school_name: schoolName,
         logo_url: logoUrl,
+        currency: currency,
         default_fee_structure: {
             tuition: defaultTuition,
             transport: defaultTransport
@@ -110,6 +126,8 @@ async function handleSave(e) {
     if (error) {
         alert('Error saving settings: ' + error.message);
     } else {
+        // Update global currency immediately
+        window.currencySymbol = currency;
         alert('Settings saved successfully!');
     }
 

@@ -70,7 +70,7 @@ export async function render(container) {
         if (!supabase) {
             throw new Error('Supabase client not initialized');
         }
-        
+
         // Fetch Stats in parallel
         const [studentsCount, classesCount, feesStats] = await Promise.all([
             supabase.from('students').select('*', { count: 'exact', head: true }),
@@ -123,8 +123,8 @@ export async function render(container) {
             <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
                 <div>
                     <p class="text-sm font-medium text-gray-500">Fees Collected</p>
-                    <h3 class="text-2xl font-bold text-green-600 mt-1">$${totalFeesCollected.toLocaleString()}</h3>
-                    <p class="text-xs text-gray-400 mt-1">out of $${totalFeesIssued.toLocaleString()}</p>
+                    <h3 class="text-2xl font-bold text-green-600 mt-1">${window.formatCurrency(totalFeesCollected)}</h3>
+                    <p class="text-xs text-gray-400 mt-1">out of ${window.formatCurrency(totalFeesIssued)}</p>
                 </div>
                 <div class="bg-green-50 p-3 rounded-lg">
                     <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
