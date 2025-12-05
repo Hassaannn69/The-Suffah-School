@@ -4,13 +4,16 @@ const fs = require('fs');
 
 console.log('🔨 Building project...\n');
 
-// Create a temporary input file for Tailwind compilation
-const inputFile = './assets/css/styles.input.css';
+// Source and output files
+const inputFile = './assets/css/styles.source.css';
 const outputFile = './assets/css/styles.css';
 
-// Read the current styles.css and create input file
-const currentStyles = fs.readFileSync(outputFile, 'utf8');
-fs.writeFileSync(inputFile, currentStyles);
+// Check if source file exists
+if (!fs.existsSync(inputFile)) {
+    console.error('❌ Source file not found:', inputFile);
+    console.error('Please ensure assets/css/styles.source.css exists');
+    process.exit(1);
+}
 
 // Build Tailwind CSS using PostCSS
 try {
@@ -26,18 +29,9 @@ try {
         shell: true
     });
     
-    // Clean up temp file
-    if (fs.existsSync(inputFile)) {
-        fs.unlinkSync(inputFile);
-    }
-    
     console.log('✅ Tailwind CSS compiled successfully\n');
 } catch (error) {
     console.error('❌ Tailwind CSS build failed:', error.message);
-    // Clean up temp file on error
-    if (fs.existsSync(inputFile)) {
-        fs.unlinkSync(inputFile);
-    }
     process.exit(1);
 }
 
