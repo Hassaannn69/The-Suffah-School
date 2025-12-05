@@ -909,29 +909,44 @@ async function handleFormSubmit(e) {
     }
 }
 
+// Helper to create auth user without logging out admin
+async function createAuthUser(email, password, name) {
+    try {
+        // Create a temporary client using the global config
+        if (!window.SUPABASE_URL || !window.SUPABASE_ANON_KEY) {
+            throw new Error('Supabase config not found');
+        }
+
+        // Use the global SupabaseLib saved in supabase-init.js
+        const tempClient = window.SupabaseLib.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY, {
+            auth: {
+                persistSession: false, // IMPORTANT: Do not persist session
+                autoRefreshToken: false,
+                detectSessionInUrl: false
+            }
         });
 
-const { data, error } = await tempClient.auth.signUp({
-    email,
-    password,
-    options: {
-        data: {
-            role: 'student',
-            name: name
-        }
-    }
-});
+        const { data, error } = await tempClient.auth.signUp({
+            email,
+            password,
+            options: {
+                data: {
+                    role: 'student',
+                    name: name
+                }
+            }
+        });
 
-if (error) throw error;
-return data.user;
+        if (error) throw error;
+        return data.user;
 
     } catch (err) {
-    console.error('Error creating auth user:', err);
-    // We don't block student creation if auth fails (maybe they already exist), 
-    // but we should warn the admin.
-    alert('Warning: Could not create login account. ' + err.message);
-    return null;
-}
+        console.error('Error creating auth user:', err);
+        // We don't block student creation if auth fails (maybe they already exist), 
+        // but we should warn the admin.
+        alert('Warning: Could not create login account. ' + err.message);
+        return null;
+    }
 }
 
 function showCredentialsModal(email, password) {
