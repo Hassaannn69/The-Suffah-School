@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seed Users - School Management System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
+
+    <div class="bg-white p-8 rounded-xl shadow-lg max-w-2xl w-full">
+        <h1 class="text-2xl font-bold text-gray-800 mb-4">Generate Test Users</h1>
+
+        <!-- Protocol Warning -->
+        <div id="protocolWarning" class="hidden bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6">
+            <p class="font-bold">⚠️ ERROR: Running from File System</p>
+            <p>You are opening this file directly (file://). Supabase <strong>will not work</strong> this way.</p>
+            <p class="mt-2">Please use a local server:</p>
+            <ul class="list-disc list-inside ml-2">
+                <li>VS Code: Right-click -> "Open with Live Server"</li>
+                <li>Python: `python -m http.server`</li>
+                <li>Node: `npx serve`</li>
+            </ul>
+        </div>
+
+        <p class="text-gray-600 mb-6">
+            This tool will create the following users in your Supabase project:
+        </p>
+
+        <ul class="list-disc list-inside space-y-2 mb-6 text-gray-700">
+            <li><strong>Admin:</strong> admin@school.com / password123</li>
+            <li><strong>Teacher:</strong> teacher@school.com / password123</li>
+            <li><strong>Student:</strong> student@school.com / password123</li>
+        </ul>
+
+        <button id="seedBtn"
+            class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg transition-colors w-full">
+            Create Users
+        </button>
+
+        <div id="logs"
+            class="mt-6 bg-gray-900 text-green-400 p-4 rounded-lg font-mono text-sm h-64 overflow-y-auto hidden"></div>
+    </div>
+
+    <script type="module">
+        import { supabase } from './assets/js/supabase-client.js';
+
+        // Check Protocol
+        if (window.location.protocol === 'file:') {
+            document.getElementById('protocolWarning').classList.remove('hidden');
+            document.getElementById('seedBtn').disabled = true;
+            document.getElementById('seedBtn').classList.add('opacity-50', 'cursor-not-allowed');
+        }
+
+        const users = [
+            { email: 'admin@school.com', password: 'password123', role: 'admin', name: 'Super Admin' },
+            { email: 'teacher@school.com', password: 'password123', role: 'teacher', name: 'John Teacher' },
+            { email: 'student@school.com', password: 'password123', role: 'student', name: 'Alice Student' }
+        ];
+
+        const logsEl = document.getElementById('logs');
+        const btn = document.getElementById('seedBtn');
+
+        function log(msg, type = 'info') {
+            const div = document.createElement('div');
+            div.className = type === 'error' ? 'text-red-400' : 'text-green-400';
+            div.textContent = `> ${msg}`;
+            logsEl.appendChild(div);
+            logsEl.scrollTop = logsEl.scrollHeight;
+            console.log(msg);
+        }
+
+        btn.addEventListener('click', async () => {
+            btn.disabled = true;
+            btn.textContent = 'Creating Users...';
+            logsEl.classList.remove('hidden');
+            logsEl.innerHTML = '';
+
+            log('Starting user generation...');
+
+            // Verify connection first
+            const { error: healthCheck } = await supabase.from('settings').select('count').limit(1);
+            if (healthCheck && healthCheck.code !== 'PGRST116') {
+                log(`Connection Check Failed: ${healthCheck.message}`, 'error');
+                log('Please check your URL and Key in config.js', 'error');
+                btn.disabled = false;
+                btn.textContent = 'Try Again';
+                return;
+            }
+
+            for (const user of users) {
+                try {
+                    log(`Creating ${user.role}: ${user.email}...`);
+
+                    // 1. Sign Up User
+                    const { data: authData, error: authError } = await supabase.auth.signUp({
+                        email: user.email,
+                        password: user.password,
+                        options: {
+                            data: {
+                                role: user.role,
+                                name: user.name
+                            }
+                        }
+                    });
+
+                    if (authError) {
+                        log(`Error creating ${user.email}: ${authError.message}`, 'error');
+                        continue;
+                    }
+
+                    if (authData.user) {
+                        if (authData.user.identities && authData.user.identities.length === 0) {
+                            log(`⚠️ User ${user.email} already exists.`, 'info');
+                        } else {
+                            log(`✅ Created Auth User: ${user.email}`);
+                        }
+
+                        // 2. If Student, insert into public.students table linked by ID
+                        if (user.role === 'student') {
+                            log(`Linking Student to Database...`);
+
+                            // Check if student record exists
+                            const { data: existingStudent } = await supabase.from('students').select('id').eq('email', user.email).single();
+
+                            if (!existingStudent) {
+                                const { error: dbError } = await supabase.from('students').insert([{
+                                    id: authData.user.id, // Link Auth ID to Student ID
+                                    name: user.name,
+                                    email: user.email,
+                                    roll_no: 'ST-001',
+                                    class: 'Class 10',
+                                    section: 'A',
+                                    gender: 'Female'
+                                }]);
+
+                                if (dbError) {
+                                    log(`Error inserting student record: ${dbError.message}`, 'error');
+                                } else {
+                                    log(`✅ Linked Student Record`);
+                                }
+                            } else {
+                                log(`Student record already linked.`, 'info');
+                            }
+                        }
+                    } else {
+                        log(`⚠️ User created but verification required (check email settings).`, 'error');
+                    }
+
+                } catch (err) {
+                    log(`Unexpected error: ${err.message}`, 'error');
+                }
+            }
+
+            log('-----------------------------------');
+            log('Process Complete.');
+            btn.disabled = false;
+            btn.textContent = 'Create Users';
+        });
+    </script>
+</body>
+
+</html>
