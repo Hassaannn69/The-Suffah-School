@@ -53,7 +53,30 @@ async function initApp() {
         const { data: { session }, error } = await supabaseClient.auth.getSession();
 
         if (error || !session) {
-            window.location.href = 'index.html';
+            // DEBUG: Stop redirect loop and show info
+            console.error('Session check failed:', error, session);
+            document.body.innerHTML = `
+                <div style="padding: 40px; text-align: center; font-family: sans-serif;">
+                    <h1 style="color: #dc2626; font-size: 24px; margin-bottom: 20px;">⚠️ Login Loop Detected</h1>
+                    <p style="margin-bottom: 20px;">The dashboard could not find your session.</p>
+                    <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; text-align: left; font-family: monospace; overflow: auto; max-width: 600px; margin: 0 auto;">
+                        <p><strong>Error:</strong> ${error ? error.message : 'None'}</p>
+                        <p><strong>Session:</strong> ${session ? 'Found' : 'Null'}</p>
+                        <p><strong>Storage Key:</strong> school_auth_token</p>
+                        <p><strong>SessionStorage Keys:</strong> ${Object.keys(sessionStorage).join(', ') || 'EMPTY'}</p>
+                        <p><strong>LocalStorage Keys:</strong> ${Object.keys(localStorage).join(', ') || 'EMPTY'}</p>
+                        <p><strong>Supabase URL:</strong> ${window.SUPABASE_URL}</p>
+                    </div>
+                    <div style="margin-top: 30px;">
+                        <button onclick="window.location.href='index.html'" style="padding: 10px 20px; background: #4f46e5; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                            Back to Login
+                        </button>
+                        <button onclick="location.reload()" style="padding: 10px 20px; background: #9ca3af; color: white; border: none; border-radius: 6px; cursor: pointer; margin-left: 10px;">
+                            Retry
+                        </button>
+                    </div>
+                </div>
+            `;
             return;
         }
 
