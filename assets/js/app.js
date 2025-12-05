@@ -195,7 +195,7 @@ async function loadModule(moduleId) {
                 throw new Error('Supabase client not initialized. Please refresh the page.');
             }
 
-            const module = await import(`./modules/${moduleId}.js`);
+            const module = await import(`./modules/${moduleId}.js?v=3`);
             if (module && module.render) {
                 await module.render(mainContent);
             } else {
