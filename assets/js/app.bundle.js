@@ -1,3 +1,5 @@
+// Supabase client should be loaded from CDN before this script
+
 var App = (() => {
   var __defProp = Object.defineProperty;
   var __getOwnPropNames = Object.getOwnPropertyNames;
@@ -44,24 +46,6 @@ var App = (() => {
       step((generator = generator.apply(__this, __arguments)).next());
     });
   };
-
-  // assets/js/supabase-client.js
-  var import_esm, SUPABASE_URL, SUPABASE_ANON_KEY, supabase;
-  var init_supabase_client = __esm({
-    "assets/js/supabase-client.js"() {
-      import_esm = __require("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm");
-      SUPABASE_URL = "https://kgwvbetqffvfcbswexre.supabase.co";
-      SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtnd3ZiZXRxZmZ2ZmNic3dleHJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ3NDY1MzUsImV4cCI6MjA4MDMyMjUzNX0.nQCwBiO6NpCTBOFkC4emJ2vPB6JaHj5tO06wUKI89uo";
-      supabase = (0, import_esm.createClient)(SUPABASE_URL, SUPABASE_ANON_KEY, {
-        auth: {
-          persistSession: true,
-          autoRefreshToken: true,
-          detectSessionInUrl: true
-        }
-      });
-      console.log("Supabase client initialized with hardcoded URL:", SUPABASE_URL);
-    }
-  });
 
   // assets/js/modules/classes.js
   var classes_exports = {};
@@ -126,7 +110,7 @@ var App = (() => {
   function fetchClasses() {
     return __async(this, null, function* () {
       const grid = document.getElementById("classesGrid");
-      const { data, error } = yield supabase.from("classes").select("*").order("class_name", { ascending: true });
+      const { data, error } = yield import_supabase_client.supabase.from("classes").select("*").order("class_name", { ascending: true });
       if (error) {
         console.error("Error fetching classes:", error);
         grid.innerHTML = `<div class="col-span-full text-center text-red-500">Error: ${error.message}</div>`;
@@ -175,7 +159,7 @@ var App = (() => {
       const className = document.getElementById("className").value;
       const sectionsStr = document.getElementById("sections").value;
       const sections = sectionsStr.split(",").map((s) => s.trim()).filter((s) => s);
-      const { error } = yield supabase.from("classes").insert([{
+      const { error } = yield import_supabase_client.supabase.from("classes").insert([{
         class_name: className,
         sections
       }]);
@@ -188,13 +172,14 @@ var App = (() => {
       }
     });
   }
+  var import_supabase_client;
   var init_classes = __esm({
     "assets/js/modules/classes.js"() {
-      init_supabase_client();
+      import_supabase_client = __require("../supabase-client.js");
       window.deleteClass = (id) => __async(void 0, null, function* () {
         if (!confirm("Are you sure? This will not delete students in this class."))
           return;
-        const { error } = yield supabase.from("classes").delete().eq("id", id);
+        const { error } = yield import_supabase_client.supabase.from("classes").delete().eq("id", id);
         if (error) {
           alert("Error deleting class: " + error.message);
         } else {
@@ -274,9 +259,9 @@ var App = (() => {
     `;
       try {
         const [studentsCount, classesCount, feesStats] = yield Promise.all([
-          supabase.from("students").select("*", { count: "exact", head: true }),
-          supabase.from("classes").select("*", { count: "exact", head: true }),
-          supabase.from("fees").select("amount, status")
+          import_supabase_client2.supabase.from("students").select("*", { count: "exact", head: true }),
+          import_supabase_client2.supabase.from("classes").select("*", { count: "exact", head: true }),
+          import_supabase_client2.supabase.from("fees").select("amount, status")
         ]);
         const totalStudents = studentsCount.count || 0;
         const totalClasses = classesCount.count || 0;
@@ -339,7 +324,7 @@ var App = (() => {
             </div>
         `;
         container.querySelector(".grid").innerHTML = statsHtml;
-        const { data: students } = yield supabase.from("students").select("class");
+        const { data: students } = yield import_supabase_client2.supabase.from("students").select("class");
         renderCharts(paidCount, unpaidCount, students);
         document.getElementById("total-students-card").addEventListener("click", openStudentsModal);
         document.getElementById("closeDashboardModalBtn").addEventListener("click", closeStudentsModal);
@@ -367,7 +352,7 @@ var App = (() => {
     return __async(this, null, function* () {
       const tbody = document.getElementById("dashboardStudentsTableBody");
       tbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center">Loading...</td></tr>';
-      const { data, error } = yield supabase.from("students").select("*").order("name");
+      const { data, error } = yield import_supabase_client2.supabase.from("students").select("*").order("name");
       if (error) {
         tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-red-500">Error: ${error.message}</td></tr>`;
         return;
@@ -484,10 +469,10 @@ var App = (() => {
       });
     }
   }
-  var allStudents;
+  var import_supabase_client2, allStudents;
   var init_dashboard = __esm({
     "assets/js/modules/dashboard.js"() {
-      init_supabase_client();
+      import_supabase_client2 = __require("../supabase-client.js");
       allStudents = [];
     }
   });
@@ -604,7 +589,7 @@ var App = (() => {
   function loadClasses() {
     return __async(this, null, function* () {
       const select = document.getElementById("classSelect");
-      const { data, error } = yield supabase.from("classes").select("class_name").order("class_name");
+      const { data, error } = yield import_supabase_client3.supabase.from("classes").select("class_name").order("class_name");
       if (data) {
         select.innerHTML = data.map((c) => `<option value="${c.class_name}">${c.class_name}</option>`).join("");
       }
@@ -627,7 +612,7 @@ var App = (() => {
       const tbody = document.getElementById("previewTableBody");
       previewSection.classList.remove("hidden");
       tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center">Loading preview...</td></tr>';
-      let studentsQuery = supabase.from("students").select("id, name, roll_no, class");
+      let studentsQuery = import_supabase_client3.supabase.from("students").select("id, name, roll_no, class");
       if (target === "class") {
         studentsQuery = studentsQuery.eq("class", className);
       }
@@ -636,7 +621,7 @@ var App = (() => {
         tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-gray-400">No students found</td></tr>';
         return;
       }
-      const { data: classes } = yield supabase.from("classes").select(`
+      const { data: classes } = yield import_supabase_client3.supabase.from("classes").select(`
             id,
             class_name,
             class_fees (
@@ -648,7 +633,7 @@ var App = (() => {
       classes.forEach((cls) => {
         classFeesMap[cls.class_name] = cls.class_fees || [];
       });
-      const { data: existingFees } = yield supabase.from("fees").select("student_id, fee_type").eq("month", month);
+      const { data: existingFees } = yield import_supabase_client3.supabase.from("fees").select("student_id, fee_type").eq("month", month);
       const existingFeeKeys = new Set(
         (existingFees == null ? void 0 : existingFees.map((f) => `${f.student_id}-${f.fee_type}`)) || []
       );
@@ -713,7 +698,7 @@ var App = (() => {
       btn.disabled = true;
       btn.innerHTML = '<div class="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>';
       try {
-        let studentsQuery = supabase.from("students").select("id, name, class");
+        let studentsQuery = import_supabase_client3.supabase.from("students").select("id, name, class");
         if (target === "class") {
           studentsQuery = studentsQuery.eq("class", className);
         }
@@ -726,7 +711,7 @@ var App = (() => {
           btn.innerHTML = originalText;
           return;
         }
-        const { data: classes } = yield supabase.from("classes").select(`
+        const { data: classes } = yield import_supabase_client3.supabase.from("classes").select(`
                 id,
                 class_name,
                 class_fees (
@@ -738,12 +723,12 @@ var App = (() => {
         classes.forEach((cls) => {
           classFeesMap[cls.class_name] = cls.class_fees || [];
         });
-        const { data: existingFees } = yield supabase.from("fees").select("student_id, fee_type").eq("month", month);
+        const { data: existingFees } = yield import_supabase_client3.supabase.from("fees").select("student_id, fee_type").eq("month", month);
         const existingFeeKeys = new Set(
           (existingFees == null ? void 0 : existingFees.map((f) => `${f.student_id}-${f.fee_type}`)) || []
         );
         if (regenerate && existingFees && existingFees.length > 0) {
-          const { error: deleteError } = yield supabase.from("fees").delete().eq("month", month);
+          const { error: deleteError } = yield import_supabase_client3.supabase.from("fees").delete().eq("month", month);
           if (deleteError)
             throw deleteError;
           existingFeeKeys.clear();
@@ -781,7 +766,7 @@ var App = (() => {
           btn.innerHTML = originalText;
           return;
         }
-        const { error: insertError } = yield supabase.from("fees").insert(feesToInsert);
+        const { error: insertError } = yield import_supabase_client3.supabase.from("fees").insert(feesToInsert);
         if (insertError)
           throw insertError;
         const uniqueStudents = new Set(feesToInsert.map((f) => f.student_id)).size;
@@ -796,9 +781,10 @@ var App = (() => {
       }
     });
   }
+  var import_supabase_client3;
   var init_fee_generation = __esm({
     "assets/js/modules/fee_generation.js"() {
-      init_supabase_client();
+      import_supabase_client3 = __require("../supabase-client.js");
     }
   });
 
@@ -1015,7 +1001,7 @@ var App = (() => {
     return __async(this, null, function* () {
       const tbody = document.getElementById("feeTypesTableBody");
       tbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center">Loading...</td></tr>';
-      const { data, error } = yield supabase.from("fee_types").select("*").order("name");
+      const { data, error } = yield import_supabase_client4.supabase.from("fee_types").select("*").order("name");
       if (error) {
         console.error("Error fetching fee types:", error);
         tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-red-500">Error: ${error.message}</td></tr>`;
@@ -1071,10 +1057,10 @@ var App = (() => {
       };
       let error;
       if (id) {
-        const res = yield supabase.from("fee_types").update(feeTypeData).eq("id", id);
+        const res = yield import_supabase_client4.supabase.from("fee_types").update(feeTypeData).eq("id", id);
         error = res.error;
       } else {
-        const res = yield supabase.from("fee_types").insert([feeTypeData]);
+        const res = yield import_supabase_client4.supabase.from("fee_types").insert([feeTypeData]);
         error = res.error;
       }
       if (error) {
@@ -1089,7 +1075,7 @@ var App = (() => {
     return __async(this, null, function* () {
       const container = document.getElementById("classList");
       container.innerHTML = '<p class="text-sm text-gray-500">Loading...</p>';
-      const { data, error } = yield supabase.from("classes").select("*").order("class_name");
+      const { data, error } = yield import_supabase_client4.supabase.from("classes").select("*").order("class_name");
       if (error) {
         container.innerHTML = `<p class="text-sm text-red-500">Error: ${error.message}</p>`;
         return;
@@ -1111,7 +1097,7 @@ var App = (() => {
       const tbody = document.getElementById("classFeesTableBody");
       const tfoot = document.getElementById("totalClassFee");
       tbody.innerHTML = '<tr><td colspan="3" class="py-4 text-center text-gray-400">Loading fees...</td></tr>';
-      const { data, error } = yield supabase.from("class_fees").select(`
+      const { data, error } = yield import_supabase_client4.supabase.from("class_fees").select(`
             id,
             amount,
             fee_types (id, name)
@@ -1149,7 +1135,7 @@ var App = (() => {
       const modal = document.getElementById("assignFeeModal");
       const select = document.getElementById("assignFeeTypeSelect");
       select.innerHTML = "<option>Loading...</option>";
-      const { data } = yield supabase.from("fee_types").select("*").order("name");
+      const { data } = yield import_supabase_client4.supabase.from("fee_types").select("*").order("name");
       if (data) {
         select.innerHTML = data.map((type) => `<option value="${type.id}">${type.name}</option>`).join("");
       }
@@ -1170,7 +1156,7 @@ var App = (() => {
       const classId = document.getElementById("assignClassId").value;
       const feeTypeId = document.getElementById("assignFeeTypeSelect").value;
       const amount = document.getElementById("assignAmount").value;
-      const { error } = yield supabase.from("class_fees").insert([{
+      const { error } = yield import_supabase_client4.supabase.from("class_fees").insert([{
         class_id: classId,
         fee_type_id: feeTypeId,
         amount
@@ -1187,15 +1173,15 @@ var App = (() => {
       }
     });
   }
-  var selectedClassId;
+  var import_supabase_client4, selectedClassId;
   var init_fee_structure = __esm({
     "assets/js/modules/fee_structure.js"() {
-      init_supabase_client();
+      import_supabase_client4 = __require("../supabase-client.js");
       window.editFeeType = openFeeTypeModal;
       window.deleteFeeType = (id) => __async(void 0, null, function* () {
         if (!confirm("Are you sure? This will delete the fee type and remove it from all classes."))
           return;
-        const { error } = yield supabase.from("fee_types").delete().eq("id", id);
+        const { error } = yield import_supabase_client4.supabase.from("fee_types").delete().eq("id", id);
         if (error) {
           toast.error("Error deleting fee type: " + error.message);
         } else {
@@ -1214,7 +1200,7 @@ var App = (() => {
       window.deleteClassFee = (id) => __async(void 0, null, function* () {
         if (!confirm("Remove this fee from the class?"))
           return;
-        const { error } = yield supabase.from("class_fees").delete().eq("id", id);
+        const { error } = yield import_supabase_client4.supabase.from("class_fees").delete().eq("id", id);
         if (error) {
           toast.error("Error removing fee: " + error.message);
         } else {
@@ -1457,7 +1443,7 @@ var App = (() => {
   function loadClasses2() {
     return __async(this, null, function* () {
       const select = document.getElementById("filterClass");
-      const { data } = yield supabase.from("classes").select("class_name").order("class_name");
+      const { data } = yield import_supabase_client5.supabase.from("classes").select("class_name").order("class_name");
       if (data) {
         const options = data.map((c) => `<option value="${c.class_name}">${c.class_name}</option>`).join("");
         select.innerHTML = '<option value="">All Classes</option>' + options;
@@ -1466,7 +1452,7 @@ var App = (() => {
   }
   function fetchStats() {
     return __async(this, null, function* () {
-      const { data, error } = yield supabase.from("fees").select("final_amount, paid_amount");
+      const { data, error } = yield import_supabase_client5.supabase.from("fees").select("final_amount, paid_amount");
       if (error) {
         console.error("Error fetching stats:", error);
         return;
@@ -1489,7 +1475,7 @@ var App = (() => {
       const classFilter = document.getElementById("filterClass").value;
       const monthFilter = document.getElementById("filterMonth").value;
       const statusFilter = document.getElementById("filterStatus").value;
-      let query = supabase.from("fees").select(`
+      let query = import_supabase_client5.supabase.from("fees").select(`
             *,
             students (id, name, roll_no, class)
         `).order("issued_at", { ascending: false });
@@ -1562,7 +1548,7 @@ var App = (() => {
     return __async(this, null, function* () {
       const container = document.getElementById("paymentHistory");
       container.innerHTML = '<p class="text-sm text-gray-500">Loading...</p>';
-      const { data, error } = yield supabase.from("fee_payments").select("*").eq("fee_id", feeId).order("payment_date", { ascending: false });
+      const { data, error } = yield import_supabase_client5.supabase.from("fee_payments").select("*").eq("fee_id", feeId).order("payment_date", { ascending: false });
       if (error) {
         container.innerHTML = '<p class="text-sm text-red-500">Error loading history</p>';
         return;
@@ -1606,7 +1592,7 @@ var App = (() => {
       btn.disabled = true;
       btn.textContent = "Processing...";
       try {
-        const { error: paymentError } = yield supabase.from("fee_payments").insert([{
+        const { error: paymentError } = yield import_supabase_client5.supabase.from("fee_payments").insert([{
           fee_id: feeId,
           student_id: studentId,
           amount_paid: amount,
@@ -1640,9 +1626,10 @@ var App = (() => {
       timeout = setTimeout(later, wait);
     };
   }
+  var import_supabase_client5;
   var init_fees = __esm({
     "assets/js/modules/fees.js"() {
-      init_supabase_client();
+      import_supabase_client5 = __require("../supabase-client.js");
       window.openPayment = (feeId, studentId, studentName, feeType, totalAmount, paidAmount) => __async(void 0, null, function* () {
         const balance = totalAmount - paidAmount;
         document.getElementById("paymentFeeId").value = feeId;
@@ -1718,7 +1705,7 @@ var App = (() => {
   }
   function fetchSettings() {
     return __async(this, null, function* () {
-      const { data, error } = yield supabase.from("settings").select("*").limit(1).single();
+      const { data, error } = yield import_supabase_client6.supabase.from("settings").select("*").limit(1).single();
       if (error && error.code !== "PGRST116") {
         console.error("Error fetching settings:", error);
         return;
@@ -1755,10 +1742,10 @@ var App = (() => {
       };
       let error;
       if (id) {
-        const res = yield supabase.from("settings").update(payload).eq("id", id);
+        const res = yield import_supabase_client6.supabase.from("settings").update(payload).eq("id", id);
         error = res.error;
       } else {
-        const res = yield supabase.from("settings").insert([payload]);
+        const res = yield import_supabase_client6.supabase.from("settings").insert([payload]);
         error = res.error;
       }
       if (error) {
@@ -1770,9 +1757,10 @@ var App = (() => {
       btn.textContent = "Save Changes";
     });
   }
+  var import_supabase_client6;
   var init_settings = __esm({
     "assets/js/modules/settings.js"() {
-      init_supabase_client();
+      import_supabase_client6 = __require("../supabase-client.js");
     }
   });
 
@@ -2023,7 +2011,7 @@ var App = (() => {
     return __async(this, null, function* () {
       const tbody = document.getElementById("studentsTableBody");
       tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center">Loading...</td></tr>';
-      const { data, error } = yield supabase.from("students").select("*").order("created_at", { ascending: false });
+      const { data, error } = yield import_supabase_client7.supabase.from("students").select("*").order("created_at", { ascending: false });
       if (error) {
         console.error("Error fetching students:", error);
         tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-red-500">Error: ${error.message}</td></tr>`;
@@ -2099,7 +2087,7 @@ var App = (() => {
   function loadClassesIntoDropdown() {
     return __async(this, null, function* () {
       const select = document.getElementById("class");
-      const { data, error } = yield supabase.from("classes").select("class_name, sections").order("class_name");
+      const { data, error } = yield import_supabase_client7.supabase.from("classes").select("class_name, sections").order("class_name");
       if (data && data.length > 0) {
         availableClasses = data;
         const currentValue = select.value;
@@ -2126,7 +2114,7 @@ var App = (() => {
   function generateNextRollNo() {
     return __async(this, null, function* () {
       try {
-        const { data, error } = yield supabase.from("students").select("roll_no").order("created_at", { ascending: false }).limit(1);
+        const { data, error } = yield import_supabase_client7.supabase.from("students").select("roll_no").order("created_at", { ascending: false }).limit(1);
         if (data && data.length > 0) {
           const lastRoll = data[0].roll_no;
           const match = lastRoll.match(/(\d+)$/);
@@ -2164,10 +2152,10 @@ var App = (() => {
       };
       let error;
       if (id) {
-        const res = yield supabase.from("students").update(studentData).eq("id", id);
+        const res = yield import_supabase_client7.supabase.from("students").update(studentData).eq("id", id);
         error = res.error;
       } else {
-        const res = yield supabase.from("students").insert([studentData]);
+        const res = yield import_supabase_client7.supabase.from("students").insert([studentData]);
         error = res.error;
       }
       if (error) {
@@ -2322,7 +2310,7 @@ var App = (() => {
       uploadBtn.textContent = "Uploading...";
       try {
         const rollNumbers = parsedStudents.map((s) => s.roll_no);
-        const { data: existing } = yield supabase.from("students").select("roll_no").in("roll_no", rollNumbers);
+        const { data: existing } = yield import_supabase_client7.supabase.from("students").select("roll_no").in("roll_no", rollNumbers);
         const existingRollNos = existing ? existing.map((s) => s.roll_no) : [];
         if (existingRollNos.length > 0) {
           const duplicates = existingRollNos.join(", ");
@@ -2333,7 +2321,7 @@ Please remove duplicates and try again.`);
           uploadBtn.textContent = "Upload Students";
           return;
         }
-        const { data, error } = yield supabase.from("students").insert(parsedStudents);
+        const { data, error } = yield import_supabase_client7.supabase.from("students").insert(parsedStudents);
         if (error) {
           throw error;
         }
@@ -2349,10 +2337,10 @@ Please remove duplicates and try again.`);
       }
     });
   }
-  var currentStudents, availableClasses, parsedStudents;
+  var import_supabase_client7, currentStudents, availableClasses, parsedStudents;
   var init_students = __esm({
     "assets/js/modules/students.js"() {
-      init_supabase_client();
+      import_supabase_client7 = __require("../supabase-client.js");
       currentStudents = [];
       availableClasses = [];
       parsedStudents = [];
@@ -2364,7 +2352,7 @@ Please remove duplicates and try again.`);
       window.deleteStudent = (id) => __async(void 0, null, function* () {
         if (!confirm("Are you sure you want to delete this student?"))
           return;
-        const { error } = yield supabase.from("students").delete().eq("id", id);
+        const { error } = yield import_supabase_client7.supabase.from("students").delete().eq("id", id);
         if (error) {
           alert("Error deleting student: " + error.message);
         } else {
@@ -2393,7 +2381,7 @@ Please remove duplicates and try again.`);
   // assets/js/app.js
   var require_app = __commonJS({
     "assets/js/app.js"(exports) {
-      init_supabase_client();
+      var import_supabase_client8 = __require("./supabase-client.js");
       init_();
       var navLinksContainer = document.getElementById("navLinks");
       var mainContent = document.getElementById("mainContent");
@@ -2410,7 +2398,7 @@ Please remove duplicates and try again.`);
       function initApp() {
         return __async(this, null, function* () {
           var _a;
-          const { data: { session }, error } = yield supabase.auth.getSession();
+          const { data: { session }, error } = yield import_supabase_client8.supabase.auth.getSession();
           if (error || !session) {
             window.location.href = "index.html";
             return;
@@ -2527,7 +2515,7 @@ Please remove duplicates and try again.`);
         });
       }
       logoutBtn.addEventListener("click", () => __async(exports, null, function* () {
-        yield supabase.auth.signOut();
+        yield import_supabase_client8.supabase.auth.signOut();
         window.location.href = "index.html";
       }));
       openSidebarBtn.addEventListener("click", () => sidebar.classList.remove("-translate-x-full"));
