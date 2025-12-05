@@ -416,7 +416,134 @@ export async function render(container) {
         dropdownMenu.classList.add('hidden');
     });
 
-    // Single student modal
+    document.getElementById('closeBulkModalBtn').addEventListener('click', closeBulkModal);
+    document.getElementById('cancelBulkBtn').addEventListener('click', closeBulkModal);
+    document.getElementById('downloadTemplateBtn').addEventListener('click', downloadTemplate);
+    document.getElementById('excelFileInput').addEventListener('change', handleFileSelect);
+    document.getElementById('uploadStudentsBtn').addEventListener('click', handleBulkUpload);
+    document.getElementById('closeCredModalBtn').addEventListener('click', () => {
+        document.getElementById('credentialsModal').classList.add('hidden');
+    });
+
+    // Profile Modal Listeners
+    document.getElementById('closeProfileModalBtn').addEventListener('click', closeProfileModal);
+    document.getElementById('editProfileBtn').addEventListener('click', () => {
+        closeProfileModal();
+        const id = document.getElementById('profileStudentId').value;
+        window.editStudent(id);
+    });
+    document.getElementById('deleteProfileBtn').addEventListener('click', () => {
+        const id = document.getElementById('profileStudentId').value;
+        window.deleteStudent(id);
+    });
+    document.getElementById('profilePhotoInput').addEventListener('change', handlePhotoUpload);
+
+    // Initial Fetch
+    fetchStudents();
+};
+
+async function fetchStudents() {
+    const tbody = document.getElementById('studentsTableBody');
+    tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center">Loading...</td></tr>';
+
+    const { data, error } = await supabase
+        .from('students')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+    if (error) {
+        console.error('Error fetching students:', error);
+        tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-red-500">Error loading students</td></tr>';
+        return;
+    }
+
+    currentStudents = data;
+    renderTable(data);
+}
+
+function renderTable(students) {
+    const tbody = document.getElementById('studentsTableBody');
+
+    if (students.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-gray-500">No students found</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = students.map(student => `
+        <tr class="hover:bg-gray-50 transition-colors group">
+            <td class="p-4">
+                <div class="font-medium text-gray-900">${student.name}</div>
+                <div class="text-xs text-gray-500">${student.email || 'No email'}</div>
+            </td>
+            <td class="p-4 text-gray-600">${student.roll_no}</td>
+            <td class="p-4">
+                <span class="px-2 py-1 bg-indigo-50 text-indigo-700 rounded-full text-xs font-medium">
+                    ${student.class} ${student.section ? `(${student.section})` : ''}
+                </span>
+            </td>
+            <td class="p-4 text-gray-600">${student.phone || '-'}</td>
+            <td class="p-4 text-right">
+                <button onclick="window.viewProfile('${student.id}')" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-600 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center ml-auto">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                    View Profile
+                </button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+// Expose functions to window
+window.viewProfile = async (id) => {
+    const student = currentStudents.find(s => s.id === id);
+    if (!student) return;
+
+    // Show modal immediately with basic info
+    const modal = document.getElementById('profileModal');
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+
+    // Populate Basic Info
+    document.getElementById('profileStudentId').value = student.id;
+    document.getElementById('profileName').textContent = student.name;
+    document.getElementById('profileClass').textContent = `${student.class} (${student.section})`;
+    document.getElementById('profileRollNo').textContent = student.roll_no;
+    document.getElementById('profileGender').textContent = student.gender || '-';
+    document.getElementById('profilePhone').textContent = student.phone || '-';
+    document.getElementById('profileEmail').textContent = student.email || '-';
+    document.getElementById('profileDate').textContent = student.admission_date || new Date(student.created_at).toLocaleDateString();
+
+    // Photo
+    const photoImg = document.getElementById('profilePhoto');
+    const placeholder = document.getElementById('profilePhotoPlaceholder');
+
+    if (student.photo_url) {
+        photoImg.src = student.photo_url;
+        photoImg.classList.remove('hidden');
+        placeholder.classList.add('hidden');
+    } else {
+        photoImg.classList.add('hidden');
+        placeholder.classList.remove('hidden');
+        placeholder.textContent = student.name.charAt(0);
+    }
+
+    // Credentials
+    document.getElementById('profileCredEmail').textContent = student.email || 'No email';
+    const firstName = student.name.split(' ')[0];
+    document.getElementById('profileCredPass').textContent = `${firstName}123!`;
+
+    // Fetch Fees
+    await fetchStudentFees(student.id);
+};
+
+window.editStudent = (id) => {
+    const student = currentStudents.find(s => s.id === id);
+    if (student) openModal(student);
+};
+
+window.deleteStudent = async (id) => {
+    if (!confirm('Are you sure you want to delete this student?')) return;
 
     const { error } = await supabase.from('students').delete().eq('id', id);
     if (error) {
@@ -425,6 +552,111 @@ export async function render(container) {
         fetchStudents();
     }
 };
+
+async function fetchStudentFees(studentId) {
+    // Reset to loading
+    document.getElementById('feeTotal').textContent = '...';
+    document.getElementById('feePaid').textContent = '...';
+    document.getElementById('feeRemaining').textContent = '...';
+    document.getElementById('feeLastPayment').textContent = '...';
+
+    try {
+        const { data: fees, error } = await supabase
+            .from('fees')
+            .select('*')
+            .eq('student_id', studentId);
+
+        if (error) throw error;
+
+        let total = 0;
+        let paid = 0;
+        let lastPayment = null;
+
+        fees.forEach(fee => {
+            const amount = parseFloat(fee.amount) || 0;
+            total += amount;
+            if (fee.status === 'paid') {
+                paid += amount;
+                const paymentDate = new Date(fee.updated_at || fee.issued_at);
+                if (!lastPayment || paymentDate > lastPayment) {
+                    lastPayment = paymentDate;
+                }
+            }
+        });
+
+        const remaining = total - paid;
+
+        document.getElementById('feeTotal').textContent = `₹${total.toLocaleString()}`;
+        document.getElementById('feePaid').textContent = `₹${paid.toLocaleString()}`;
+        document.getElementById('feeRemaining').textContent = `₹${remaining.toLocaleString()}`;
+        document.getElementById('feeLastPayment').textContent = lastPayment ? lastPayment.toLocaleDateString() : 'Never';
+
+    } catch (err) {
+        console.error('Error fetching fees:', err);
+        document.getElementById('feeTotal').textContent = 'Error';
+    }
+}
+
+async function handlePhotoUpload(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const studentId = document.getElementById('profileStudentId').value;
+    if (!studentId) return;
+
+    // Show uploading state
+    const img = document.getElementById('profilePhoto');
+    img.style.opacity = '0.5';
+
+    try {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${studentId}-${Date.now()}.${fileExt}`;
+        const filePath = `${fileName}`;
+
+        // Upload to Supabase Storage
+        const { error: uploadError } = await supabase.storage
+            .from('student-photos')
+            .upload(filePath, file);
+
+        if (uploadError) throw uploadError;
+
+        // Get Public URL
+        const { data: { publicUrl } } = supabase.storage
+            .from('student-photos')
+            .getPublicUrl(filePath);
+
+        // Update Student Record
+        const { error: updateError } = await supabase
+            .from('students')
+            .update({ photo_url: publicUrl })
+            .eq('id', studentId);
+
+        if (updateError) throw updateError;
+
+        // Update UI
+        img.src = publicUrl;
+        img.classList.remove('hidden');
+        document.getElementById('profilePhotoPlaceholder').classList.add('hidden');
+
+        // Update local data
+        const student = currentStudents.find(s => s.id === studentId);
+        if (student) student.photo_url = publicUrl;
+
+        alert('Profile photo updated!');
+
+    } catch (err) {
+        console.error('Error uploading photo:', err);
+        alert('Error uploading photo: ' + err.message);
+    } finally {
+        img.style.opacity = '1';
+    }
+}
+
+function closeProfileModal() {
+    const modal = document.getElementById('profileModal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+}
 
 async function openModal(student = null) {
     const modal = document.getElementById('studentModal');
