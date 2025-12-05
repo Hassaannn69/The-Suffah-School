@@ -76,8 +76,8 @@ export async function render(container) {
         </div>
 
         <!-- Modal -->
-        <div id="studentModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 backdrop-blur-sm">
-            <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl mx-4 overflow-hidden transform transition-all">
+        <div id="studentModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-start justify-center z-50 backdrop-blur-sm pt-10 overflow-y-auto transition-opacity duration-300">
+            <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl mx-4 mb-10 overflow-hidden transform transition-all duration-300 ease-out opacity-0 scale-95 translate-y-4">
                 <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
                     <h3 class="text-lg font-bold text-gray-800" id="modalTitle">Add New Student</h3>
                     <button id="closeModalBtn" class="text-gray-400 hover:text-gray-600">
@@ -146,9 +146,9 @@ export async function render(container) {
         </div>
 
         <!-- Bulk Upload Modal -->
-        <div id="bulkUploadModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 backdrop-blur-sm">
+        <div id="bulkUploadModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-start justify-center z-50 backdrop-blur-sm pt-10 overflow-y-auto transition-opacity duration-300">
             <!-- ... (existing bulk modal content) ... -->
-            <div class="bg-white rounded-xl shadow-2xl w-full max-w-3xl mx-4 overflow-hidden transform transition-all">
+            <div class="bg-white rounded-xl shadow-2xl w-full max-w-3xl mx-4 mb-10 overflow-hidden transform transition-all duration-300 ease-out opacity-0 scale-95 translate-y-4">
                 <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
                     <h3 class="text-lg font-bold text-gray-800">Add Bulk Students</h3>
                     <button id="closeBulkModalBtn" class="text-gray-400 hover:text-gray-600">
@@ -216,8 +216,8 @@ export async function render(container) {
         </div>
 
         <!-- Credentials Modal -->
-        <div id="credentialsModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 backdrop-blur-sm">
-            <div class="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 overflow-hidden transform transition-all animate-bounce-in">
+        <div id="credentialsModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-start justify-center z-50 backdrop-blur-sm pt-10 overflow-y-auto transition-opacity duration-300">
+            <div class="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 mb-10 overflow-hidden transform transition-all duration-300 ease-out opacity-0 scale-95 translate-y-4">
                 <div class="bg-green-500 p-6 text-center">
                     <div class="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -255,8 +255,8 @@ export async function render(container) {
         <!-- ... (existing credentials modal) ... -->
 
         <!-- Profile Modal -->
-        <div id="profileModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 backdrop-blur-sm">
-            <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl mx-4 overflow-hidden transform transition-all flex flex-col max-h-[90vh]">
+        <div id="profileModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-start justify-center z-50 backdrop-blur-sm pt-10 overflow-y-auto transition-opacity duration-300">
+            <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl mx-4 mb-10 overflow-hidden transform transition-all duration-300 ease-out opacity-0 scale-95 translate-y-4 flex flex-col">
                 <!-- Header with Photo -->
                 <div class="relative bg-indigo-600 h-32 flex-shrink-0">
                     <button id="closeProfileModalBtn" class="absolute top-4 right-4 text-white hover:text-gray-200 z-10">
@@ -438,7 +438,14 @@ export async function render(container) {
     document.getElementById('excelFileInput').addEventListener('change', handleFileSelect);
     document.getElementById('uploadStudentsBtn').addEventListener('click', handleBulkUpload);
     document.getElementById('closeCredModalBtn').addEventListener('click', () => {
-        document.getElementById('credentialsModal').classList.add('hidden');
+        const modal = document.getElementById('credentialsModal');
+        const content = modal.querySelector('div');
+        content.classList.remove('opacity-100', 'scale-100', 'translate-y-0');
+        content.classList.add('opacity-0', 'scale-95', 'translate-y-4');
+        setTimeout(() => {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }, 300);
     });
 
     // Profile Modal Listeners
@@ -517,8 +524,15 @@ window.viewProfile = async (id) => {
 
     // Show modal immediately with basic info
     const modal = document.getElementById('profileModal');
+    const content = modal.querySelector('div');
+
     modal.classList.remove('hidden');
     modal.classList.add('flex');
+
+    // Animate In
+    void modal.offsetWidth; // Trigger reflow
+    content.classList.remove('opacity-0', 'scale-95', 'translate-y-4');
+    content.classList.add('opacity-100', 'scale-100', 'translate-y-0');
 
     // Populate Basic Info
     document.getElementById('profileStudentId').value = student.id;
@@ -670,18 +684,31 @@ async function handlePhotoUpload(e) {
 
 function closeProfileModal() {
     const modal = document.getElementById('profileModal');
-    modal.classList.add('hidden');
-    modal.classList.remove('flex');
+    const content = modal.querySelector('div');
+
+    content.classList.remove('opacity-100', 'scale-100', 'translate-y-0');
+    content.classList.add('opacity-0', 'scale-95', 'translate-y-4');
+
+    setTimeout(() => {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }, 300);
 }
 
 async function openModal(student = null) {
     const modal = document.getElementById('studentModal');
+    const content = modal.querySelector('div');
     const title = document.getElementById('modalTitle');
     const form = document.getElementById('studentForm');
     const rollNoInput = document.getElementById('roll_no');
 
     modal.classList.remove('hidden');
     modal.classList.add('flex');
+
+    // Animate In
+    void modal.offsetWidth;
+    content.classList.remove('opacity-0', 'scale-95', 'translate-y-4');
+    content.classList.add('opacity-100', 'scale-100', 'translate-y-0');
 
     // Load classes into dropdown
     await loadClassesIntoDropdown();
@@ -784,8 +811,15 @@ async function generateNextRollNo() {
 
 function closeModal() {
     const modal = document.getElementById('studentModal');
-    modal.classList.add('hidden');
-    modal.classList.remove('flex');
+    const content = modal.querySelector('div');
+
+    content.classList.remove('opacity-100', 'scale-100', 'translate-y-0');
+    content.classList.add('opacity-0', 'scale-95', 'translate-y-4');
+
+    setTimeout(() => {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }, 300);
 }
 
 async function handleFormSubmit(e) {
@@ -915,10 +949,18 @@ async function createAuthUser(email, password, name) {
 
 function showCredentialsModal(email, password) {
     const modal = document.getElementById('credentialsModal');
+    const content = modal.querySelector('div');
+
     document.getElementById('credEmail').textContent = email;
     document.getElementById('credPassword').textContent = password;
+
     modal.classList.remove('hidden');
     modal.classList.add('flex');
+
+    // Animate In
+    void modal.offsetWidth;
+    content.classList.remove('opacity-0', 'scale-95', 'translate-y-4');
+    content.classList.add('opacity-100', 'scale-100', 'translate-y-0');
 }
 
 function handleSearch(e) {
@@ -934,8 +976,29 @@ function handleSearch(e) {
 
 function openBulkModal() {
     const modal = document.getElementById('bulkUploadModal');
+    const content = modal.querySelector('div'); // Assuming first div inside modal is the content container
+    // Actually, in the HTML, the content div is the direct child.
+    // Let's be safe and select by class or structure if needed, but querySelector('div') should get the first div.
+    // Looking at HTML: <div id="bulkUploadModal"> <div class="bg-white...">
+
     modal.classList.remove('hidden');
     modal.classList.add('flex');
+
+    // Animate In
+    void modal.offsetWidth;
+    // Note: I need to make sure I select the correct child. 
+    // In openBulkModal, I'll use modal.children[0] or querySelector.
+    // The previous replacement used modal.querySelector('div') which finds the first div descendant.
+    // The first div descendant IS the content card.
+
+    // However, for bulk modal, there might be other divs?
+    // HTML: <div id="bulkUploadModal"> <!-- comment --> <div class="bg-white...">
+    // querySelector('div') will find the bg-white div. Correct.
+
+    const innerContent = modal.querySelector('.bg-white'); // More specific
+
+    innerContent.classList.remove('opacity-0', 'scale-95', 'translate-y-4');
+    innerContent.classList.add('opacity-100', 'scale-100', 'translate-y-0');
 
     // Reset state
     parsedStudents = [];
@@ -947,8 +1010,15 @@ function openBulkModal() {
 
 function closeBulkModal() {
     const modal = document.getElementById('bulkUploadModal');
-    modal.classList.add('hidden');
-    modal.classList.remove('flex');
+    const content = modal.querySelector('.bg-white');
+
+    content.classList.remove('opacity-100', 'scale-100', 'translate-y-0');
+    content.classList.add('opacity-0', 'scale-95', 'translate-y-4');
+
+    setTimeout(() => {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }, 300);
 }
 
 // Download Excel Template
