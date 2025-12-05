@@ -6,6 +6,12 @@ INSERT INTO storage.buckets (id, name, public)
 VALUES ('student-photos', 'student-photos', true)
 ON CONFLICT (id) DO NOTHING;
 
+-- Drop existing policies to avoid conflicts
+DROP POLICY IF EXISTS "Public Access to Student Photos" ON storage.objects;
+DROP POLICY IF EXISTS "Authenticated Users can upload photos" ON storage.objects;
+DROP POLICY IF EXISTS "Authenticated Users can update photos" ON storage.objects;
+DROP POLICY IF EXISTS "Authenticated Users can delete photos" ON storage.objects;
+
 -- Allow public access to student photos
 CREATE POLICY "Public Access to Student Photos" 
 ON storage.objects FOR SELECT 
