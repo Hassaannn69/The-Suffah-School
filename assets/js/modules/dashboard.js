@@ -1,4 +1,5 @@
-import { supabase } from '../supabase-client.js';
+// Use global Supabase client for production compatibility
+const supabase = window.supabase;
 
 let allStudents = [];
 
@@ -66,6 +67,10 @@ export async function render(container) {
     `;
 
     try {
+        if (!supabase) {
+            throw new Error('Supabase client not initialized');
+        }
+        
         // Fetch Stats in parallel
         const [studentsCount, classesCount, feesStats] = await Promise.all([
             supabase.from('students').select('*', { count: 'exact', head: true }),
@@ -174,6 +179,11 @@ function closeStudentsModal() {
 async function fetchAndRenderStudents() {
     const tbody = document.getElementById('dashboardStudentsTableBody');
     tbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center">Loading...</td></tr>';
+
+    if (!supabase) {
+        tbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-red-500">Error: Supabase client not initialized</td></tr>';
+        return;
+    }
 
     const { data, error } = await supabase
         .from('students')

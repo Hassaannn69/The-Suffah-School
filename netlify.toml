@@ -1,10 +1,24 @@
 [build]
   publish = "."
   
+# Exclude static assets from SPA redirect - serve them directly
+[[redirects]]
+  from = "/assets/*"
+  to = "/assets/:splat"
+  status = 200
+  force = true
+  
+# SPA fallback - redirect all other routes to index.html
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
+  
+[[headers]]
+  for = "/assets/js/*.js"
+  [headers.values]
+    Content-Type = "application/javascript; charset=utf-8"
+    Cache-Control = "public, max-age=31536000"
   
 [[headers]]
   for = "/*"

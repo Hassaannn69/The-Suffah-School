@@ -1,4 +1,8 @@
-import { supabase } from '../supabase-client.js';
+// Use global Supabase client for production compatibility
+const supabase = window.supabase || (() => {
+    console.error('Supabase client not found on window object');
+    throw new Error('Supabase client not initialized');
+})();
 
 export async function render(container) {
     container.innerHTML = `

@@ -1,4 +1,15 @@
-import { supabase } from './supabase-client.js';
+// Use global Supabase client for production compatibility
+// Wait for Supabase to be initialized (it's loaded via supabase-init.js before this script)
+let supabase;
+function getSupabase() {
+    if (!supabase && window.supabase) {
+        supabase = window.supabase;
+    }
+    if (!supabase) {
+        throw new Error('Supabase client not initialized. Please ensure supabase-init.js loads before app.js');
+    }
+    return supabase;
+}
 
 // DOM Elements
 const navLinksContainer = document.getElementById('navLinks');
@@ -18,24 +29,59 @@ let currentRole = 'student'; // Default fallback
 
 // Auth Guard
 async function initApp() {
-    const { data: { session }, error } = await supabase.auth.getSession();
-
-    if (error || !session) {
-        window.location.href = 'index.html';
+    // Ensure Supabase is available
+    try {
+        getSupabase(); // Check if available
+    } catch (e) {
+        console.error('Supabase client not initialized');
+        mainContent.innerHTML = `
+            <div class="text-center py-10">
+                <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 dark:bg-red-900 mb-4">
+                    <svg class="w-8 h-8 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                </div>
+                <p class="text-gray-700 dark:text-gray-300 font-medium">Initialization Error</p>
+                <p class="text-gray-500 dark:text-gray-400 text-sm mt-2">Supabase client not initialized. Please refresh the page.</p>
+            </div>
+        `;
         return;
     }
 
-    currentUser = session.user;
-    // Extract role from metadata or assume default
-    currentRole = currentUser.user_metadata?.role || 'student';
+    try {
+        const supabaseClient = getSupabase();
+        const { data: { session }, error } = await supabaseClient.auth.getSession();
 
-    // Update Sidebar User Info
-    userNameEl.textContent = currentUser.email.split('@')[0]; // Simple name extraction
-    userRoleEl.textContent = currentRole.charAt(0).toUpperCase() + currentRole.slice(1);
-    userAvatarEl.textContent = currentUser.email.charAt(0).toUpperCase();
+        if (error || !session) {
+            window.location.href = 'index.html';
+            return;
+        }
 
-    renderSidebar();
-    loadModule('dashboard'); // Load default module
+        currentUser = session.user;
+        // Extract role from metadata or assume default
+        currentRole = currentUser.user_metadata?.role || 'student';
+
+        // Update Sidebar User Info
+        userNameEl.textContent = currentUser.email.split('@')[0]; // Simple name extraction
+        userRoleEl.textContent = currentRole.charAt(0).toUpperCase() + currentRole.slice(1);
+        userAvatarEl.textContent = currentUser.email.charAt(0).toUpperCase();
+
+        renderSidebar();
+        loadModule('dashboard'); // Load default module
+    } catch (err) {
+        console.error('Error initializing app:', err);
+        mainContent.innerHTML = `
+            <div class="text-center py-10">
+                <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 dark:bg-red-900 mb-4">
+                    <svg class="w-8 h-8 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                </div>
+                <p class="text-gray-700 dark:text-gray-300 font-medium">Initialization Error</p>
+                <p class="text-gray-500 dark:text-gray-400 text-sm mt-2">${err.message}</p>
+            </div>
+        `;
+    }
 }
 
 // Sidebar Navigation Config
@@ -120,7 +166,12 @@ async function loadModule(moduleId) {
         `;
 
         try {
-            // Dynamic import of module
+            // Dynamic import of module - relative path works with ES modules
+            // Ensure Supabase is available before loading modules
+            if (!window.supabase) {
+                throw new Error('Supabase client not initialized. Please refresh the page.');
+            }
+            
             const module = await import(`./modules/${moduleId}.js`);
             if (module && module.render) {
                 await module.render(mainContent);
@@ -157,7 +208,8 @@ async function loadModule(moduleId) {
 
 // Logout Logic
 logoutBtn.addEventListener('click', async () => {
-    await supabase.auth.signOut();
+    const supabaseClient = getSupabase();
+    await supabaseClient.auth.signOut();
     window.location.href = 'index.html';
 });
 
