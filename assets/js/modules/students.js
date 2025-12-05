@@ -496,8 +496,10 @@ function renderTable(students) {
     tbody.innerHTML = students.map(student => `
         <tr class="hover:bg-gray-50 transition-colors group">
             <td class="p-4">
-                <div class="font-medium text-gray-900">${student.name}</div>
-                <div class="text-xs text-gray-500">${student.email || 'No email'}</div>
+                <button onclick="window.viewProfile('${student.id}')" class="text-left hover:text-indigo-600 transition-colors focus:outline-none">
+                    <div class="font-medium text-gray-900 group-hover:text-indigo-600">${student.name}</div>
+                    <div class="text-xs text-gray-500">${student.email || 'No email'}</div>
+                </button>
             </td>
             <td class="p-4 text-gray-600">${student.roll_no}</td>
             <td class="p-4">
