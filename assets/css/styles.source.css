@@ -147,6 +147,18 @@ body {
   color: var(--color-primary);
 }
 
+.text-text {
+  color: var(--color-text);
+}
+
+.text-text-secondary {
+  color: var(--color-text-secondary);
+}
+
+.text-text-muted {
+  color: var(--color-text-muted);
+}
+
 .border-custom {
   border-color: var(--color-border);
 }
@@ -506,13 +518,37 @@ body {
 /* Focus Visible for Accessibility */
 *:focus-visible {
   outline: none;
-  ring: 2px solid var(--color-primary);
-  ring-offset: 2px;
+  box-shadow: 0 0 0 2px var(--color-primary);
+  outline-offset: 2px;
 }
 
 /* Smooth Transitions for All Interactive Elements */
 button, a, input, select, textarea {
   transition: all var(--transition-base);
+}
+
+/* Ensure proper text color inheritance */
+.dark .text-text {
+  color: var(--color-text);
+}
+
+.dark .text-text-secondary {
+  color: var(--color-text-secondary);
+}
+
+.dark .text-text-muted {
+  color: var(--color-text-muted);
+}
+
+/* Fix stat card text visibility */
+.stat-card h3,
+.stat-card p {
+  color: inherit;
+}
+
+/* Ensure buttons inherit colors properly */
+button {
+  color: inherit;
 }
 
 /* Print Styles */

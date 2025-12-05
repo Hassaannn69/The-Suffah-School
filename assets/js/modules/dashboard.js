@@ -193,7 +193,19 @@ export async function render(container) {
 
     } catch (error) {
         console.error('Error loading dashboard stats:', error);
-        container.innerHTML += `<div class="bg-red-50 p-4 rounded text-red-600">Error loading stats: ${error.message}</div>`;
+        container.innerHTML += `
+            <div class="modern-card p-6 border-l-4 border-red-500 animate-fade-in">
+                <div class="flex items-center space-x-3">
+                    <svg class="w-6 h-6 text-red-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <div>
+                        <p class="text-text font-semibold">Error loading stats</p>
+                        <p class="text-text-secondary text-sm mt-1">${error.message}</p>
+                    </div>
+                </div>
+            </div>
+        `;
     }
 }
 
@@ -213,10 +225,10 @@ function closeStudentsModal() {
 
 async function fetchAndRenderStudents() {
     const tbody = document.getElementById('dashboardStudentsTableBody');
-    tbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center">Loading...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-text-secondary">Loading...</td></tr>';
 
     if (!supabase) {
-        tbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-red-500">Error: Supabase client not initialized</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-red-600 dark:text-red-400">Error: Supabase client not initialized</td></tr>';
         return;
     }
 
@@ -226,7 +238,7 @@ async function fetchAndRenderStudents() {
         .order('name');
 
     if (error) {
-        tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-red-500">Error: ${error.message}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-red-600 dark:text-red-400">Error: ${error.message}</td></tr>`;
         return;
     }
 
@@ -257,7 +269,7 @@ function renderStudentsTable(students) {
     countSpan.textContent = students.length;
 
     if (students.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-gray-400">No students found.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-text-muted">No students found.</td></tr>';
         return;
     }
 
@@ -335,7 +347,7 @@ function renderCharts(paid, unpaid, students) {
         // Show placeholder message - only replace the canvas wrapper
         const canvas = document.getElementById('studentsChart');
         canvas.parentElement.innerHTML = `
-            <div class="flex items-center justify-center h-full text-gray-400">
+            <div class="flex items-center justify-center h-full text-text-muted">
                 <p>No students added yet. Add students to see distribution.</p>
             </div>
         `;
