@@ -11,46 +11,179 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 
-<body class="bg-surface min-h-screen flex items-center justify-center p-4">
+<body class="bg-surface min-h-screen flex items-center justify-center p-4 overflow-hidden">
 
-    <div class="glass-panel w-full max-w-md p-8 rounded-2xl shadow-xl">
-        <div class="text-center mb-8">
-            <div class="w-20 h-20 rounded-xl mx-auto mb-4 overflow-hidden shadow-lg">
+    <!-- Background Blobs -->
+    <div class="fixed inset-0 overflow-hidden -z-10 pointer-events-none">
+        <div
+            class="absolute top-0 left-0 w-96 h-96 bg-purple-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob">
+        </div>
+        <div
+            class="absolute top-0 right-0 w-96 h-96 bg-indigo-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-2000">
+        </div>
+        <div
+            class="absolute -bottom-32 left-20 w-96 h-96 bg-pink-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-4000">
+        </div>
+    </div>
+
+    <div class="glass-panel w-full max-w-md p-8 rounded-2xl shadow-xl relative transition-all duration-500 ease-in-out"
+        id="mainCard">
+
+        <!-- Header Section -->
+        <div class="text-center mb-8 transition-all duration-500" id="headerSection">
+            <div
+                class="w-20 h-20 rounded-xl mx-auto mb-4 overflow-hidden shadow-lg transform transition-transform hover:scale-105 duration-300">
                 <img src="assets/images/school-logo.jpg" alt="The Suffah School" class="w-full h-full object-cover">
             </div>
-            <h1 class="text-2xl font-bold text-gray-800">The Suffah School</h1>
-            <p class="text-gray-500 text-sm mt-2">Sign in to access your dashboard</p>
+            <h1
+                class="text-2xl font-bold text-gray-800 bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">
+                The Suffah School</h1>
+            <p class="text-gray-500 text-sm mt-2" id="headerSubtitle">Select your role to continue</p>
         </div>
 
-        <form id="loginForm" class="space-y-6">
-            <div>
-                <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
-                <input type="email" id="email" required
-                    class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors bg-gray-50 focus:bg-white outline-none"
-                    placeholder="admin@school.com">
-            </div>
+        <!-- Role Selection View -->
+        <div id="roleSelection" class="space-y-4 transition-all duration-500 ease-in-out">
+            <div class="grid grid-cols-2 gap-4">
+                <!-- Admin Role -->
+                <button onclick="selectRole('admin')"
+                    class="role-card group p-4 rounded-xl border border-gray-200 hover:border-indigo-500 hover:shadow-md bg-white/50 hover:bg-white transition-all duration-300 text-left">
+                    <div
+                        class="w-10 h-10 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                            stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                        </svg>
+                    </div>
+                    <h3 class="font-semibold text-gray-800">Admin</h3>
+                    <p class="text-xs text-gray-500 mt-1">Full Access</p>
+                </button>
 
-            <div>
-                <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                <input type="password" id="password" required
-                    class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors bg-gray-50 focus:bg-white outline-none"
-                    placeholder="••••••••">
-            </div>
+                <!-- Teacher Role -->
+                <button onclick="selectRole('teacher')"
+                    class="role-card group p-4 rounded-xl border border-gray-200 hover:border-green-500 hover:shadow-md bg-white/50 hover:bg-white transition-all duration-300 text-left">
+                    <div
+                        class="w-10 h-10 rounded-lg bg-green-100 text-green-600 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                            stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                        </svg>
+                    </div>
+                    <h3 class="font-semibold text-gray-800">Teacher</h3>
+                    <p class="text-xs text-gray-500 mt-1">Class Management</p>
+                </button>
 
-            <div id="errorMessage" class="hidden p-3 rounded-lg bg-red-50 text-red-600 text-sm flex items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                    <path fill-rule="evenodd"
-                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
-                        clip-rule="evenodd" />
+                <!-- Accountant Role -->
+                <button onclick="selectRole('accountant')"
+                    class="role-card group p-4 rounded-xl border border-gray-200 hover:border-blue-500 hover:shadow-md bg-white/50 hover:bg-white transition-all duration-300 text-left">
+                    <div
+                        class="w-10 h-10 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                            stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                        </svg>
+                    </div>
+                    <h3 class="font-semibold text-gray-800">Accountant</h3>
+                    <p class="text-xs text-gray-500 mt-1">Fee Management</p>
+                </button>
+
+                <!-- Student Role -->
+                <button onclick="selectRole('student')"
+                    class="role-card group p-4 rounded-xl border border-gray-200 hover:border-purple-500 hover:shadow-md bg-white/50 hover:bg-white transition-all duration-300 text-left">
+                    <div
+                        class="w-10 h-10 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                            stroke="currentColor">
+                            <path d="M12 14l9-5-9-5-9 5 9 5z" />
+                            <path
+                                d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14zm-4 6v-7.5l4-2.222" />
+                        </svg>
+                    </div>
+                    <h3 class="font-semibold text-gray-800">Student</h3>
+                    <p class="text-xs text-gray-500 mt-1">View Records</p>
+                </button>
+            </div>
+        </div>
+
+        <!-- Login Form View (Hidden Initially) -->
+        <div id="loginContainer"
+            class="hidden opacity-0 transform translate-x-10 transition-all duration-500 ease-in-out">
+            <button onclick="backToRoles()"
+                class="mb-4 flex items-center text-sm text-gray-500 hover:text-indigo-600 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
                 </svg>
-                <span id="errorText">Authentication failed</span>
-            </div>
-
-            <button type="submit" id="loginBtn"
-                class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-lg shadow-lg shadow-indigo-200 transition-all transform hover:-translate-y-0.5 active:translate-y-0">
-                Sign In
+                Back to Roles
             </button>
-        </form>
+
+            <form id="loginForm" class="space-y-6">
+                <div>
+                    <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <svg class="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none"
+                                viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M16 12a4 4 0 1 0 -8 0 4 4 0 0 0 -8 0zm0 0v1.5a2.5 2.5 0 0 0 5 0V12a9 9 0 1 0 -9 9m4.5-1.206a8.959 8.959 0 0 1 -4.5 1.207" />
+                            </svg>
+                        </div>
+                        <input type="email" id="email" required
+                            class="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors bg-gray-50 focus:bg-white outline-none"
+                            placeholder="name@school.com">
+                    </div>
+                </div>
+
+                <div>
+                    <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <svg class="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none"
+                                viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                            </svg>
+                        </div>
+                        <input type="password" id="password" required
+                            class="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors bg-gray-50 focus:bg-white outline-none"
+                            placeholder="••••••••">
+                    </div>
+                </div>
+
+                <div id="errorMessage"
+                    class="hidden p-3 rounded-lg bg-red-50 text-red-600 text-sm flex items-center animate-shake">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 flex-shrink-0" viewBox="0 0 20 20"
+                        fill="currentColor">
+                        <path fill-rule="evenodd"
+                            d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                            clip-rule="evenodd" />
+                    </svg>
+                    <span id="errorText">Authentication failed</span>
+                </div>
+
+                <button type="submit" id="loginBtn"
+                    class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-lg shadow-lg shadow-indigo-200 transition-all transform hover:-translate-y-0.5 active:translate-y-0 relative overflow-hidden">
+                    <span class="relative z-10">Sign In</span>
+                </button>
+            </form>
+        </div>
+
+        <!-- Success Overlay -->
+        <div id="successOverlay"
+            class="absolute inset-0 bg-white/90 backdrop-blur-sm rounded-2xl flex flex-col items-center justify-center z-50 hidden opacity-0 transition-opacity duration-500">
+            <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-4 animate-bounce">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-green-600" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+            </div>
+            <h2 class="text-2xl font-bold text-gray-800 mb-2">Login Successful!</h2>
+            <p class="text-gray-500">Redirecting to dashboard...</p>
+        </div>
 
         <div class="mt-6 text-center text-sm text-gray-500">
             <p>Don't have an account? Contact your administrator.</p>
@@ -73,12 +206,70 @@
 
         console.log('Supabase client initialized:', SUPABASE_URL);
 
+        // UI Elements
+        const mainCard = document.getElementById('mainCard');
+        const roleSelection = document.getElementById('roleSelection');
+        const loginContainer = document.getElementById('loginContainer');
+        const headerSubtitle = document.getElementById('headerSubtitle');
         const loginForm = document.getElementById('loginForm');
         const emailInput = document.getElementById('email');
         const passwordInput = document.getElementById('password');
         const errorMessage = document.getElementById('errorMessage');
         const errorText = document.getElementById('errorText');
         const loginBtn = document.getElementById('loginBtn');
+        const successOverlay = document.getElementById('successOverlay');
+
+        let selectedRole = null;
+
+        // Role Selection Logic
+        function selectRole(role) {
+            selectedRole = role;
+
+            // Animate out role selection
+            roleSelection.classList.add('opacity-0', '-translate-x-10');
+            setTimeout(() => {
+                roleSelection.classList.add('hidden');
+
+                // Animate in login form
+                loginContainer.classList.remove('hidden');
+                // Trigger reflow
+                void loginContainer.offsetWidth;
+                loginContainer.classList.remove('opacity-0', 'translate-x-10');
+
+                // Update header
+                const roleNames = {
+                    'admin': 'Administrator',
+                    'teacher': 'Teacher',
+                    'accountant': 'Accountant',
+                    'student': 'Student'
+                };
+                headerSubtitle.textContent = `Login as ${roleNames[role]}`;
+
+                // Focus email
+                emailInput.focus();
+            }, 300);
+        }
+
+        function backToRoles() {
+            // Animate out login form
+            loginContainer.classList.add('opacity-0', 'translate-x-10');
+            setTimeout(() => {
+                loginContainer.classList.add('hidden');
+
+                // Animate in role selection
+                roleSelection.classList.remove('hidden');
+                // Trigger reflow
+                void roleSelection.offsetWidth;
+                roleSelection.classList.remove('opacity-0', '-translate-x-10');
+
+                // Reset header
+                headerSubtitle.textContent = 'Select your role to continue';
+
+                // Clear form
+                loginForm.reset();
+                errorMessage.classList.add('hidden');
+            }, 300);
+        }
 
         // Check if already logged in
         async function checkSession() {
@@ -123,7 +314,7 @@
             // Reset UI
             errorMessage.classList.add('hidden');
             loginBtn.disabled = true;
-            const originalBtnText = loginBtn.textContent;
+            const originalBtnText = loginBtn.innerHTML;
             loginBtn.innerHTML = `<svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -148,8 +339,17 @@
                     // Double check session is set before redirecting
                     const { data: sessionData } = await supabase.auth.getSession();
                     if (sessionData.session) {
-                        console.log('Session verified. Redirecting...');
-                        window.location.href = 'dashboard.html';
+                        // Show Success Animation
+                        successOverlay.classList.remove('hidden');
+                        // Trigger reflow
+                        void successOverlay.offsetWidth;
+                        successOverlay.classList.remove('opacity-0');
+
+                        // Wait for animation then redirect
+                        setTimeout(() => {
+                            window.location.href = 'dashboard.html';
+                        }, 1500);
+
                     } else {
                         throw new Error('Login succeeded but session was not established. Please try again.');
                     }
@@ -167,9 +367,14 @@
 
                 errorText.textContent = msg;
                 errorMessage.classList.remove('hidden');
-            } finally {
+
+                // Shake animation for error
+                errorMessage.classList.remove('animate-shake');
+                void errorMessage.offsetWidth; // trigger reflow
+                errorMessage.classList.add('animate-shake');
+
                 loginBtn.disabled = false;
-                loginBtn.textContent = originalBtnText;
+                loginBtn.innerHTML = originalBtnText;
             }
         });
     </script>
