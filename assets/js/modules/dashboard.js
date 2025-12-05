@@ -255,7 +255,10 @@ function filterStudents(e) {
 }
 
 function renderCharts(paid, unpaid, students) {
-    const ctxFees = document.getElementById('feesChart').getContext('2d');
+    const feesCanvas = document.getElementById('feesChart');
+    if (!feesCanvas) return; // Prevent error if user navigated away
+
+    const ctxFees = feesCanvas.getContext('2d');
     new Chart(ctxFees, {
         type: 'doughnut',
         data: {
@@ -289,11 +292,14 @@ function renderCharts(paid, unpaid, students) {
     const classCounts = classLabels.map(label => classDistribution[label]);
 
     // If no data, show a message instead of empty chart
-    const ctxStudents = document.getElementById('studentsChart').getContext('2d');
+    const studentsCanvas = document.getElementById('studentsChart');
+    if (!studentsCanvas) return;
+
+    const ctxStudents = studentsCanvas.getContext('2d');
 
     if (classLabels.length === 0) {
         // Show placeholder message - only replace the canvas wrapper
-        const canvas = document.getElementById('studentsChart');
+        const canvas = studentsCanvas;
         canvas.parentElement.innerHTML = `
             <div class="flex items-center justify-center h-full text-gray-400">
                 <p>No students added yet. Add students to see distribution.</p>
