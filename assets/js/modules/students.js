@@ -251,6 +251,154 @@ export async function render(container) {
                 </div>
             </div>
         </div>
+        <!-- Credentials Modal -->
+        <!-- ... (existing credentials modal) ... -->
+
+        <!-- Profile Modal -->
+        <div id="profileModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 backdrop-blur-sm">
+            <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl mx-4 overflow-hidden transform transition-all flex flex-col max-h-[90vh]">
+                <!-- Header with Photo -->
+                <div class="relative bg-indigo-600 h-32 flex-shrink-0">
+                    <button id="closeProfileModalBtn" class="absolute top-4 right-4 text-white hover:text-gray-200 z-10">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                    <div class="absolute -bottom-12 left-8 flex items-end">
+                        <div class="relative group">
+                            <div class="h-24 w-24 rounded-full border-4 border-white bg-white shadow-lg overflow-hidden">
+                                <img id="profilePhoto" src="" alt="Profile" class="h-full w-full object-cover">
+                                <div id="profilePhotoPlaceholder" class="h-full w-full flex items-center justify-center bg-indigo-100 text-indigo-600 text-3xl font-bold">
+                                    <!-- Initial -->
+                                </div>
+                            </div>
+                            <label for="profilePhotoInput" class="absolute bottom-0 right-0 bg-white rounded-full p-1.5 shadow-md cursor-pointer hover:bg-gray-50 transition-colors text-gray-600">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                                <input type="file" id="profilePhotoInput" accept="image/*" class="hidden">
+                            </label>
+                        </div>
+                        <div class="ml-4 mb-1">
+                            <h2 id="profileName" class="text-2xl font-bold text-white drop-shadow-md">Student Name</h2>
+                            <p id="profileClass" class="text-indigo-100 text-sm font-medium">Class 10 (A)</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Content -->
+                <div class="p-8 pt-16 overflow-y-auto flex-grow">
+                    <input type="hidden" id="profileStudentId">
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        
+                        <!-- Left Column: Details -->
+                        <div class="md:col-span-2 space-y-6">
+                            <!-- Personal Details -->
+                            <div class="bg-white rounded-lg border border-gray-100 p-5 shadow-sm">
+                                <h3 class="text-sm font-bold text-gray-900 uppercase tracking-wide mb-4 border-b border-gray-100 pb-2">Personal Details</h3>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-6">
+                                    <div>
+                                        <label class="text-xs text-gray-500 block">Roll Number</label>
+                                        <span id="profileRollNo" class="text-sm font-medium text-gray-900">-</span>
+                                    </div>
+                                    <div>
+                                        <label class="text-xs text-gray-500 block">Gender</label>
+                                        <span id="profileGender" class="text-sm font-medium text-gray-900">-</span>
+                                    </div>
+                                    <div>
+                                        <label class="text-xs text-gray-500 block">Phone</label>
+                                        <span id="profilePhone" class="text-sm font-medium text-gray-900">-</span>
+                                    </div>
+                                    <div>
+                                        <label class="text-xs text-gray-500 block">Admission Date</label>
+                                        <span id="profileDate" class="text-sm font-medium text-gray-900">-</span>
+                                    </div>
+                                    <div class="sm:col-span-2">
+                                        <label class="text-xs text-gray-500 block">Email</label>
+                                        <span id="profileEmail" class="text-sm font-medium text-gray-900">-</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Fee Summary -->
+                            <div class="bg-white rounded-lg border border-gray-100 p-5 shadow-sm">
+                                <h3 class="text-sm font-bold text-gray-900 uppercase tracking-wide mb-4 border-b border-gray-100 pb-2">Fee Status</h3>
+                                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                    <div class="bg-blue-50 p-3 rounded-lg text-center">
+                                        <div class="text-xs text-blue-600 font-medium uppercase">Total Fees</div>
+                                        <div id="feeTotal" class="text-lg font-bold text-blue-800">₹0</div>
+                                    </div>
+                                    <div class="bg-green-50 p-3 rounded-lg text-center">
+                                        <div class="text-xs text-green-600 font-medium uppercase">Paid</div>
+                                        <div id="feePaid" class="text-lg font-bold text-green-800">₹0</div>
+                                    </div>
+                                    <div class="bg-red-50 p-3 rounded-lg text-center">
+                                        <div class="text-xs text-red-600 font-medium uppercase">Remaining</div>
+                                        <div id="feeRemaining" class="text-lg font-bold text-red-800">₹0</div>
+                                    </div>
+                                </div>
+                                <div class="mt-4 text-xs text-gray-500 text-center">
+                                    Last Payment: <span id="feeLastPayment" class="font-medium text-gray-700">-</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right Column: Credentials & Actions -->
+                        <div class="space-y-6">
+                            <!-- Credentials Card -->
+                            <div class="bg-indigo-50 rounded-lg border border-indigo-100 p-5 shadow-sm">
+                                <h3 class="text-sm font-bold text-indigo-900 uppercase tracking-wide mb-4 border-b border-indigo-200 pb-2">Login Credentials</h3>
+                                <div class="space-y-3">
+                                    <div>
+                                        <label class="text-xs text-indigo-500 block">Username / Email</label>
+                                        <div class="flex items-center justify-between">
+                                            <code id="profileCredEmail" class="text-sm font-mono font-bold text-indigo-900 truncate mr-2">user@school.com</code>
+                                            <button onclick="navigator.clipboard.writeText(document.getElementById('profileCredEmail').textContent)" class="text-indigo-400 hover:text-indigo-600">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="text-xs text-indigo-500 block">Default Password</label>
+                                        <div class="flex items-center justify-between">
+                                            <code id="profileCredPass" class="text-sm font-mono font-bold text-indigo-900">Pass123!</code>
+                                            <button onclick="navigator.clipboard.writeText(document.getElementById('profileCredPass').textContent)" class="text-indigo-400 hover:text-indigo-600">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Actions -->
+                            <div class="bg-white rounded-lg border border-gray-100 p-5 shadow-sm">
+                                <h3 class="text-sm font-bold text-gray-900 uppercase tracking-wide mb-4 border-b border-gray-100 pb-2">Actions</h3>
+                                <div class="space-y-3">
+                                    <button id="editProfileBtn" class="w-full flex items-center justify-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                        </svg>
+                                        Edit Details
+                                    </button>
+                                    <button id="deleteProfileBtn" class="w-full flex items-center justify-center px-4 py-2 border border-red-200 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-colors">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
+                                        Delete Student
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     `;
 
     // Event Listeners
@@ -269,28 +417,6 @@ export async function render(container) {
     });
 
     // Single student modal
-    document.getElementById('addSingleStudent').addEventListener('click', () => {
-        dropdownMenu.classList.add('hidden');
-        openModal();
-    });
-
-    document.getElementById('closeModalBtn').addEventListener('click', closeModal);
-    document.getElementById('cancelBtn').addEventListener('click', closeModal);
-    document.getElementById('studentForm').addEventListener('submit', handleFormSubmit);
-
-    // Bulk upload modal
-    document.getElementById('addBulkStudents').addEventListener('click', () => {
-        dropdownMenu.classList.add('hidden');
-        openBulkModal();
-    });
-
-    document.getElementById('closeBulkModalBtn').addEventListener('click', closeBulkModal);
-    document.getElementById('cancelBulkBtn').addEventListener('click', closeBulkModal);
-    if (student) openModal(student);
-};
-
-window.deleteStudent = async (id) => {
-    if (!confirm('Are you sure you want to delete this student?')) return;
 
     const { error } = await supabase.from('students').delete().eq('id', id);
     if (error) {
