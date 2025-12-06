@@ -76,9 +76,9 @@ export async function render(container) {
         </div>
 
         <!-- Modal -->
-        <div id="studentModal" class="modal-overlay fixed inset-0 bg-black bg-opacity-50 hidden z-50 backdrop-blur-sm overflow-y-auto transition-opacity duration-300 p-4" style="display: none;">
-            <div class="min-h-full flex items-center justify-center">
-                <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden transform transition-all duration-300 ease-out opacity-0 scale-95">
+        <!-- Modal -->
+        <div id="studentModal" class="modal-overlay fixed inset-0 bg-black bg-opacity-50 hidden z-50 backdrop-blur-sm overflow-y-auto transition-opacity duration-300">
+            <div class="relative m-auto bg-white rounded-xl shadow-2xl w-full max-w-2xl mx-4 my-4 overflow-hidden transform transition-all duration-300 ease-out opacity-0 scale-95 translate-y-0">
                 <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
                     <h3 class="text-lg font-bold text-gray-800" id="modalTitle">Add New Student</h3>
                     <button id="closeModalBtn" class="text-gray-400 hover:text-gray-600">
@@ -143,7 +143,6 @@ export async function render(container) {
                         <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors">Save Student</button>
                     </div>
                 </form>
-                </div>
             </div>
         </div>
 
@@ -707,8 +706,8 @@ async function openModal(student = null) {
     const form = document.getElementById('studentForm');
     const rollNoInput = document.getElementById('roll_no');
 
-    modal.style.display = 'block';
     modal.classList.remove('hidden');
+    modal.classList.add('flex');
 
     // Animate In
     void modal.offsetWidth;
@@ -823,7 +822,7 @@ function closeModal() {
 
     setTimeout(() => {
         modal.classList.add('hidden');
-        modal.style.display = 'none';
+        modal.classList.remove('flex');
     }, 300);
 }
 

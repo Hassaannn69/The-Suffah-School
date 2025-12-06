@@ -67,10 +67,9 @@ body {
   background: #6b7280;
 }
 
-/* Modal Centering - Grid-based approach that works with overflow */
+/* Modal Centering - Flex + Margin Auto approach */
 .modal-overlay {
-  display: grid !important;
-  place-items: center;
+  display: flex !important;
   position: fixed;
   inset: 0;
   padding: 1rem;
@@ -81,14 +80,7 @@ body {
   display: none !important;
 }
 
-/* Ensure modal content stays centered */
-.modal-overlay>div:first-child {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 100%;
-  width: 100%;
-}
+/* Wrapper rule removed as we simplified HTML structure */
 
 /* Ensure modal content is properly centered vertically */
 .modal-content {
