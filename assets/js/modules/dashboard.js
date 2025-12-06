@@ -61,7 +61,7 @@ export async function render(container) {
         </div>
 
         <!-- Students Modal -->
-        <div id="dashboardStudentsModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 backdrop-blur-sm">
+        <div id="dashboardStudentsModal" class="modal-overlay fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 backdrop-blur-sm">
             <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl mx-4 overflow-hidden flex flex-col max-h-[90vh]">
                 <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
                     <h3 class="text-lg font-bold text-gray-800">All Students</h3>

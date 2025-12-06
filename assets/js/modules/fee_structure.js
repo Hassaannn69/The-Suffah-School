@@ -106,7 +106,7 @@ export async function render(container) {
         </div>
 
         <!-- Fee Type Modal -->
-        <div id="feeTypeModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 backdrop-blur-sm">
+        <div id="feeTypeModal" class="modal-overlay fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 backdrop-blur-sm">
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md mx-4 overflow-hidden transform transition-all">
                 <div class="p-6 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-700">
                     <h3 class="text-lg font-bold text-gray-800 dark:text-white" id="feeTypeModalTitle">Add Fee Type</h3>
@@ -145,7 +145,7 @@ export async function render(container) {
         </div>
 
         <!-- Assign Fee Modal -->
-        <div id="assignFeeModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 backdrop-blur-sm">
+        <div id="assignFeeModal" class="modal-overlay fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 backdrop-blur-sm">
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md mx-4 overflow-hidden transform transition-all">
                 <div class="p-6 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-700">
                     <h3 class="text-lg font-bold text-gray-800 dark:text-white">Assign Fee to Class</h3>

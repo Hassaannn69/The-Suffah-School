@@ -23,7 +23,7 @@ export async function render(container) {
         </div>
 
         <!-- Modal -->
-        <div id="classModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 backdrop-blur-sm">
+        <div id="classModal" class="modal-overlay fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 backdrop-blur-sm">
             <div class="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 my-4 overflow-hidden">
                 <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
                     <h3 class="text-lg font-bold text-gray-800">Add New Class</h3>
