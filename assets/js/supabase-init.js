@@ -28,16 +28,25 @@ window.formatCurrency = (amount) => {
     return `${window.currencySymbol} ${parseFloat(amount || 0).toLocaleString()}`;
 };
 
-// Fetch currency setting immediately
+// Fetch currency setting immediately (silently fails if settings table doesn't exist)
 (async () => {
     try {
-        // Wait for supabase to be ready if needed, but here it's synchronous
-        const { data } = await window.supabase.from('settings').select('currency').single();
+        const { data, error } = await window.supabase.from('settings').select('currency').single();
+        if (error) {
+            // Settings table may not exist - this is normal for new installations
+            if (error.code === 'PGRST116' || error.code === '42P01' || error.message.includes('does not exist')) {
+                console.log('ℹ️ Settings table not found, using default currency: PKR');
+            }
+            // Don't log other errors to avoid console noise
+            return;
+        }
         if (data && data.currency) {
             window.currencySymbol = data.currency;
             console.log('💱 Currency set to:', window.currencySymbol);
         }
     } catch (e) {
-        console.warn('Could not fetch currency setting:', e);
+        // Silently use default - settings table may not be set up
+        console.log('ℹ️ Using default currency: PKR');
     }
 })();
+
