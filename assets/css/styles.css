@@ -67,18 +67,27 @@ body {
   background: #6b7280;
 }
 
-/* Modal Centering - Explicit styles for consistent positioning */
+/* Modal Centering - Grid-based approach that works with overflow */
 .modal-overlay {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
+  display: grid !important;
+  place-items: center;
   position: fixed;
   inset: 0;
   padding: 1rem;
+  overflow-y: auto;
 }
 
 .modal-overlay.hidden {
   display: none !important;
+}
+
+/* Ensure modal content stays centered */
+.modal-overlay>div:first-child {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100%;
+  width: 100%;
 }
 
 /* Ensure modal content is properly centered vertically */
@@ -94,6 +103,7 @@ body {
     opacity: 0;
     transform: scale(0.95) translateY(10px);
   }
+
   to {
     opacity: 1;
     transform: scale(1) translateY(0);
