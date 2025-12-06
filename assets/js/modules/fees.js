@@ -122,7 +122,7 @@ export async function render(container) {
 
         <!-- Payment Modal -->
         <div id="paymentModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 backdrop-blur-sm">
-            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-2xl mx-4 overflow-hidden max-h-[90vh] flex flex-col">
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-2xl mx-4 my-4 overflow-hidden max-h-[90vh] flex flex-col">
                 <div class="p-6 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-700">
                     <h3 class="text-lg font-bold text-gray-800 dark:text-white">Collect Payment</h3>
                     <button id="closePaymentModal" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
