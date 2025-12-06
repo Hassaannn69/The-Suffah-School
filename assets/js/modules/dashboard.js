@@ -6,11 +6,43 @@ let allStudents = [];
 export async function render(container) {
     container.innerHTML = `
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <!-- Stat Cards will be injected here -->
-            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 animate-pulse h-32"></div>
-            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 animate-pulse h-32"></div>
-            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 animate-pulse h-32"></div>
-            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 animate-pulse h-32"></div>
+            <!-- Stat Cards -->
+            <div id="card-students" class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 h-32 flex items-center justify-center cursor-pointer hover:shadow-md transition-shadow">
+                <div class="animate-pulse flex space-x-4 w-full">
+                    <div class="flex-1 space-y-4 py-1">
+                        <div class="h-4 bg-gray-200 rounded w-3/4"></div>
+                        <div class="h-8 bg-gray-200 rounded"></div>
+                    </div>
+                    <div class="rounded-full bg-gray-200 h-12 w-12"></div>
+                </div>
+            </div>
+            <div id="card-classes" class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 h-32 flex items-center justify-center">
+                <div class="animate-pulse flex space-x-4 w-full">
+                    <div class="flex-1 space-y-4 py-1">
+                        <div class="h-4 bg-gray-200 rounded w-3/4"></div>
+                        <div class="h-8 bg-gray-200 rounded"></div>
+                    </div>
+                    <div class="rounded-full bg-gray-200 h-12 w-12"></div>
+                </div>
+            </div>
+            <div id="card-fees-collected" class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 h-32 flex items-center justify-center">
+                <div class="animate-pulse flex space-x-4 w-full">
+                    <div class="flex-1 space-y-4 py-1">
+                        <div class="h-4 bg-gray-200 rounded w-3/4"></div>
+                        <div class="h-8 bg-gray-200 rounded"></div>
+                    </div>
+                    <div class="rounded-full bg-gray-200 h-12 w-12"></div>
+                </div>
+            </div>
+            <div id="card-fees-pending" class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 h-32 flex items-center justify-center">
+                <div class="animate-pulse flex space-x-4 w-full">
+                    <div class="flex-1 space-y-4 py-1">
+                        <div class="h-4 bg-gray-200 rounded w-3/4"></div>
+                        <div class="h-8 bg-gray-200 rounded"></div>
+                    </div>
+                    <div class="rounded-full bg-gray-200 h-12 w-12"></div>
+                </div>
+            </div>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -66,61 +98,108 @@ export async function render(container) {
         </div>
     `;
 
-    try {
-        if (!supabase) {
-            throw new Error('Supabase client not initialized');
-        }
+    // Event Listeners
+    document.getElementById('card-students').addEventListener('click', openStudentsModal);
+    document.getElementById('closeDashboardModalBtn').addEventListener('click', closeStudentsModal);
+    document.getElementById('dashboardClassFilter').addEventListener('change', filterStudents);
 
-        // Fetch Stats in parallel
-        const [studentsCount, classesCount, feesStats] = await Promise.all([
-            supabase.from('students').select('*', { count: 'exact', head: true }),
-            supabase.from('classes').select('*', { count: 'exact', head: true }),
-            supabase.from('fees').select('amount, status')
-        ]);
+    if (!supabase) {
+        console.error('Supabase client not initialized');
+        return;
+    }
 
-        const totalStudents = studentsCount.count || 0;
-        const totalClasses = classesCount.count || 0;
+    // Progressive Loading
 
-        let totalFeesIssued = 0;
-        let totalFeesCollected = 0;
-        let paidCount = 0;
-        let unpaidCount = 0;
+    // 1. Students (Count + Chart)
+    supabase.from('students').select('class')
+        .then(({ data, error }) => {
+            if (!error && data) {
+                updateStudentCard(data.length);
+                renderStudentsChart(data);
+            } else {
+                console.error('Error fetching students:', error);
+                updateStudentCard(0);
+            }
+        });
 
-        if (feesStats.data) {
-            feesStats.data.forEach(fee => {
-                totalFeesIssued += (fee.amount || 0);
-                if (fee.status === 'paid') {
-                    totalFeesCollected += (fee.amount || 0);
-                    paidCount++;
-                } else {
-                    unpaidCount++;
-                }
-            });
-        }
+    // 2. Classes (Count)
+    supabase.from('classes').select('*', { count: 'exact', head: true })
+        .then(({ count, error }) => {
+            if (!error) {
+                updateClassesCard(count);
+            } else {
+                console.error('Error fetching classes:', error);
+                updateClassesCard(0);
+            }
+        });
 
-        // Update UI
-        const statsHtml = `
-            <div id="total-students-card" class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between cursor-pointer hover:shadow-md transition-shadow">
+    // 3. Fees (Stats + Chart)
+    supabase.from('fees').select('amount, status')
+        .then(({ data, error }) => {
+            if (!error && data) {
+                processFeeStats(data);
+            } else {
+                console.error('Error fetching fees:', error);
+                processFeeStats([]);
+            }
+        });
+}
+
+function updateStudentCard(count) {
+    const card = document.getElementById('card-students');
+    if (card) {
+        card.innerHTML = `
+            <div class="flex items-center justify-between w-full">
                 <div>
                     <p class="text-sm font-medium text-gray-500">Total Students</p>
-                    <h3 class="text-2xl font-bold text-gray-800 mt-1">${totalStudents}</h3>
+                    <h3 class="text-2xl font-bold text-gray-800 mt-1">${count}</h3>
                 </div>
                 <div class="bg-blue-50 p-3 rounded-lg">
                     <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
                 </div>
             </div>
+        `;
+    }
+}
 
-            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
+function updateClassesCard(count) {
+    const card = document.getElementById('card-classes');
+    if (card) {
+        card.innerHTML = `
+            <div class="flex items-center justify-between w-full">
                 <div>
                     <p class="text-sm font-medium text-gray-500">Total Classes</p>
-                    <h3 class="text-2xl font-bold text-gray-800 mt-1">${totalClasses}</h3>
+                    <h3 class="text-2xl font-bold text-gray-800 mt-1">${count || 0}</h3>
                 </div>
                 <div class="bg-purple-50 p-3 rounded-lg">
                     <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
                 </div>
             </div>
+        `;
+    }
+}
 
-            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
+function processFeeStats(fees) {
+    let totalFeesIssued = 0;
+    let totalFeesCollected = 0;
+    let paidCount = 0;
+    let unpaidCount = 0;
+
+    fees.forEach(fee => {
+        totalFeesIssued += (fee.amount || 0);
+        if (fee.status === 'paid') {
+            totalFeesCollected += (fee.amount || 0);
+            paidCount++;
+        } else {
+            unpaidCount++;
+        }
+    });
+
+    // Update Collected Card
+    const collectedCard = document.getElementById('card-fees-collected');
+    if (collectedCard) {
+        collectedCard.innerHTML = `
+            <div class="flex items-center justify-between w-full">
                 <div>
                     <p class="text-sm font-medium text-gray-500">Fees Collected</p>
                     <h3 class="text-2xl font-bold text-green-600 mt-1">${window.formatCurrency(totalFeesCollected)}</h3>
@@ -130,8 +209,14 @@ export async function render(container) {
                     <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                 </div>
             </div>
+        `;
+    }
 
-            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
+    // Update Pending Card
+    const pendingCard = document.getElementById('card-fees-pending');
+    if (pendingCard) {
+        pendingCard.innerHTML = `
+            <div class="flex items-center justify-between w-full">
                 <div>
                     <p class="text-sm font-medium text-gray-500">Pending Fees</p>
                     <h3 class="text-2xl font-bold text-red-600 mt-1">${unpaidCount}</h3>
@@ -142,24 +227,9 @@ export async function render(container) {
                 </div>
             </div>
         `;
-
-        container.querySelector('.grid').innerHTML = statsHtml;
-
-        // Fetch student distribution by class
-        const { data: students } = await supabase.from('students').select('class');
-
-        // Render Charts
-        renderCharts(paidCount, unpaidCount, students);
-
-        // Event Listeners for Modal
-        document.getElementById('total-students-card').addEventListener('click', openStudentsModal);
-        document.getElementById('closeDashboardModalBtn').addEventListener('click', closeStudentsModal);
-        document.getElementById('dashboardClassFilter').addEventListener('change', filterStudents);
-
-    } catch (error) {
-        console.error('Error loading dashboard stats:', error);
-        container.innerHTML += `<div class="bg-red-50 p-4 rounded text-red-600">Error loading stats: ${error.message}</div>`;
     }
+
+    renderFeesChart(paidCount, unpaidCount);
 }
 
 async function openStudentsModal() {
@@ -254,7 +324,7 @@ function filterStudents(e) {
     }
 }
 
-function renderCharts(paid, unpaid, students) {
+function renderFeesChart(paid, unpaid) {
     const ctxFees = document.getElementById('feesChart').getContext('2d');
     new Chart(ctxFees, {
         type: 'doughnut',
@@ -274,7 +344,9 @@ function renderCharts(paid, unpaid, students) {
             }
         }
     });
+}
 
+function renderStudentsChart(students) {
     // Group students by class
     const classDistribution = {};
     if (students && students.length > 0) {
