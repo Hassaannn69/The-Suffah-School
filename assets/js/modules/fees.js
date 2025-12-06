@@ -372,6 +372,12 @@ window.openPayment = async (feeId, studentId, studentName, feeType, totalAmount,
     await loadPaymentHistory(feeId);
 
     const modal = document.getElementById('paymentModal');
+
+    // Move modal to body to break out of dashboard layout
+    if (modal.parentElement !== document.body) {
+        document.body.appendChild(modal);
+    }
+
     modal.classList.remove('hidden');
     modal.classList.add('flex');
 };

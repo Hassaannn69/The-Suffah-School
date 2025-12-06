@@ -1,107 +1,140 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
-/* Light mode color variables */
-:root {
-  --color-bg: #f3f4f6;
-  --color-surface: #ffffff;
-  --color-primary: #6366f1;
-  --color-text: #111827;
-}
-
-/* Dark mode overrides */
-.dark {
-  --color-bg: #1a1a1a;
-  --color-surface: #2d2d2d;
-  --color-primary: #818cf8;
-  --color-text: #f3f4f6;
-}
-
+/* Base Styles */
 body {
   font-family: 'Inter', sans-serif;
-  background-color: var(--color-bg);
-  color: var(--color-text);
-  transition: background-color 0.3s, color 0.3s;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
+  background: #cbd5e1;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
+  background: #94a3b8;
+}
+
+/* Dark Mode Scrollbar */
+.dark ::-webkit-scrollbar-thumb {
+  background: #334155;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+/* Glassmorphism Utilities */
+.glass {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.dark .glass {
+  background: rgba(30, 41, 59, 0.7);
+  /* Slate 800 with opacity */
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .glass-panel {
   background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+  backdrop-filter: blur(20px);
 }
 
-/* Dark mode specific component styles */
 .dark .glass-panel {
-  background: rgba(0, 0, 0, 0.85);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(15, 23, 42, 0.8);
+  /* Slate 900 with opacity */
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-/* Dark mode scrollbar */
-.dark ::-webkit-scrollbar-track {
-  background: #1f2937;
+/* Animations */
+.animate-shake {
+  animation: shake 0.82s cubic-bezier(.36, .07, .19, .97) both;
 }
 
-.dark ::-webkit-scrollbar-thumb {
-  background: #4b5563;
-}
+@keyframes shake {
 
-.dark ::-webkit-scrollbar-thumb:hover {
-  background: #6b7280;
-}
-
-/* Modal Centering - Flex + Margin Auto approach */
-.modal-overlay {
-  display: flex !important;
-  position: fixed;
-  inset: 0;
-  padding: 1rem;
-  overflow-y: auto;
-}
-
-.modal-overlay.hidden {
-  display: none !important;
-}
-
-/* Wrapper rule removed as we simplified HTML structure */
-
-/* Ensure modal content is properly centered vertically */
-.modal-content {
-  margin: auto;
-  max-height: calc(100vh - 2rem);
-  overflow-y: auto;
-}
-
-/* Animation for modals */
-@keyframes modalFadeIn {
-  from {
-    opacity: 0;
-    transform: scale(0.95) translateY(10px);
+  10%,
+  90% {
+    transform: translate3d(-1px, 0, 0);
   }
 
-  to {
-    opacity: 1;
-    transform: scale(1) translateY(0);
+  20%,
+  80% {
+    transform: translate3d(2px, 0, 0);
+  }
+
+  30%,
+  50%,
+  70% {
+    transform: translate3d(-4px, 0, 0);
+  }
+
+  40%,
+  60% {
+    transform: translate3d(4px, 0, 0);
   }
 }
 
-.modal-animate-in {
-  animation: modalFadeIn 0.3s ease-out forwards;
+/* Form Elements */
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+  /* Indigo 500 ring */
+}
+
+/* Table Styles */
+.table-row-hover:hover td {
+  background-color: rgba(241, 245, 249, 0.5);
+  /* Slate 100 */
+}
+
+.dark .table-row-hover:hover td {
+  background-color: rgba(51, 65, 85, 0.5);
+  /* Slate 700 */
+}
+
+/* Loader */
+.loader {
+  border-top-color: #6366f1;
+  /* Indigo 500 */
+  -webkit-animation: spinner 1.5s linear infinite;
+  animation: spinner 1.5s linear infinite;
+}
+
+@keyframes spinner {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Hide Scrollbar for specific elements */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  /* IE and Edge */
+  scrollbar-width: none;
+  /* Firefox */
 }

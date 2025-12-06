@@ -124,13 +124,13 @@ function renderSidebar() {
         if (item.roles.includes(currentRole)) {
             const link = document.createElement('a');
             link.href = '#';
-            link.className = 'flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg transition-colors group';
+            link.className = 'flex items-center space-x-3 px-4 py-3 text-gray-400 hover:bg-gray-800 hover:text-white rounded-lg transition-all group border-l-4 border-transparent';
             link.dataset.module = item.id;
             link.innerHTML = `
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400 group-hover:text-indigo-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500 group-hover:text-primary-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${item.icon}" />
                 </svg>
-                <span class="font-medium">${item.label}</span>
+                <span class="font-medium tracking-wide">${item.label}</span>
             `;
             link.addEventListener('click', (e) => {
                 e.preventDefault();
@@ -151,11 +151,13 @@ async function loadModule(moduleId) {
     // Update active state in sidebar
     document.querySelectorAll('#navLinks a').forEach(el => {
         if (el.dataset.module === moduleId) {
-            el.classList.add('bg-indigo-50', 'text-indigo-600');
-            el.querySelector('svg').classList.add('text-indigo-600');
+            el.classList.add('bg-gray-800', 'text-white', 'border-primary-500');
+            el.querySelector('svg').classList.remove('text-gray-500');
+            el.querySelector('svg').classList.add('text-primary-400');
         } else {
-            el.classList.remove('bg-indigo-50', 'text-indigo-600');
-            el.querySelector('svg').classList.remove('text-indigo-600');
+            el.classList.remove('bg-gray-800', 'text-white', 'border-primary-500');
+            el.querySelector('svg').classList.add('text-gray-500');
+            el.querySelector('svg').classList.remove('text-primary-400');
         }
     });
 
@@ -180,10 +182,10 @@ async function loadModule(moduleId) {
             <div class="flex items-center justify-center h-64">
                 <div class="flex flex-col items-center gap-4">
                     <div class="relative">
-                        <div class="w-16 h-16 border-4 border-indigo-200 dark:border-indigo-900 rounded-full"></div>
-                        <div class="w-16 h-16 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin absolute top-0"></div>
+                        <div class="w-16 h-16 border-4 border-gray-800 rounded-full"></div>
+                        <div class="w-16 h-16 border-4 border-primary-500 border-t-transparent rounded-full animate-spin absolute top-0"></div>
                     </div>
-                    <p class="text-gray-600 dark:text-gray-400 font-medium">Loading...</p>
+                    <p class="text-gray-400 font-medium animate-pulse">Loading...</p>
                 </div>
             </div>
         `;
@@ -261,35 +263,35 @@ openSidebarBtn.addEventListener('click', () => sidebar.classList.remove('-transl
 closeSidebarBtn.addEventListener('click', () => sidebar.classList.add('-translate-x-full'));
 
 // Theme Toggle Logic
-const themeToggleBtn = document.getElementById('themeToggle');
-const themeToggleDarkIcon = document.getElementById('themeToggleDarkIcon');
-const themeToggleLightIcon = document.getElementById('themeToggleLightIcon');
+// Theme Toggle Logic
+function initTheme() {
+    const themeToggleBtn = document.getElementById('themeToggle');
+    const themeToggleDarkIcon = document.getElementById('themeToggleDarkIcon');
+    const themeToggleLightIcon = document.getElementById('themeToggleLightIcon');
 
-// Check for saved user preference, if any, on load of the website
-if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-    document.documentElement.classList.add('dark');
-    themeToggleLightIcon.classList.remove('hidden');
-} else {
-    document.documentElement.classList.remove('dark');
-    themeToggleDarkIcon.classList.remove('hidden');
-}
+    if (!themeToggleBtn || !themeToggleDarkIcon || !themeToggleLightIcon) {
+        console.warn('Theme toggle elements not found');
+        return;
+    }
 
-themeToggleBtn.addEventListener('click', function () {
-    // toggle icons inside button
-    themeToggleDarkIcon.classList.toggle('hidden');
-    themeToggleLightIcon.classList.toggle('hidden');
-
-    // if set via local storage previously
-    if (localStorage.getItem('color-theme')) {
-        if (localStorage.getItem('color-theme') === 'light') {
-            document.documentElement.classList.add('dark');
-            localStorage.setItem('color-theme', 'dark');
-        } else {
-            document.documentElement.classList.remove('dark');
-            localStorage.setItem('color-theme', 'light');
-        }
+    // Initial State
+    if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark');
+        themeToggleLightIcon.classList.remove('hidden');
+        themeToggleDarkIcon.classList.add('hidden');
     } else {
-        // if NOT set via local storage previously
+        document.documentElement.classList.remove('dark');
+        themeToggleDarkIcon.classList.remove('hidden');
+        themeToggleLightIcon.classList.add('hidden');
+    }
+
+    // Toggle Event
+    themeToggleBtn.addEventListener('click', function () {
+        // Toggle icons
+        themeToggleDarkIcon.classList.toggle('hidden');
+        themeToggleLightIcon.classList.toggle('hidden');
+
+        // Toggle Theme
         if (document.documentElement.classList.contains('dark')) {
             document.documentElement.classList.remove('dark');
             localStorage.setItem('color-theme', 'light');
@@ -297,8 +299,11 @@ themeToggleBtn.addEventListener('click', function () {
             document.documentElement.classList.add('dark');
             localStorage.setItem('color-theme', 'dark');
         }
-    }
-});
+    });
+}
+
+// Initialize Theme
+initTheme();
 
 // Initialize
 initApp();

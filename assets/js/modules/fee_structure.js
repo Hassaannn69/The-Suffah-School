@@ -251,6 +251,12 @@ async function fetchFeeTypes() {
 
 function openFeeTypeModal(id = '', name = '', description = '', defaultAmount = 0, allowCustom = true) {
     const modal = document.getElementById('feeTypeModal');
+
+    // Move modal to body to break out of dashboard layout
+    if (modal.parentElement !== document.body) {
+        document.body.appendChild(modal);
+    }
+
     const title = document.getElementById('feeTypeModalTitle');
 
     document.getElementById('feeTypeId').value = id;
@@ -405,6 +411,12 @@ async function openAssignFeeModal() {
     if (!selectedClassId) return;
 
     const modal = document.getElementById('assignFeeModal');
+
+    // Move modal to body to break out of dashboard layout
+    if (modal.parentElement !== document.body) {
+        document.body.appendChild(modal);
+    }
+
     const select = document.getElementById('assignFeeTypeSelect');
 
     // Populate dropdown

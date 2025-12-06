@@ -117,8 +117,15 @@ window.deleteClass = async (id) => {
 };
 
 function openModal() {
-    document.getElementById('classModal').classList.remove('hidden');
-    document.getElementById('classModal').classList.add('flex');
+    const modal = document.getElementById('classModal');
+
+    // Move modal to body to break out of dashboard layout
+    if (modal.parentElement !== document.body) {
+        document.body.appendChild(modal);
+    }
+
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
 }
 
 function closeModal() {

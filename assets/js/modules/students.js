@@ -6,18 +6,19 @@ const supabase = window.supabase || (() => {
 
 let currentStudents = [];
 let availableClasses = []; // Store classes and their sections
+let parsedStudents = []; // Store parsed students from Excel file for bulk upload
 
 export async function render(container) {
     container.innerHTML = `
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-            <div class="p-6 border-b border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <h2 class="text-xl font-bold text-gray-800">Students Directory</h2>
+        <div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden transition-colors duration-200">
+            <div class="p-6 border-b border-gray-200 dark:border-gray-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <h2 class="text-xl font-bold text-gray-900 dark:text-white">Students Directory</h2>
                 <div class="flex space-x-3">
-                    <input type="text" id="searchInput" placeholder="Search students..." class="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none text-gray-900">
+                    <input type="text" id="searchInput" placeholder="Search students..." class="px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 outline-none text-gray-900 dark:text-white placeholder-gray-500 transition-colors">
                     
                     <!-- Dropdown Button -->
                     <div class="relative">
-                        <button id="addStudentDropdown" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center transition-colors">
+                        <button id="addStudentDropdown" class="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center transition-colors shadow-lg shadow-primary-500/20">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                             </svg>
@@ -28,60 +29,78 @@ export async function render(container) {
                         </button>
                         
                         <!-- Dropdown Menu -->
-                        <div id="studentDropdownMenu" class="hidden absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl border border-gray-200 z-20">
-                            <button id="addSingleStudent" class="w-full text-left px-4 py-3 hover:bg-gray-50 flex items-center transition-colors border-b border-gray-100">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <div id="studentDropdownMenu" class="hidden absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-20">
+                            <button id="addSingleStudent" class="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center transition-colors border-b border-gray-100 dark:border-gray-700 group">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3 text-primary-500 dark:text-primary-400 group-hover:text-primary-600 dark:group-hover:text-primary-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                                 </svg>
                                 <div>
-                                    <div class="font-medium text-gray-900">Add a Student</div>
-                                    <div class="text-xs text-gray-500">Single admission</div>
+                                    <div class="font-medium text-gray-900 dark:text-white">Add a Student</div>
+                                    <div class="text-xs text-gray-500 dark:text-gray-400">Single admission</div>
                                 </div>
                             </button>
-                            <button id="addBulkStudents" class="w-full text-left px-4 py-3 hover:bg-gray-50 flex items-center transition-colors">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <button id="addBulkStudents" class="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center transition-colors group">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3 text-green-500 dark:text-green-400 group-hover:text-green-600 dark:group-hover:text-green-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                 </svg>
                                 <div>
-                                    <div class="font-medium text-gray-900">Add Bulk Students</div>
-                                    <div class="text-xs text-gray-500">Upload Excel file</div>
+                                    <div class="font-medium text-gray-900 dark:text-white">Add Bulk Students</div>
+                                    <div class="text-xs text-gray-500 dark:text-gray-400">Upload Excel file</div>
+                                </div>
+                            </button>
+                            <button id="fixRollNumbers" class="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center transition-colors border-t border-gray-100 dark:border-gray-700 group">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3 text-orange-500 dark:text-orange-400 group-hover:text-orange-600 dark:group-hover:text-orange-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                </svg>
+                                <div>
+                                    <div class="font-medium text-gray-900 dark:text-white">Fix Roll Numbers</div>
+                                    <div class="text-xs text-gray-500 dark:text-gray-400">Recalculate all roll numbers</div>
+                                </div>
+                            </button>
+                            <button id="fixClassNames" class="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center transition-colors border-t border-gray-100 dark:border-gray-700 group">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3 text-blue-500 dark:text-blue-400 group-hover:text-blue-600 dark:group-hover:text-blue-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                                <div>
+                                    <div class="font-medium text-gray-900 dark:text-white">Fix Class Names</div>
+                                    <div class="text-xs text-gray-500 dark:text-gray-400">Normalize class names (e.g. 7 -> Class 7)</div>
                                 </div>
                             </button>
                         </div>
                     </div>
                 </div>
             </div>
-            
+
+            <!-- Student Table -->
             <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
-                    <thead>
-                        <tr class="bg-gray-50 text-gray-600 text-sm uppercase tracking-wider">
-                            <th class="p-4 font-semibold">Name</th>
-                            <th class="p-4 font-semibold">Roll No</th>
-                            <th class="p-4 font-semibold">Class</th>
-                            <th class="p-4 font-semibold">Contact</th>
-                            <th class="p-4 font-semibold text-right">Actions</th>
+                <table class="w-full">
+                    <thead class="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+                        <tr>
+                            <th class="p-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Student</th>
+                            <th class="p-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Roll No</th>
+                            <th class="p-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Class</th>
+                            <th class="p-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Phone</th>
+                            <th class="p-4 text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
                         </tr>
                     </thead>
-                    <tbody id="studentsTableBody" class="text-gray-700 text-sm divide-y divide-gray-100">
-                        <tr><td colspan="5" class="p-4 text-center">Loading...</td></tr>
+                    <tbody id="studentsTableBody" class="divide-y divide-gray-200 dark:divide-gray-800">
+                        <tr><td colspan="5" class="p-4 text-center text-gray-500 dark:text-gray-400">Loading...</td></tr>
                     </tbody>
                 </table>
             </div>
-            
+
             <!-- Pagination (Simple) -->
-            <div class="p-4 border-t border-gray-100 flex justify-end">
-                <span class="text-xs text-gray-400">Showing all records</span>
+            <div class="p-4 border-t border-gray-200 dark:border-gray-800 flex justify-end">
+                <span class="text-xs text-gray-500 dark:text-gray-500">Showing all records</span>
             </div>
         </div>
 
-        <!-- Modal -->
-        <!-- Modal -->
-        <div id="studentModal" class="modal-overlay fixed inset-0 bg-black bg-opacity-50 hidden z-50 backdrop-blur-sm overflow-y-auto transition-opacity duration-300">
-            <div class="relative m-auto bg-white rounded-xl shadow-2xl w-full max-w-2xl mx-4 my-4 overflow-hidden transform transition-all duration-300 ease-out opacity-0 scale-95 translate-y-0">
-                <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-                    <h3 class="text-lg font-bold text-gray-800" id="modalTitle">Add New Student</h3>
-                    <button id="closeModalBtn" class="text-gray-400 hover:text-gray-600">
+        <!-- Student Modal (Add/Edit) -->
+        <div id="studentModal" class="modal-overlay fixed inset-0 bg-black/80 hidden items-center justify-center z-50 backdrop-blur-sm overflow-y-auto transition-opacity duration-300">
+            <div class="bg-gray-900 rounded-xl shadow-2xl w-full max-w-2xl mx-4 my-4 overflow-hidden transform transition-all duration-300 ease-out opacity-0 scale-95 translate-y-4 border border-gray-800">
+                <div class="bg-gradient-to-r from-primary-600 to-indigo-600 p-6 flex justify-between items-center">
+                    <h3 id="modalTitle" class="text-xl font-bold text-white">Add New Student</h3>
+                    <button id="closeModalBtn" class="text-white hover:text-gray-200 transition-colors">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                         </svg>
@@ -92,67 +111,65 @@ export async function render(container) {
                     
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
-                            <input type="text" id="name" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-gray-900">
+                            <label class="block text-sm font-medium text-gray-300 mb-1">Full Name *</label>
+                            <input type="text" id="name" required class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-primary-500 outline-none">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Roll Number</label>
-                            <input type="text" id="roll_no" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-gray-900">
+                            <label class="block text-sm font-medium text-gray-300 mb-1">Roll Number *</label>
+                            <input type="text" id="roll_no" required class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-primary-500 outline-none">
                         </div>
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Class</label>
-                            <select id="class" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-gray-900">
+                            <label class="block text-sm font-medium text-gray-300 mb-1">Class *</label>
+                            <select id="class" required class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-primary-500 outline-none">
                                 <option value="">Select Class</option>
                                 <!-- Populated dynamically -->
                             </select>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Section</label>
-                            <select id="section" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-gray-900">
+                            <label class="block text-sm font-medium text-gray-300 mb-1">Section *</label>
+                            <select id="section" required class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-primary-500 outline-none">
                                 <option value="">Select Section</option>
-                                <!-- Populated dynamically based on class -->
+                                <!-- Populated dynamically -->
                             </select>
                         </div>
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                            <input type="email" id="email" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-gray-900">
+                            <label class="block text-sm font-medium text-gray-300 mb-1">Gender</label>
+                            <select id="gender" class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-primary-500 outline-none">
+                                <option value="Male">Male</option>
+                                <option value="Female">Female</option>
+                            </select>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-                            <input type="tel" id="phone" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-gray-900">
+                            <label class="block text-sm font-medium text-gray-300 mb-1">Phone</label>
+                            <input type="tel" id="phone" class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-primary-500 outline-none">
                         </div>
                     </div>
 
-                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Gender</label>
-                        <select id="gender" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-gray-900">
-                            <option value="Male">Male</option>
-                            <option value="Female">Female</option>
-                            <option value="Other">Other</option>
-                        </select>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-1">Email</label>
+                        <input type="email" id="email" class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-primary-500 outline-none" placeholder="Leave empty to auto-generate">
                     </div>
 
-                    <div class="flex justify-end pt-4">
-                        <button type="button" id="cancelBtn" class="mr-3 px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">Cancel</button>
-                        <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors">Save Student</button>
+                    <div class="flex justify-end space-x-3 pt-4 border-t border-gray-800">
+                        <button type="button" id="cancelBtn" class="px-4 py-2 text-gray-300 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors border border-gray-700">Cancel</button>
+                        <button type="submit" class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors shadow-lg shadow-primary-500/20">Save Student</button>
                     </div>
                 </form>
             </div>
         </div>
 
         <!-- Bulk Upload Modal -->
-        <div id="bulkUploadModal" class="modal-overlay fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 backdrop-blur-sm overflow-y-auto transition-opacity duration-300">
-            <!-- ... (existing bulk modal content) ... -->
-            <div class="bg-white rounded-xl shadow-2xl w-full max-w-3xl mx-4 my-4 overflow-hidden transform transition-all duration-300 ease-out opacity-0 scale-95 translate-y-0">
-                <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-                    <h3 class="text-lg font-bold text-gray-800">Add Bulk Students</h3>
-                    <button id="closeBulkModalBtn" class="text-gray-400 hover:text-gray-600">
+        <div id="bulkUploadModal" class="modal-overlay fixed inset-0 bg-black/80 hidden items-center justify-center z-50 backdrop-blur-sm overflow-y-auto transition-opacity duration-300">
+            <div class="bg-gray-900 rounded-xl shadow-2xl w-full max-w-2xl mx-4 my-4 overflow-hidden transform transition-all duration-300 ease-out opacity-0 scale-95 translate-y-4 border border-gray-800">
+                <div class="bg-gradient-to-r from-green-600 to-emerald-600 p-6 flex justify-between items-center">
+                    <h3 class="text-xl font-bold text-white">Bulk Upload Students</h3>
+                    <button id="closeBulkModalBtn" class="text-white hover:text-gray-200 transition-colors">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                         </svg>
@@ -160,7 +177,7 @@ export async function render(container) {
                 </div>
                 <div class="p-6">
                     <!-- Instructions -->
-                    <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-6">
+                    <div class="bg-blue-900/20 border-l-4 border-blue-500 p-4 mb-6">
                         <div class="flex">
                             <div class="flex-shrink-0">
                                 <svg class="h-5 w-5 text-blue-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
@@ -168,7 +185,7 @@ export async function render(container) {
                                 </svg>
                             </div>
                             <div class="ml-3">
-                                <p class="text-sm text-blue-700">
+                                <p class="text-sm text-blue-300">
                                     <strong>Instructions:</strong> Download the Excel template, fill in student details, and upload the file to add multiple students at once.
                                 </p>
                             </div>
@@ -177,7 +194,7 @@ export async function render(container) {
 
                     <!-- Download Template -->
                     <div class="mb-6">
-                        <button id="downloadTemplateBtn" class="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg font-medium flex items-center justify-center transition-colors">
+                        <button id="downloadTemplateBtn" class="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg font-medium flex items-center justify-center transition-colors shadow-lg shadow-green-500/20">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                             </svg>
@@ -187,41 +204,41 @@ export async function render(container) {
 
                     <!-- Upload File -->
                     <div class="mb-6">
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Upload Filled Excel File</label>
-                        <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-indigo-500 transition-colors">
+                        <label class="block text-sm font-medium text-gray-300 mb-2">Upload Filled Excel File</label>
+                        <div class="border-2 border-dashed border-gray-700 rounded-lg p-6 text-center hover:border-primary-500 hover:bg-gray-800 transition-all">
                             <input type="file" id="excelFileInput" accept=".xlsx,.xls" class="hidden">
                             <label for="excelFileInput" class="cursor-pointer">
-                                <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                                <svg class="mx-auto h-12 w-12 text-gray-500" stroke="currentColor" fill="none" viewBox="0 0 48 48">
                                     <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                                 </svg>
-                                <p class="mt-2 text-sm text-gray-600">Click to select Excel file or drag and drop</p>
+                                <p class="mt-2 text-sm text-gray-400">Click to select Excel file or drag and drop</p>
                                 <p class="text-xs text-gray-500">XLSX or XLS files only</p>
                             </label>
                         </div>
-                        <p id="selectedFileName" class="mt-2 text-sm text-gray-600"></p>
+                        <p id="selectedFileName" class="mt-2 text-sm text-gray-400"></p>
                     </div>
 
                     <!-- Preview/Errors -->
                     <div id="uploadResults" class="hidden mb-6">
-                        <h4 class="font-semibold text-gray-800 mb-2">Upload Summary</h4>
-                        <div id="uploadSummary" class="bg-gray-50 rounded-lg p-4 text-sm"></div>
+                        <h4 class="font-semibold text-white mb-2">Upload Summary</h4>
+                        <div id="uploadSummary" class="bg-gray-800 rounded-lg p-4 text-sm text-gray-300"></div>
                     </div>
 
                     <!-- Actions -->
                     <div class="flex justify-end space-x-3">
-                        <button type="button" id="cancelBulkBtn" class="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">Cancel</button>
-                        <button type="button" id="uploadStudentsBtn" disabled class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Upload Students</button>
+                        <button type="button" id="cancelBulkBtn" class="px-4 py-2 text-gray-300 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors border border-gray-700">Cancel</button>
+                        <button type="button" id="uploadStudentsBtn" disabled class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-primary-500/20">Upload Students</button>
                     </div>
                 </div>
             </div>
         </div>
 
         <!-- Credentials Modal -->
-        <div id="credentialsModal" class="modal-overlay fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 backdrop-blur-sm overflow-y-auto transition-opacity duration-300">
-            <div class="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 my-4 overflow-hidden transform transition-all duration-300 ease-out opacity-0 scale-95 translate-y-0">
-                <div class="bg-green-500 p-6 text-center">
+        <div id="credentialsModal" class="modal-overlay fixed inset-0 bg-black/80 hidden items-center justify-center z-50 backdrop-blur-sm overflow-y-auto transition-opacity duration-300">
+            <div class="bg-gray-900 rounded-xl shadow-2xl w-full max-w-md mx-4 my-4 overflow-hidden transform transition-all duration-300 ease-out opacity-0 scale-95 translate-y-0 border border-gray-800">
+                <div class="bg-green-600 p-6 text-center">
                     <div class="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                         </svg>
                     </div>
@@ -229,51 +246,60 @@ export async function render(container) {
                     <p class="text-green-100 mt-1">Credentials generated successfully</p>
                 </div>
                 <div class="p-6 space-y-4">
-                    <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                    <div class="bg-gray-800 p-4 rounded-lg border border-gray-700">
                         <div class="mb-3">
-                            <label class="text-xs text-gray-500 uppercase font-semibold">Email / Username</label>
+                            <label class="text-xs text-gray-400 uppercase font-semibold">Email / Username</label>
                             <div class="flex items-center justify-between mt-1">
-                                <code id="credEmail" class="text-lg font-mono text-gray-800 font-bold">user@school.com</code>
-                                <button onclick="navigator.clipboard.writeText(document.getElementById('credEmail').textContent)" class="text-indigo-600 hover:text-indigo-800 text-sm font-medium">Copy</button>
+                                <code id="credEmail" class="text-lg font-mono text-white font-bold">user@school.com</code>
+                                <button onclick="navigator.clipboard.writeText(document.getElementById('credEmail').textContent)" class="text-primary-400 hover:text-primary-300 text-sm font-medium">Copy</button>
                             </div>
                         </div>
                         <div>
-                            <label class="text-xs text-gray-500 uppercase font-semibold">Password</label>
+                            <label class="text-xs text-gray-400 uppercase font-semibold">Password</label>
                             <div class="flex items-center justify-between mt-1">
-                                <code id="credPassword" class="text-lg font-mono text-gray-800 font-bold">Pass123!</code>
-                                <button onclick="navigator.clipboard.writeText(document.getElementById('credPassword').textContent)" class="text-indigo-600 hover:text-indigo-800 text-sm font-medium">Copy</button>
+                                <code id="credPassword" class="text-lg font-mono text-white font-bold">Pass123!</code>
+                                <button onclick="navigator.clipboard.writeText(document.getElementById('credPassword').textContent)" class="text-primary-400 hover:text-primary-300 text-sm font-medium">Copy</button>
                             </div>
                         </div>
                     </div>
-                    <p class="text-sm text-gray-500 text-center">Please share these credentials with the student.</p>
-                    <button id="closeCredModalBtn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-lg shadow-lg transition-transform transform hover:-translate-y-0.5">
+                    <p class="text-sm text-gray-400 text-center">Please share these credentials with the student.</p>
+                    <button id="closeCredModalBtn" class="w-full bg-primary-600 hover:bg-primary-700 text-white font-bold py-3 rounded-lg shadow-lg transition-transform transform hover:-translate-y-0.5">
                         Done
                     </button>
                 </div>
             </div>
         </div>
-        <!-- Credentials Modal -->
-        <!-- ... (existing credentials modal) ... -->
 
         <!-- Profile Modal -->
-        <div id="profileModal" class="modal-overlay fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 backdrop-blur-sm overflow-y-auto transition-opacity duration-300">
-            <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl mx-4 my-4 max-h-[90vh] overflow-hidden transform transition-all duration-300 ease-out opacity-0 scale-95 translate-y-0 flex flex-col">
+        <div id="profileModal" class="modal-overlay fixed inset-0 bg-black/80 hidden items-center justify-center z-50 backdrop-blur-sm overflow-y-auto transition-opacity duration-300">
+            <div class="bg-gray-900 rounded-xl shadow-2xl w-full max-w-4xl mx-4 my-4 max-h-[90vh] overflow-hidden transform transition-all duration-300 ease-out opacity-0 scale-95 translate-y-0 flex flex-col border border-gray-800">
                 <!-- Header with Photo -->
-                <div class="relative bg-indigo-600 h-32 flex-shrink-0">
-                    <button id="closeProfileModalBtn" class="absolute top-4 right-4 text-white hover:text-gray-200 z-10">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <div class="relative h-40 flex-shrink-0 group">
+                    <!-- Background Wrapper (Clipped) -->
+                    <div class="absolute inset-0 overflow-hidden">
+                        <!-- Background with subtle gradient -->
+                        <div class="absolute inset-0 bg-gradient-to-br from-gray-800 via-gray-900 to-black"></div>
+                        
+                        <!-- Decorative Circle/Glow -->
+                        <div class="absolute -top-24 -right-24 w-64 h-64 bg-primary-500/10 rounded-full blur-3xl opacity-50"></div>
+                        <div class="absolute -bottom-24 -left-24 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl opacity-50"></div>
+                    </div>
+
+                    <button id="closeProfileModalBtn" class="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors z-20 bg-black/20 hover:bg-black/40 rounded-full p-2 backdrop-blur-sm border border-white/5">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                         </svg>
                     </button>
-                    <div class="absolute -bottom-12 left-8 flex items-end">
-                        <div class="relative group">
-                            <div class="h-24 w-24 rounded-full border-4 border-white bg-white shadow-lg overflow-hidden">
+
+                    <div class="absolute -bottom-12 left-8 flex items-end z-20">
+                        <div class="relative group/photo">
+                            <div class="h-28 w-28 rounded-full border-4 border-gray-900 bg-gray-800 shadow-2xl overflow-hidden relative z-10 ring-1 ring-gray-700/50">
                                 <img id="profilePhoto" src="" alt="Profile" class="h-full w-full object-cover">
-                                <div id="profilePhotoPlaceholder" class="h-full w-full flex items-center justify-center bg-indigo-100 text-indigo-600 text-3xl font-bold">
+                                <div id="profilePhotoPlaceholder" class="h-full w-full flex items-center justify-center bg-gradient-to-br from-gray-700 to-gray-800 text-white text-3xl font-bold">
                                     <!-- Initial -->
                                 </div>
                             </div>
-                            <label for="profilePhotoInput" class="absolute bottom-0 right-0 bg-white rounded-full p-1.5 shadow-md cursor-pointer hover:bg-gray-50 transition-colors text-gray-600">
+                            <label for="profilePhotoInput" class="absolute bottom-1 right-1 bg-gray-800 rounded-full p-2 shadow-lg cursor-pointer hover:bg-gray-700 transition-colors text-gray-400 hover:text-white border border-gray-700 z-20 group-hover/photo:scale-110 transition-transform">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -281,118 +307,289 @@ export async function render(container) {
                                 <input type="file" id="profilePhotoInput" accept="image/*" class="hidden">
                             </label>
                         </div>
-                        <div class="ml-4 mb-1">
-                            <h2 id="profileName" class="text-2xl font-bold text-white drop-shadow-md">Student Name</h2>
-                            <p id="profileClass" class="text-indigo-100 text-sm font-medium">Class 10 (A)</p>
+                        <div class="ml-5 mb-2">
+                            <h2 id="profileName" class="text-3xl font-bold text-white tracking-tight drop-shadow-md">Student Name</h2>
+                            <div class="flex items-center mt-1 space-x-2">
+                                <span id="profileClass" class="px-2.5 py-0.5 rounded-full bg-gray-800/80 border border-gray-700 text-gray-300 text-xs font-medium backdrop-blur-sm">Class 10 (A)</span>
+                            </div>
                         </div>
                     </div>
                 </div>
 
+                <!-- Tab Navigation -->
+                <!-- Tab Navigation -->
+                <div class="bg-gray-900 border-b border-gray-800 px-8 pt-14 pb-0">
+                    <nav class="-mb-px flex space-x-6 overflow-x-auto no-scrollbar" aria-label="Tabs">
+                        <button class="tab-btn active-tab border-primary-500 text-primary-400 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors" data-tab="personal">
+                            Personal Info
+                        </button>
+                        <button class="tab-btn border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-600 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors" data-tab="academic">
+                            Academic
+                        </button>
+                        <button class="tab-btn border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-600 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors" data-tab="fee">
+                            Fee Details
+                        </button>
+                        <button class="tab-btn border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-600 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors" data-tab="attendance">
+                            Attendance
+                        </button>
+                        <button class="tab-btn border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-600 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors" data-tab="discipline">
+                            Discipline
+                        </button>
+                        <button class="tab-btn border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-600 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors" data-tab="documents">
+                            Documents
+                        </button>
+                        <button class="tab-btn border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-600 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors" data-tab="account">
+                            Account
+                        </button>
+                    </nav>
+                </div>
+
                 <!-- Content -->
-                <div class="p-8 pt-16 overflow-y-auto flex-grow">
+                <div class="p-8 overflow-y-auto flex-grow bg-gray-950">
                     <input type="hidden" id="profileStudentId">
                     
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <!-- Tab: Personal Info -->
+                    <div id="tab-personal" class="tab-content block">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                         
                         <!-- Left Column: Details -->
                         <div class="md:col-span-2 space-y-6">
                             <!-- Personal Details -->
-                            <div class="bg-white rounded-lg border border-gray-100 p-5 shadow-sm">
-                                <h3 class="text-sm font-bold text-gray-900 uppercase tracking-wide mb-4 border-b border-gray-100 pb-2">Personal Details</h3>
+                            <div class="bg-gray-900 rounded-lg border border-gray-800 p-5 shadow-sm">
+                                <h3 class="text-sm font-bold text-white uppercase tracking-wide mb-4 border-b border-gray-800 pb-2">Personal Details</h3>
                                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-6">
                                     <div>
                                         <label class="text-xs text-gray-500 block">Roll Number</label>
-                                        <span id="profileRollNo" class="text-sm font-medium text-gray-900">-</span>
+                                        <span id="profileRollNo" class="text-sm font-medium text-white">-</span>
                                     </div>
                                     <div>
                                         <label class="text-xs text-gray-500 block">Gender</label>
-                                        <span id="profileGender" class="text-sm font-medium text-gray-900">-</span>
+                                        <span id="profileGender" class="text-sm font-medium text-white">-</span>
                                     </div>
                                     <div>
                                         <label class="text-xs text-gray-500 block">Phone</label>
-                                        <span id="profilePhone" class="text-sm font-medium text-gray-900">-</span>
+                                        <span id="profilePhone" class="text-sm font-medium text-white">-</span>
                                     </div>
                                     <div>
                                         <label class="text-xs text-gray-500 block">Admission Date</label>
-                                        <span id="profileDate" class="text-sm font-medium text-gray-900">-</span>
+                                        <span id="profileDate" class="text-sm font-medium text-white">-</span>
                                     </div>
                                     <div class="sm:col-span-2">
                                         <label class="text-xs text-gray-500 block">Email</label>
-                                        <span id="profileEmail" class="text-sm font-medium text-gray-900">-</span>
+                                        <span id="profileEmail" class="text-sm font-medium text-white">-</span>
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- Fee Summary -->
-                            <div class="bg-white rounded-lg border border-gray-100 p-5 shadow-sm">
-                                <h3 class="text-sm font-bold text-gray-900 uppercase tracking-wide mb-4 border-b border-gray-100 pb-2">Fee Status</h3>
-                                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                    <div class="bg-blue-50 p-3 rounded-lg text-center">
-                                        <div class="text-xs text-blue-600 font-medium uppercase">Total Fees</div>
-                                        <div id="feeTotal" class="text-lg font-bold text-blue-800">...</div>
-                                    </div>
-                                    <div class="bg-green-50 p-3 rounded-lg text-center">
-                                        <div class="text-xs text-green-600 font-medium uppercase">Paid</div>
-                                        <div id="feePaid" class="text-lg font-bold text-green-800">...</div>
-                                    </div>
-                                    <div class="bg-red-50 p-3 rounded-lg text-center">
-                                        <div class="text-xs text-red-600 font-medium uppercase">Remaining</div>
-                                        <div id="feeRemaining" class="text-lg font-bold text-red-800">...</div>
-                                    </div>
-                                </div>
-                                <div class="mt-4 text-xs text-gray-500 text-center">
-                                    Last Payment: <span id="feeLastPayment" class="font-medium text-gray-700">-</span>
-                                </div>
-                            </div>
+
                         </div>
 
                         <!-- Right Column: Credentials & Actions -->
                         <div class="space-y-6">
-                            <!-- Credentials Card -->
-                            <div class="bg-indigo-50 rounded-lg border border-indigo-100 p-5 shadow-sm">
-                                <h3 class="text-sm font-bold text-indigo-900 uppercase tracking-wide mb-4 border-b border-indigo-200 pb-2">Login Credentials</h3>
-                                <div class="space-y-3">
-                                    <div>
-                                        <label class="text-xs text-indigo-500 block">Username / Email</label>
-                                        <div class="flex items-center justify-between">
-                                            <code id="profileCredEmail" class="text-sm font-mono font-bold text-indigo-900 truncate mr-2">user@school.com</code>
-                                            <button onclick="navigator.clipboard.writeText(document.getElementById('profileCredEmail').textContent)" class="text-indigo-400 hover:text-indigo-600">
-                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                                                </svg>
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label class="text-xs text-indigo-500 block">Default Password</label>
-                                        <div class="flex items-center justify-between">
-                                            <code id="profileCredPass" class="text-sm font-mono font-bold text-indigo-900">Pass123!</code>
-                                            <button onclick="navigator.clipboard.writeText(document.getElementById('profileCredPass').textContent)" class="text-indigo-400 hover:text-indigo-600">
-                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                                                </svg>
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+
 
                             <!-- Actions -->
-                            <div class="bg-white rounded-lg border border-gray-100 p-5 shadow-sm">
-                                <h3 class="text-sm font-bold text-gray-900 uppercase tracking-wide mb-4 border-b border-gray-100 pb-2">Actions</h3>
+                            <div class="bg-gray-900 rounded-lg border border-gray-800 p-5 shadow-sm">
+                                <h3 class="text-sm font-bold text-white uppercase tracking-wide mb-4 border-b border-gray-800 pb-2">Actions</h3>
                                 <div class="space-y-3">
-                                    <button id="editProfileBtn" class="w-full flex items-center justify-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+                                    <button id="editProfileBtn" class="w-full flex items-center justify-center px-4 py-2 border border-gray-700 rounded-lg text-sm font-medium text-gray-300 hover:bg-gray-800 hover:text-white transition-colors">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                         </svg>
                                         Edit Details
                                     </button>
-                                    <button id="deleteProfileBtn" class="w-full flex items-center justify-center px-4 py-2 border border-red-200 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-colors">
+                                    <button id="deleteProfileBtn" class="w-full flex items-center justify-center px-4 py-2 border border-red-900/50 rounded-lg text-sm font-medium text-red-400 hover:bg-red-900/20 transition-colors">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                         </svg>
                                         Delete Student
                                     </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    </div> <!-- End Personal Tab -->
+
+                    <!-- Other Tabs -->
+                    <div id="tab-academic" class="tab-content hidden">
+                        <div class="space-y-6">
+                            <!-- Performance Stats -->
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <div class="bg-gray-900 p-4 rounded-lg border border-gray-800 shadow-sm text-center">
+                                    <div class="text-xs text-gray-400 uppercase font-bold">CGPA</div>
+                                    <div class="text-2xl font-bold text-primary-400">-</div>
+                                </div>
+                                <div class="bg-gray-900 p-4 rounded-lg border border-gray-800 shadow-sm text-center">
+                                    <div class="text-xs text-gray-400 uppercase font-bold">Attendance</div>
+                                    <div class="text-2xl font-bold text-green-400">0%</div>
+                                </div>
+                                <div class="bg-gray-900 p-4 rounded-lg border border-gray-800 shadow-sm text-center">
+                                    <div class="text-xs text-gray-400 uppercase font-bold">Rank</div>
+                                    <div class="text-2xl font-bold text-blue-400">-</div>
+                                </div>
+                                <div class="bg-gray-900 p-4 rounded-lg border border-gray-800 shadow-sm text-center">
+                                    <div class="text-xs text-gray-400 uppercase font-bold">Grade</div>
+                                    <div class="text-2xl font-bold text-purple-400">-</div>
+                                </div>
+                            </div>
+
+                            <!-- Recent Exams -->
+                            <!-- Recent Exams -->
+                            <div class="bg-gray-900 rounded-lg border border-gray-800 shadow-sm overflow-hidden">
+                                <div class="px-6 py-4 border-b border-gray-800 flex justify-between items-center">
+                                    <h3 class="font-bold text-white">Recent Exam Results</h3>
+                                    <button class="text-primary-400 text-sm font-medium hover:text-primary-300 disabled:opacity-50" disabled>View All</button>
+                                </div>
+                                <table class="w-full text-sm text-left">
+                                    <thead class="bg-gray-800 text-gray-400 font-medium">
+                                        <tr>
+                                            <th class="px-6 py-3">Subject</th>
+                                            <th class="px-6 py-3">Marks</th>
+                                            <th class="px-6 py-3">Grade</th>
+                                            <th class="px-6 py-3">Date</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-gray-800">
+                                        <tr>
+                                            <td colspan="4" class="px-6 py-8 text-center text-gray-500">
+                                                No exam results recorded yet.
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="tab-fee" class="tab-content hidden">
+                        <div class="max-w-4xl mx-auto">
+                            <!-- Fee Summary -->
+                            <!-- Fee Summary -->
+                            <div class="bg-gray-900 rounded-lg border border-gray-800 p-5 shadow-sm mb-6">
+                                <h3 class="text-sm font-bold text-white uppercase tracking-wide mb-4 border-b border-gray-800 pb-2">Fee Status</h3>
+                                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                    <div class="bg-blue-900/20 p-3 rounded-lg text-center border border-blue-900/30">
+                                        <div class="text-xs text-blue-400 font-medium uppercase">Total Fees</div>
+                                        <div id="feeTotal" class="text-lg font-bold text-blue-300">...</div>
+                                    </div>
+                                    <div class="bg-green-900/20 p-3 rounded-lg text-center border border-green-900/30">
+                                        <div class="text-xs text-green-400 font-medium uppercase">Paid</div>
+                                        <div id="feePaid" class="text-lg font-bold text-green-300">...</div>
+                                    </div>
+                                    <div class="bg-red-900/20 p-3 rounded-lg text-center border border-red-900/30">
+                                        <div class="text-xs text-red-400 font-medium uppercase">Remaining</div>
+                                        <div id="feeRemaining" class="text-lg font-bold text-red-300">...</div>
+                                    </div>
+                                </div>
+                                <div class="mt-4 text-xs text-gray-400 text-center">
+                                    Last Payment: <span id="feeLastPayment" class="font-medium text-gray-300">-</span>
+                                </div>
+                            </div>
+                            
+                            <div class="flex justify-end">
+                                <button class="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center shadow-lg shadow-primary-500/20">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                    </svg>
+                                    Add Fee Payment
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="tab-attendance" class="tab-content hidden">
+                        <div class="space-y-6">
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <!-- Stats -->
+                                <!-- Stats -->
+                                <div class="bg-gray-900 p-5 rounded-lg border border-gray-800 shadow-sm">
+                                    <h4 class="text-xs font-bold text-gray-400 uppercase mb-4">Yearly Overview</h4>
+                                    <div class="flex items-center justify-center relative h-32 w-32 mx-auto">
+                                        <svg class="h-full w-full transform -rotate-90" viewBox="0 0 36 36">
+                                            <path class="text-gray-800" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="3.8" />
+                                            <path class="text-green-500" stroke-dasharray="0, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="3.8" />
+                                        </svg>
+                                        <div class="absolute flex flex-col items-center">
+                                            <span class="text-2xl font-bold text-white">0%</span>
+                                            <span class="text-xs text-gray-400">Present</span>
+                                        </div>
+                                    </div>
+                                    <div class="mt-4 grid grid-cols-2 gap-2 text-center text-xs">
+                                        <div class="bg-green-900/20 p-2 rounded text-green-400 font-medium border border-green-900/30">0 Present</div>
+                                        <div class="bg-red-900/20 p-2 rounded text-red-400 font-medium border border-red-900/30">0 Absent</div>
+                                    </div>
+                                </div>
+
+                                <!-- Recent History -->
+                                <!-- Recent History -->
+                                <div class="md:col-span-2 bg-gray-900 rounded-lg border border-gray-800 shadow-sm overflow-hidden">
+                                    <div class="px-6 py-4 border-b border-gray-800">
+                                        <h3 class="font-bold text-white">Recent Attendance</h3>
+                                    </div>
+                                    <div class="divide-y divide-gray-800">
+                                        <div class="px-6 py-8 text-center text-gray-500">
+                                            No attendance records found.
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="tab-discipline" class="tab-content hidden">
+                        <div class="space-y-4">
+                            <div class="bg-gray-900 p-8 rounded-lg border border-gray-800 shadow-sm text-center">
+                                <div class="inline-flex items-center justify-center h-12 w-12 rounded-full bg-gray-800 mb-4">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                </div>
+                                <h3 class="text-lg font-medium text-white">Clean Record</h3>
+                                <p class="text-gray-400 mt-1">No discipline records or remarks found for this student.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="tab-documents" class="tab-content hidden">
+                        <div class="bg-gray-900 rounded-lg border border-gray-800 shadow-sm overflow-hidden">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
+                                <!-- Upload New -->
+                                <div class="border-2 border-dashed border-gray-700 rounded-lg p-4 hover:border-primary-500 hover:bg-gray-800 transition-all cursor-pointer flex flex-col items-center justify-center text-center h-full min-h-[140px] group">
+                                    <div class="h-10 w-10 rounded-full bg-gray-800 flex items-center justify-center text-primary-400 mb-2 group-hover:scale-110 transition-transform">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                                        </svg>
+                                    </div>
+                                    <span class="text-sm font-medium text-primary-400">Upload Document</span>
+                                    <span class="text-xs text-gray-500 mt-1">PDF, JPG, PNG</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="tab-account" class="tab-content hidden">
+                        <div class="max-w-2xl mx-auto space-y-6">
+                            <!-- Credentials Card -->
+                            <div class="bg-gray-900 rounded-lg border border-gray-800 p-5 shadow-sm">
+                                <h3 class="text-sm font-bold text-primary-400 uppercase tracking-wide mb-4 border-b border-gray-800 pb-2">Login Credentials</h3>
+                                <div class="space-y-3">
+                                    <div>
+                                        <label class="text-xs text-gray-500 block">Username / Email</label>
+                                        <div class="flex items-center justify-between">
+                                            <code id="profileCredEmail" class="text-sm font-mono font-bold text-white truncate mr-2">user@school.com</code>
+                                            <button onclick="navigator.clipboard.writeText(document.getElementById('profileCredEmail').textContent)" class="text-primary-400 hover:text-primary-300">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="text-xs text-gray-500 block">Default Password</label>
+                                        <div class="flex items-center justify-between">
+                                            <code id="profileCredPass" class="text-sm font-mono font-bold text-white">Pass123!</code>
+                                            <button onclick="navigator.clipboard.writeText(document.getElementById('profileCredPass').textContent)" class="text-primary-400 hover:text-primary-300">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -403,65 +600,125 @@ export async function render(container) {
     `;
 
     // Event Listeners
+    const addEvent = (id, event, handler) => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener(event, handler);
+        else console.warn(`Element ${id} not found`);
+    };
+
     // Dropdown toggle
     const dropdown = document.getElementById('addStudentDropdown');
     const dropdownMenu = document.getElementById('studentDropdownMenu');
 
-    dropdown.addEventListener('click', (e) => {
-        e.stopPropagation();
-        dropdownMenu.classList.toggle('hidden');
-    });
+    if (dropdown && dropdownMenu) {
+        dropdown.addEventListener('click', (e) => {
+            e.stopPropagation();
+            dropdownMenu.classList.toggle('hidden');
+        });
 
-    // Close dropdown when clicking outside
-    document.addEventListener('click', () => {
-        dropdownMenu.classList.add('hidden');
-    });
+        // Close dropdown when clicking outside
+        document.addEventListener('click', () => {
+            dropdownMenu.classList.add('hidden');
+        });
+    }
 
     // Single student modal
-    document.getElementById('addSingleStudent').addEventListener('click', () => {
-        dropdownMenu.classList.add('hidden');
+    addEvent('addSingleStudent', 'click', () => {
+        if (dropdownMenu) dropdownMenu.classList.add('hidden');
         openModal();
     });
 
-    document.getElementById('closeModalBtn').addEventListener('click', closeModal);
-    document.getElementById('cancelBtn').addEventListener('click', closeModal);
-    document.getElementById('studentForm').addEventListener('submit', handleFormSubmit);
-    document.getElementById('class').addEventListener('change', handleClassChange);
+    addEvent('closeModalBtn', 'click', closeModal);
+    addEvent('cancelBtn', 'click', closeModal);
+    addEvent('studentForm', 'submit', handleFormSubmit);
+    addEvent('class', 'change', handleClassChange);
 
     // Bulk upload modal
-    document.getElementById('addBulkStudents').addEventListener('click', () => {
-        dropdownMenu.classList.add('hidden');
+    addEvent('addBulkStudents', 'click', () => {
+        if (dropdownMenu) dropdownMenu.classList.add('hidden');
         openBulkModal();
     });
 
-    document.getElementById('closeBulkModalBtn').addEventListener('click', closeBulkModal);
-    document.getElementById('cancelBulkBtn').addEventListener('click', closeBulkModal);
-    document.getElementById('downloadTemplateBtn').addEventListener('click', downloadTemplate);
-    document.getElementById('excelFileInput').addEventListener('change', handleFileSelect);
-    document.getElementById('uploadStudentsBtn').addEventListener('click', handleBulkUpload);
-    document.getElementById('closeCredModalBtn').addEventListener('click', () => {
+    // Fix Roll Numbers button
+    addEvent('fixRollNumbers', 'click', async () => {
+        if (dropdownMenu) dropdownMenu.classList.add('hidden');
+        await fixAllRollNumbers();
+    });
+
+    // Fix Class Names button
+    addEvent('fixClassNames', 'click', async () => {
+        if (dropdownMenu) dropdownMenu.classList.add('hidden');
+        await fixClassNames();
+    });
+
+    addEvent('closeBulkModalBtn', 'click', closeBulkModal);
+    addEvent('cancelBulkBtn', 'click', closeBulkModal);
+    addEvent('downloadTemplateBtn', 'click', downloadTemplate);
+    addEvent('excelFileInput', 'change', handleFileSelect);
+    addEvent('uploadStudentsBtn', 'click', handleBulkUpload);
+
+    addEvent('closeCredModalBtn', 'click', () => {
         const modal = document.getElementById('credentialsModal');
-        const content = modal.querySelector('div');
-        content.classList.remove('opacity-100', 'scale-100', 'translate-y-0');
-        content.classList.add('opacity-0', 'scale-95', 'translate-y-4');
-        setTimeout(() => {
-            modal.classList.add('hidden');
-            modal.classList.remove('flex');
-        }, 300);
+        if (modal) {
+            const content = modal.querySelector('div');
+            content.classList.remove('opacity-100', 'scale-100', 'translate-y-0');
+            content.classList.add('opacity-0', 'scale-95', 'translate-y-4');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }, 300);
+        }
     });
 
     // Profile Modal Listeners
-    document.getElementById('closeProfileModalBtn').addEventListener('click', closeProfileModal);
-    document.getElementById('editProfileBtn').addEventListener('click', () => {
+    addEvent('closeProfileModalBtn', 'click', closeProfileModal);
+    addEvent('editProfileBtn', 'click', () => {
         closeProfileModal();
-        const id = document.getElementById('profileStudentId').value;
-        window.editStudent(id);
+        const idInput = document.getElementById('profileStudentId');
+        if (idInput && window.editStudent) {
+            window.editStudent(idInput.value);
+        }
     });
-    document.getElementById('deleteProfileBtn').addEventListener('click', () => {
-        const id = document.getElementById('profileStudentId').value;
-        window.deleteStudent(id);
+    addEvent('deleteProfileBtn', 'click', () => {
+        const idInput = document.getElementById('profileStudentId');
+        if (idInput && window.deleteStudent) {
+            window.deleteStudent(idInput.value);
+        }
     });
-    document.getElementById('profilePhotoInput').addEventListener('change', handlePhotoUpload);
+    addEvent('profilePhotoInput', 'change', handlePhotoUpload);
+
+    // Search Listener
+    addEvent('searchInput', 'input', handleSearch);
+
+    // Tab Switching Logic
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    tabBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            // Remove active state from all tabs
+            tabBtns.forEach(b => {
+                b.classList.remove('active-tab', 'border-indigo-500', 'text-indigo-600');
+                b.classList.add('border-transparent', 'text-gray-500');
+            });
+
+            // Add active state to clicked tab
+            btn.classList.add('active-tab', 'border-indigo-500', 'text-indigo-600');
+            btn.classList.remove('border-transparent', 'text-gray-500');
+
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.add('hidden');
+                content.classList.remove('block');
+            });
+
+            // Show target tab content
+            const targetId = `tab-${btn.dataset.tab}`;
+            const targetContent = document.getElementById(targetId);
+            if (targetContent) {
+                targetContent.classList.remove('hidden');
+                targetContent.classList.add('block');
+            }
+        });
+    });
 
     // Initial Fetch
     fetchStudents();
@@ -469,7 +726,7 @@ export async function render(container) {
 
 async function fetchStudents() {
     const tbody = document.getElementById('studentsTableBody');
-    tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center">Loading...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-gray-400">Loading...</td></tr>';
 
     const { data, error } = await supabase
         .from('students')
@@ -478,7 +735,7 @@ async function fetchStudents() {
 
     if (error) {
         console.error('Error fetching students:', error);
-        tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-red-500">Error loading students</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-red-400">Error loading students</td></tr>';
         return;
     }
 
@@ -490,27 +747,27 @@ function renderTable(students) {
     const tbody = document.getElementById('studentsTableBody');
 
     if (students.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-gray-500">No students found</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-gray-500 dark:text-gray-400">No students found</td></tr>';
         return;
     }
 
     tbody.innerHTML = students.map(student => `
-        <tr class="hover:bg-gray-50 transition-colors group">
+        <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group border-b border-gray-200 dark:border-gray-800 last:border-0">
             <td class="p-4">
-                <button onclick="window.viewProfile('${student.id}')" class="text-left hover:text-indigo-600 transition-colors focus:outline-none">
-                    <div class="font-medium text-gray-900 group-hover:text-indigo-600">${student.name}</div>
-                    <div class="text-xs text-gray-500">${student.email || 'No email'}</div>
+                <button onclick="window.viewProfile('${student.id}')" class="text-left hover:text-primary-600 dark:hover:text-primary-400 transition-colors focus:outline-none">
+                    <div class="font-medium text-gray-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400">${student.name}</div>
+                    <div class="text-xs text-gray-500 dark:text-gray-400">${student.email || 'No email'}</div>
                 </button>
             </td>
-            <td class="p-4 text-gray-600">${student.roll_no}</td>
+            <td class="p-4 text-gray-600 dark:text-gray-300">${student.roll_no}</td>
             <td class="p-4">
-                <span class="px-2 py-1 bg-indigo-50 text-indigo-700 rounded-full text-xs font-medium">
+                <span class="px-2 py-1 bg-indigo-50 dark:bg-primary-900/20 text-indigo-700 dark:text-primary-300 rounded-full text-xs font-medium border border-indigo-100 dark:border-primary-900/30">
                     ${student.class} ${student.section ? `(${student.section})` : ''}
                 </span>
             </td>
-            <td class="p-4 text-gray-600">${student.phone || '-'}</td>
+            <td class="p-4 text-gray-600 dark:text-gray-300">${student.phone || '-'}</td>
             <td class="p-4 text-right">
-                <button onclick="window.viewProfile('${student.id}')" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-600 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center ml-auto">
+                <button onclick="window.viewProfile('${student.id}')" class="bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-primary-400 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center ml-auto border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                     </svg>
@@ -523,11 +780,48 @@ function renderTable(students) {
 
 // Expose functions to window
 window.viewProfile = async (id) => {
-    const student = currentStudents.find(s => s.id === id);
-    if (!student) return;
+    console.log('viewProfile called with ID:', id);
+
+    // Try to find student in current array first
+    let student = currentStudents.find(s => s.id === id);
+
+    // If not found in array, fetch directly from database
+    if (!student) {
+        console.warn('Student not found in currentStudents array, fetching from database...');
+        try {
+            const { data, error } = await supabase
+                .from('students')
+                .select('*')
+                .eq('id', id)
+                .single();
+
+            if (error) throw error;
+
+            if (data) {
+                student = data;
+                console.log('Student fetched from database:', student);
+            } else {
+                console.error('Student not found in database');
+                alert('Error: Student not found. Please refresh the page.');
+                return;
+            }
+        } catch (err) {
+            console.error('Error fetching student:', err);
+            alert('Error loading student profile: ' + err.message);
+            return;
+        }
+    } else {
+        console.log('Student found in array:', student);
+    }
 
     // Show modal immediately with basic info
     const modal = document.getElementById('profileModal');
+
+    // Move modal to body to break out of dashboard layout
+    if (modal.parentElement !== document.body) {
+        document.body.appendChild(modal);
+    }
+
     const content = modal.querySelector('div');
 
     modal.classList.remove('hidden');
@@ -538,15 +832,37 @@ window.viewProfile = async (id) => {
     content.classList.remove('opacity-0', 'scale-95', 'translate-y-4');
     content.classList.add('opacity-100', 'scale-100', 'translate-y-0');
 
+    // Reset Tabs to Personal Info
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    tabBtns.forEach(b => {
+        b.classList.remove('active-tab', 'border-indigo-500', 'text-indigo-600');
+        b.classList.add('border-transparent', 'text-gray-500');
+    });
+    const personalTabBtn = document.querySelector('.tab-btn[data-tab="personal"]');
+    if (personalTabBtn) {
+        personalTabBtn.classList.add('active-tab', 'border-indigo-500', 'text-indigo-600');
+        personalTabBtn.classList.remove('border-transparent', 'text-gray-500');
+    }
+
+    document.querySelectorAll('.tab-content').forEach(c => {
+        c.classList.add('hidden');
+        c.classList.remove('block');
+    });
+    const personalTab = document.getElementById('tab-personal');
+    if (personalTab) {
+        personalTab.classList.remove('hidden');
+        personalTab.classList.add('block');
+    }
+
     // Populate Basic Info
     document.getElementById('profileStudentId').value = student.id;
-    document.getElementById('profileName').textContent = student.name;
-    document.getElementById('profileClass').textContent = `${student.class} (${student.section})`;
-    document.getElementById('profileRollNo').textContent = student.roll_no;
+    document.getElementById('profileName').textContent = student.name || 'N/A';
+    document.getElementById('profileClass').textContent = `${student.class || 'N/A'} (${student.section || 'N/A'})`;
+    document.getElementById('profileRollNo').textContent = student.roll_no || 'N/A';
     document.getElementById('profileGender').textContent = student.gender || '-';
     document.getElementById('profilePhone').textContent = student.phone || '-';
     document.getElementById('profileEmail').textContent = student.email || '-';
-    document.getElementById('profileDate').textContent = student.admission_date || new Date(student.created_at).toLocaleDateString();
+    document.getElementById('profileDate').textContent = student.admission_date || (student.created_at ? new Date(student.created_at).toLocaleDateString() : '-');
 
     // Photo
     const photoImg = document.getElementById('profilePhoto');
@@ -559,12 +875,12 @@ window.viewProfile = async (id) => {
     } else {
         photoImg.classList.add('hidden');
         placeholder.classList.remove('hidden');
-        placeholder.textContent = student.name.charAt(0);
+        placeholder.textContent = student.name ? student.name.charAt(0) : '?';
     }
 
     // Credentials
     document.getElementById('profileCredEmail').textContent = student.email || 'No email';
-    const firstName = student.name.split(' ')[0];
+    const firstName = student.name ? student.name.split(' ')[0] : 'Student';
     document.getElementById('profileCredPass').textContent = `${firstName}123!`;
 
     // Fetch Fees
@@ -572,8 +888,18 @@ window.viewProfile = async (id) => {
 };
 
 window.editStudent = (id) => {
+    console.log('editStudent called with ID:', id);
+    console.log('currentStudents array length:', currentStudents.length);
     const student = currentStudents.find(s => s.id === id);
-    if (student) openModal(student);
+    if (student) {
+        console.log('Student found:', student);
+        closeProfileModal(); // Close profile modal first
+        openModal(student);
+    } else {
+        console.error('Student not found in currentStudents array. ID:', id);
+        console.error('Available IDs:', currentStudents.map(s => s.id));
+        alert('Error: Student data not found. Please refresh the page and try again.');
+    }
 };
 
 window.deleteStudent = async (id) => {
@@ -583,6 +909,7 @@ window.deleteStudent = async (id) => {
     if (error) {
         alert('Error deleting student: ' + error.message);
     } else {
+        closeProfileModal(); // Close profile modal
         fetchStudents();
     }
 };
@@ -701,6 +1028,12 @@ function closeProfileModal() {
 
 async function openModal(student = null) {
     const modal = document.getElementById('studentModal');
+
+    // Move modal to body to break out of dashboard layout
+    if (modal.parentElement !== document.body) {
+        document.body.appendChild(modal);
+    }
+
     const content = modal.querySelector('.bg-white');
     const title = document.getElementById('modalTitle');
     const form = document.getElementById('studentForm');
@@ -740,13 +1073,10 @@ async function openModal(student = null) {
         form.reset();
         document.getElementById('studentId').value = '';
 
-        // Auto-generate Roll No
-        rollNoInput.value = 'Loading...';
+        // Roll number will be auto-generated when class is selected
+        rollNoInput.value = 'Select class first...';
         rollNoInput.readOnly = true;
         rollNoInput.classList.add('bg-gray-100');
-
-        const nextRoll = await generateNextRollNo();
-        rollNoInput.value = nextRoll;
     }
 }
 
@@ -779,39 +1109,316 @@ function handleClassChange() {
 
     if (selectedClass && selectedClass.sections && selectedClass.sections.length > 0) {
         sectionSelect.innerHTML += selectedClass.sections.map(s => `<option value="${s}">${s}</option>`).join('');
-    } else {
-        // If no sections defined, maybe show a default or keep empty
-        // User requested "only those sections which are created by user"
-        // So we leave it empty or show "No sections found"
+    }
+
+    // Auto-generate roll number for new students when class is selected
+    const studentId = document.getElementById('studentId').value;
+    if (!studentId) { // Only for new students
+        const rollNoInput = document.getElementById('roll_no');
+        rollNoInput.value = 'Generating...';
+
+        // Generate roll number based on selected class
+        getNextRollNumber(selectedClassName, new Date().getFullYear(), 1)
+            .then(rollNo => {
+                rollNoInput.value = rollNo;
+            })
+            .catch(err => {
+                console.error('Error generating roll number:', err);
+                rollNoInput.value = 'Error - please retry';
+            });
     }
 }
 
-async function generateNextRollNo() {
+// ========== NEW ROLL NUMBER SYSTEM ==========
+// Format: SUF<YY><CLASSCODE><NNNN>
+// Example: SUF2507015 = The Suffah School, 2025, Class 5, Student #15
+
+// Class Code Mapping
+function getClassCode(className) {
+    // Remove section info and normalize class name
+    const normalizedClass = className.toLowerCase().replace(/\s*\([a-z]\)$/i, '').trim();
+
+    const classMap = {
+        'play group': '01',
+        'pg': '01',
+        'prep': '02',
+        'class 1': '03',
+        '1': '03',
+        'class 2': '04',
+        '2': '04',
+        'class 3': '05',
+        '3': '05',
+        'class 4': '06',
+        '4': '06',
+        'class 5': '07',
+        '5': '07',
+        'class 6': '08',
+        '6': '08',
+        'class 7': '09',
+        '7': '09',
+        'class 8': '10',
+        '8': '10',
+        'class 9': '11',
+        '9': '11',
+        'class 10': '12',
+        '10': '12'
+    };
+
+    return classMap[normalizedClass] || '99'; // 99 for unknown classes
+}
+
+// Get admission year (last 2 digits)
+function getAdmissionYearCode(year) {
+    if (!year) {
+        year = new Date().getFullYear();
+    }
+    return year.toString().slice(-2); // Last 2 digits
+}
+
+// Generate next roll number for a specific class and year
+async function getNextRollNumber(className, admissionYear = null, count = 1) {
     try {
+        if (!className) {
+            throw new Error('Class name is required for roll number generation');
+        }
+
+        // Get class code
+        const classCode = getClassCode(className);
+
+        // Get year code
+        if (!admissionYear) {
+            admissionYear = new Date().getFullYear();
+        }
+        const yearCode = getAdmissionYearCode(admissionYear);
+
+        // Query for max serial number in this class + year combination
         const { data, error } = await supabase
             .from('students')
-            .select('roll_no')
-            .order('created_at', { ascending: false })
+            .select('roll_no, class, admission_year')
+            .eq('admission_year', admissionYear)
+            .ilike('class', `%${className.split('(')[0].trim()}%`) // Match class ignoring section
+            .order('roll_no', { ascending: false })
             .limit(1);
 
+        if (error) throw error;
+
+        let nextSerial = 1;
+
         if (data && data.length > 0) {
-            const lastRoll = data[0].roll_no;
-            // Try to extract number part
-            const match = lastRoll.match(/(\d+)$/);
+            // Extract serial number from existing roll number
+            const lastRollNo = data[0].roll_no;
+            // Format: SUF<YY><CC><NNNN> - extract last 4 digits
+            const match = lastRollNo.match(/SUF\d{2}\d{2}(\d{4})$/);
             if (match) {
-                const numberPart = match[1];
-                const prefix = lastRoll.substring(0, lastRoll.length - numberPart.length);
-                const nextNumber = parseInt(numberPart) + 1;
-                // Pad with zeros to match length of previous number
-                return `${prefix}${nextNumber.toString().padStart(numberPart.length, '0')}`;
+                nextSerial = parseInt(match[1]) + 1;
             }
         }
-        return 'ST-001'; // Default start
+
+        // Generate roll number(s)
+        if (count === 1) {
+            const serial = nextSerial.toString().padStart(4, '0');
+            return `SUF${yearCode}${classCode}${serial}`;
+        }
+
+        // For bulk upload - return array
+        const rollNumbers = [];
+        for (let i = 0; i < count; i++) {
+            const serial = (nextSerial + i).toString().padStart(4, '0');
+            rollNumbers.push(`SUF${yearCode}${classCode}${serial}`);
+        }
+        return rollNumbers;
+
     } catch (err) {
-        console.error('Error generating roll no:', err);
-        return 'ST-001';
+        console.error('Error generating roll number:', err);
+        // Fallback
+        const yearCode = getAdmissionYearCode(admissionYear || new Date().getFullYear());
+        const classCode = getClassCode(className || 'Class 1');
+        if (count === 1) {
+            return `SUF${yearCode}${classCode}0001`;
+        }
+        const fallbackRolls = [];
+        for (let i = 0; i < count; i++) {
+            const serial = (i + 1).toString().padStart(4, '0');
+            fallbackRolls.push(`SUF${yearCode}${classCode}${serial}`);
+        }
+        return fallbackRolls;
     }
 }
+
+// Legacy function for backward compatibility - now uses centralized function
+async function generateNextRollNo() {
+    return await getNextRollNumber(1);
+}
+
+// ========== FIX ALL ROLL NUMBERS ==========
+// Convert all existing students to new SUF<YY><CLASSCODE><NNNN> format
+async function fixAllRollNumbers() {
+    const confirmMsg = 'This will convert ALL student roll numbers to the NEW FORMAT!\n\n' +
+        'New Format: SUF<YY><CLASSCODE><NNNN>\n' +
+        'Example: SUF2507001 = The Suffah School, 2025, Class 5, Student #1\n\n' +
+        'This will:\n' +
+        '- Group students by CLASS + ADMISSION YEAR\n' +
+        '- Assign sequential numbers within each group\n' +
+        '- Skip students already in SUF format\n' +
+        '- Use admission year from created_at if not set\n\n' +
+        'Do you want to continue?';
+
+    if (!confirm(confirmMsg)) {
+        return;
+    }
+
+    try {
+        const tbody = document.getElementById('studentsTableBody');
+        tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-blue-600 font-bold">📊 Loading students...</td></tr>';
+
+        const { data: students, error: fetchError } = await supabase
+            .from('students')
+            .select('*')
+            .order('created_at', { ascending: true });
+
+        if (fetchError) throw fetchError;
+
+        if (!students || students.length === 0) {
+            alert('No students found.');
+            return;
+        }
+
+        const totalStudents = students.length;
+        console.log(`🔄 Processing ${totalStudents} students...`);
+
+        // Check which students already have SUF format
+        const sufPattern = /^SUF\d{2}\d{2}\d{4}$/;
+        const alreadyConverted = students.filter(s => sufPattern.test(s.roll_no));
+        const needsConversion = students.filter(s => !sufPattern.test(s.roll_no));
+
+        console.log(`✓ Already in SUF format: ${alreadyConverted.length}`);
+        console.log(`⚠ Needs conversion: ${needsConversion.length}`);
+
+        if (needsConversion.length === 0) {
+            alert('✅ All students already have SUF format roll numbers!');
+            return;
+        }
+
+        // Group ALL students (including already converted) by class + admission_year
+        // This ensures we don't create duplicate roll numbers
+        const groups = {};
+        const usedRollNumbers = new Set(); // Track all used roll numbers
+
+        students.forEach(student => {
+            const admissionYear = student.admission_year || new Date(student.created_at).getFullYear();
+            const className = student.class.split('(')[0].trim(); // Remove section
+            const groupKey = `${className}_${admissionYear}`;
+
+            if (!groups[groupKey]) {
+                groups[groupKey] = {
+                    className,
+                    admissionYear,
+                    students: [],
+                    nextSerial: 1
+                };
+            }
+
+            // If student already has SUF format, track their roll number
+            if (sufPattern.test(student.roll_no)) {
+                usedRollNumbers.add(student.roll_no);
+                // Extract serial number to determine next available
+                const match = student.roll_no.match(/SUF\d{2}\d{2}(\d{4})$/);
+                if (match) {
+                    const serial = parseInt(match[1]);
+                    if (serial >= groups[groupKey].nextSerial) {
+                        groups[groupKey].nextSerial = serial + 1;
+                    }
+                }
+            }
+
+            groups[groupKey].students.push(student);
+        });
+
+        // PHASE: Assign new roll numbers to students that need conversion
+        tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-green-600 font-bold">⚙️ Assigning roll numbers...</td></tr>';
+        console.log('⚡ Assigning SUF format roll numbers...');
+
+        let successCount = 0;
+        let failedCount = 0;
+        let skippedCount = 0;
+        let processedCount = 0;
+
+        for (const [groupKey, group] of Object.entries(groups)) {
+            const classCode = getClassCode(group.className);
+            const yearCode = getAdmissionYearCode(group.admissionYear);
+            let serial = group.nextSerial;
+
+            for (const student of group.students) {
+                processedCount++;
+
+                // Skip if already in SUF format
+                if (sufPattern.test(student.roll_no)) {
+                    console.log(`⏭ Skipping ${student.name}: Already has ${student.roll_no}`);
+                    skippedCount++;
+                    continue;
+                }
+
+                // Find next available roll number
+                let newRollNo;
+                let attempts = 0;
+                do {
+                    newRollNo = `SUF${yearCode}${classCode}${serial.toString().padStart(4, '0')}`;
+                    serial++;
+                    attempts++;
+                    if (attempts > 1000) {
+                        console.error(`❌ Too many attempts for ${student.name}`);
+                        failedCount++;
+                        break;
+                    }
+                } while (usedRollNumbers.has(newRollNo));
+
+                if (attempts > 1000) continue;
+
+                // Update student
+                const { error } = await supabase
+                    .from('students')
+                    .update({
+                        roll_no: newRollNo,
+                        admission_year: group.admissionYear
+                    })
+                    .eq('id', student.id);
+
+                if (error) {
+                    console.error(`❌ Error updating ${student.name}:`, error);
+                    console.error('Error details:', error.message, error.details, error.hint);
+                    failedCount++;
+                } else {
+                    console.log(`✅ ${student.name}: ${student.roll_no} → ${newRollNo}`);
+                    usedRollNumbers.add(newRollNo); // Mark as used
+                    successCount++;
+                }
+
+                // Update progress every 5 students
+                if (processedCount % 5 === 0 || processedCount === totalStudents) {
+                    tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-green-600 font-bold">⚙️ Processing: ${processedCount}/${totalStudents} students...</td></tr>`;
+                }
+            }
+        }
+
+        console.log('✅ Process Complete!');
+        console.log(`Skipped: ${skippedCount} | Converted: ${successCount} | Failed: ${failedCount}`);
+
+        if (failedCount > 0) {
+            alert(`⚠️ Completed:\n\n⏭ Already converted: ${skippedCount}\n✓ Newly converted: ${successCount}\n✗ Failed: ${failedCount}\n\nCheck console for error details.`);
+        } else {
+            alert(`✅ SUCCESS!\n\n⏭ Already in SUF format: ${skippedCount}\n✓ Newly converted: ${successCount}\n\nAll students now have proper SUF<YY><CLASSCODE><NNNN> roll numbers!`);
+        }
+
+        // Refresh table
+        await fetchStudents();
+
+    } catch (error) {
+        console.error('❌ Error:', error);
+        alert('Error: ' + error.message);
+        await fetchStudents();
+    }
+}
+
 
 function closeModal() {
     const modal = document.getElementById('studentModal');
@@ -879,6 +1486,11 @@ async function handleFormSubmit(e) {
             phone,
             gender,
         };
+
+        // Add admission_year for new students
+        if (!id) {
+            studentData.admission_year = new Date().getFullYear();
+        }
 
         let error;
         if (id) {
@@ -954,6 +1566,12 @@ async function createAuthUser(email, password, name) {
 
 function showCredentialsModal(email, password) {
     const modal = document.getElementById('credentialsModal');
+
+    // Move modal to body to break out of dashboard layout
+    if (modal.parentElement !== document.body) {
+        document.body.appendChild(modal);
+    }
+
     const content = modal.querySelector('div');
 
     document.getElementById('credEmail').textContent = email;
@@ -981,6 +1599,12 @@ function handleSearch(e) {
 
 function openBulkModal() {
     const modal = document.getElementById('bulkUploadModal');
+
+    // Move modal to body to break out of dashboard layout
+    if (modal.parentElement !== document.body) {
+        document.body.appendChild(modal);
+    }
+
     const content = modal.querySelector('div'); // Assuming first div inside modal is the content container
     // Actually, in the HTML, the content div is the direct child.
     // Let's be safe and select by class or structure if needed, but querySelector('div') should get the first div.
@@ -1030,10 +1654,10 @@ function closeBulkModal() {
 function downloadTemplate() {
     const wb = XLSX.utils.book_new();
 
-    // Template data with headers and sample row
+    // Template data with headers and sample row (Roll No will be auto-generated)
     const templateData = [
-        ['Name', 'Roll No', 'Class', 'Section', 'Gender', 'Email', 'Phone', 'Address'],
-        ['John Doe', 'ST-001', 'Class 10', 'A', 'Male', 'john@example.com', '1234567890', '123 Main St']
+        ['Name', 'Class', 'Section', 'Gender', 'Email', 'Phone', 'Address'],
+        ['John Doe', 'Class 10', 'A', 'Male', 'john@example.com', '1234567890', '123 Main St']
     ];
 
     const ws = XLSX.utils.aoa_to_sheet(templateData);
@@ -1041,7 +1665,6 @@ function downloadTemplate() {
     // Set column widths
     ws['!cols'] = [
         { wch: 20 }, // Name
-        { wch: 12 }, // Roll No
         { wch: 12 }, // Class
         { wch: 10 }, // Section
         { wch: 10 }, // Gender
@@ -1092,7 +1715,7 @@ function handleFileSelect(e) {
     reader.readAsArrayBuffer(file);
 }
 
-// Validate Excel Data
+// Validate Excel Data (Roll No will be auto-generated, not required in file)
 function validateExcelData(jsonData) {
     const students = [];
     const errors = [];
@@ -1101,12 +1724,9 @@ function validateExcelData(jsonData) {
         const rowNum = index + 2; // +2 because Excel is 1-indexed and has header row
         const rowErrors = [];
 
-        // Required fields validation
+        // Required fields validation (Roll No is NOT required - will be auto-generated)
         if (!row['Name'] || row['Name'].toString().trim() === '') {
             rowErrors.push(`Row ${rowNum}: Name is required`);
-        }
-        if (!row['Roll No'] || row['Roll No'].toString().trim() === '') {
-            rowErrors.push(`Row ${rowNum}: Roll No is required`);
         }
         if (!row['Class'] || row['Class'].toString().trim() === '') {
             rowErrors.push(`Row ${rowNum}: Class is required`);
@@ -1118,7 +1738,7 @@ function validateExcelData(jsonData) {
         if (rowErrors.length === 0) {
             students.push({
                 name: row['Name'].toString().trim(),
-                roll_no: row['Roll No'].toString().trim(),
+                // roll_no will be auto-generated in handleBulkUpload
                 class: row['Class'].toString().trim(),
                 section: row['Section'].toString().trim(),
                 gender: row['Gender'] ? row['Gender'].toString().trim() : 'Male',
@@ -1163,42 +1783,56 @@ function showUploadSummary(students, errors) {
     summaryDiv.innerHTML = html;
 }
 
-// Handle Bulk Upload
+// Handle Bulk Upload with New Roll Number Format
 async function handleBulkUpload() {
     if (parsedStudents.length === 0) return;
 
     const uploadBtn = document.getElementById('uploadStudentsBtn');
     uploadBtn.disabled = true;
-    uploadBtn.textContent = 'Uploading...';
+    uploadBtn.textContent = 'Generating Roll Numbers...';
 
     try {
-        // Check for duplicate roll numbers in database
-        const rollNumbers = parsedStudents.map(s => s.roll_no);
-        const { data: existing } = await supabase
-            .from('students')
-            .select('roll_no')
-            .in('roll_no', rollNumbers);
+        const currentYear = new Date().getFullYear();
 
-        const existingRollNos = existing ? existing.map(s => s.roll_no) : [];
+        // Group students by class
+        const studentsByClass = {};
+        parsedStudents.forEach(student => {
+            const className = student.class;
+            if (!studentsByClass[className]) {
+                studentsByClass[className] = [];
+            }
+            studentsByClass[className].push(student);
+        });
 
-        if (existingRollNos.length > 0) {
-            const duplicates = existingRollNos.join(', ');
-            alert(`Error: The following roll numbers already exist: ${duplicates}\n\nPlease remove duplicates and try again.`);
-            uploadBtn.disabled = false;
-            uploadBtn.textContent = 'Upload Students';
-            return;
+        // Generate roll numbers for each class group
+        const studentsWithRollNo = [];
+
+        for (const [className, classStudents] of Object.entries(studentsByClass)) {
+            // Get roll numbers for this class
+            const rollNumbers = await getNextRollNumber(className, currentYear, classStudents.length);
+
+            // Assign roll numbers to students in this class
+            classStudents.forEach((student, index) => {
+                studentsWithRollNo.push({
+                    ...student,
+                    roll_no: rollNumbers[index],
+                    admission_year: currentYear
+                });
+            });
         }
 
-        // Insert all students
+        uploadBtn.textContent = 'Uploading...';
+
+        // Insert all students with auto-generated roll numbers
         const { data, error } = await supabase
             .from('students')
-            .insert(parsedStudents);
+            .insert(studentsWithRollNo);
 
         if (error) {
             throw error;
         }
 
-        alert(`Success! ${parsedStudents.length} student(s) added successfully.`);
+        alert(`Success! ${parsedStudents.length} student(s) added successfully with new roll number format (SUF format).`);
         closeBulkModal();
         fetchStudents();
 
@@ -1208,5 +1842,78 @@ async function handleBulkUpload() {
     } finally {
         uploadBtn.disabled = false;
         uploadBtn.textContent = 'Upload Students';
+    }
+}
+
+// ========== FIX CLASS NAMES ==========
+async function fixClassNames() {
+    if (!confirm('This will update student class names to match the standard format (e.g., "7" -> "Class 7"). Continue?')) {
+        return;
+    }
+
+    const loadingMsg = 'Fixing class names...';
+    // Use loadingOverlay instead of toast.loading
+    if (window.loadingOverlay) window.loadingOverlay.show(loadingMsg);
+    else console.log(loadingMsg);
+
+    try {
+        // 1. Get valid classes
+        const { data: classes, error: classError } = await supabase
+            .from('classes')
+            .select('class_name');
+
+        if (classError) throw classError;
+
+        const validClassNames = new Set(classes.map(c => c.class_name));
+
+        // 2. Get all students
+        const { data: students, error: studentError } = await supabase
+            .from('students')
+            .select('id, class');
+
+        if (studentError) throw studentError;
+
+        // 3. Identify updates
+        const updates = [];
+        students.forEach(student => {
+            const currentClass = student.class;
+            // If class is NOT in valid list
+            if (currentClass && !validClassNames.has(currentClass)) {
+                // Try adding "Class " prefix
+                const fixedClass = `Class ${currentClass}`;
+                // If adding prefix makes it valid, then it's a candidate for update
+                if (validClassNames.has(fixedClass)) {
+                    updates.push({ id: student.id, class: fixedClass });
+                }
+            }
+        });
+
+        if (updates.length === 0) {
+            if (window.loadingOverlay) window.loadingOverlay.hide();
+            if (window.toast) window.toast.info('No class names needed fixing.');
+            else alert('No class names needed fixing.');
+            return;
+        }
+
+        // 4. Perform updates
+        // We'll do parallel promises
+        const updatePromises = updates.map(u =>
+            supabase.from('students').update({ class: u.class }).eq('id', u.id)
+        );
+
+        await Promise.all(updatePromises);
+
+        if (window.loadingOverlay) window.loadingOverlay.hide();
+        if (window.toast) window.toast.success(`Fixed ${updates.length} student class names!`);
+        else alert(`Fixed ${updates.length} student class names!`);
+
+        // Refresh table
+        await fetchStudents();
+
+    } catch (error) {
+        console.error(error);
+        if (window.loadingOverlay) window.loadingOverlay.hide();
+        if (window.toast) window.toast.error('Failed to fix class names');
+        else alert('Failed to fix class names');
     }
 }
