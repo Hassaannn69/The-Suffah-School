@@ -76,7 +76,7 @@ export async function render(container) {
         </div>
 
         <!-- Modal -->
-        <div id="studentModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-start justify-center z-50 backdrop-blur-sm pt-10 overflow-y-auto transition-opacity duration-300">
+        <div id="studentModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 backdrop-blur-sm overflow-y-auto transition-opacity duration-300">
             <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl mx-4 mb-10 overflow-hidden transform transition-all duration-300 ease-out opacity-0 scale-95 translate-y-4">
                 <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
                     <h3 class="text-lg font-bold text-gray-800" id="modalTitle">Add New Student</h3>
@@ -146,7 +146,7 @@ export async function render(container) {
         </div>
 
         <!-- Bulk Upload Modal -->
-        <div id="bulkUploadModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-start justify-center z-50 backdrop-blur-sm pt-10 overflow-y-auto transition-opacity duration-300">
+        <div id="bulkUploadModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 backdrop-blur-sm overflow-y-auto transition-opacity duration-300">
             <!-- ... (existing bulk modal content) ... -->
             <div class="bg-white rounded-xl shadow-2xl w-full max-w-3xl mx-4 mb-10 overflow-hidden transform transition-all duration-300 ease-out opacity-0 scale-95 translate-y-4">
                 <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
@@ -216,7 +216,7 @@ export async function render(container) {
         </div>
 
         <!-- Credentials Modal -->
-        <div id="credentialsModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-start justify-center z-50 backdrop-blur-sm pt-10 overflow-y-auto transition-opacity duration-300">
+        <div id="credentialsModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 backdrop-blur-sm overflow-y-auto transition-opacity duration-300">
             <div class="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 mb-10 overflow-hidden transform transition-all duration-300 ease-out opacity-0 scale-95 translate-y-4">
                 <div class="bg-green-500 p-6 text-center">
                     <div class="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
@@ -255,7 +255,7 @@ export async function render(container) {
         <!-- ... (existing credentials modal) ... -->
 
         <!-- Profile Modal -->
-        <div id="profileModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-start justify-center z-50 backdrop-blur-sm pt-10 overflow-y-auto transition-opacity duration-300">
+        <div id="profileModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 backdrop-blur-sm overflow-y-auto transition-opacity duration-300">
             <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl mx-4 mb-10 overflow-hidden transform transition-all duration-300 ease-out opacity-0 scale-95 translate-y-4 flex flex-col">
                 <!-- Header with Photo -->
                 <div class="relative bg-indigo-600 h-32 flex-shrink-0">
