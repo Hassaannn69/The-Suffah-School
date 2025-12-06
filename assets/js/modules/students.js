@@ -6,7 +6,6 @@ const supabase = window.supabase || (() => {
 
 let currentStudents = [];
 let availableClasses = []; // Store classes and their sections
-let parsedStudents = []; // Store parsed Excel data
 
 export async function render(container) {
     container.innerHTML = `
@@ -1105,8 +1104,9 @@ function validateExcelData(jsonData) {
         if (!row['Name'] || row['Name'].toString().trim() === '') {
             rowErrors.push(`Row ${rowNum}: Name is required`);
         }
-        // Roll No is optional now - will be auto-generated if missing
-
+        if (!row['Roll No'] || row['Roll No'].toString().trim() === '') {
+            rowErrors.push(`Row ${rowNum}: Roll No is required`);
+        }
         if (!row['Class'] || row['Class'].toString().trim() === '') {
             rowErrors.push(`Row ${rowNum}: Class is required`);
         }
@@ -1117,7 +1117,7 @@ function validateExcelData(jsonData) {
         if (rowErrors.length === 0) {
             students.push({
                 name: row['Name'].toString().trim(),
-                roll_no: row['Roll No'] ? row['Roll No'].toString().trim() : null, // Allow null
+                roll_no: row['Roll No'].toString().trim(),
                 class: row['Class'].toString().trim(),
                 section: row['Section'].toString().trim(),
                 gender: row['Gender'] ? row['Gender'].toString().trim() : 'Male',
@@ -1171,41 +1171,7 @@ async function handleBulkUpload() {
     uploadBtn.textContent = 'Uploading...';
 
     try {
-
-        // 1. Auto-generate Roll Numbers for those missing
-        const studentsWithoutRoll = parsedStudents.filter(s => !s.roll_no);
-
-        if (studentsWithoutRoll.length > 0) {
-            // Fetch last roll number
-            const { data: lastStudent } = await supabase
-                .from('students')
-                .select('roll_no')
-                .order('created_at', { ascending: false })
-                .limit(1)
-                .single();
-
-            let lastRoll = lastStudent ? lastStudent.roll_no : 'ST-000';
-            let prefix = 'ST-';
-            let currentNum = 0;
-
-            // Extract number part
-            const match = lastRoll.match(/(\d+)$/);
-            if (match) {
-                const numberPart = match[1];
-                prefix = lastRoll.substring(0, lastRoll.length - numberPart.length);
-                currentNum = parseInt(numberPart);
-            }
-
-            // Assign new roll numbers
-            parsedStudents.forEach(student => {
-                if (!student.roll_no) {
-                    currentNum++;
-                    student.roll_no = `${prefix}${currentNum.toString().padStart(3, '0')}`;
-                }
-            });
-        }
-
-        // 2. Check for duplicate roll numbers in database (for the ones that were manually provided OR generated)
+        // Check for duplicate roll numbers in database
         const rollNumbers = parsedStudents.map(s => s.roll_no);
         const { data: existing } = await supabase
             .from('students')
@@ -1216,7 +1182,7 @@ async function handleBulkUpload() {
 
         if (existingRollNos.length > 0) {
             const duplicates = existingRollNos.join(', ');
-            alert(`Error: The following roll numbers already exist: ${duplicates}\n\nThis might happen if the auto-generated numbers conflict with existing ones or if the Excel file contains duplicates.`);
+            alert(`Error: The following roll numbers already exist: ${duplicates}\n\nPlease remove duplicates and try again.`);
             uploadBtn.disabled = false;
             uploadBtn.textContent = 'Upload Students';
             return;

@@ -11,9 +11,8 @@ window.supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     auth: {
         persistSession: true,
         storage: window.localStorage,
-        storageKey: 'school_auth_token', // Force same key
         autoRefreshToken: true,
-        detectSessionInUrl: false // Disable to prevent interference
+        detectSessionInUrl: true
     }
 });
 

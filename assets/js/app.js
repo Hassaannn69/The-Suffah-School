@@ -50,23 +50,7 @@ async function initApp() {
 
     try {
         const supabaseClient = getSupabase();
-
-        // Retry logic for session check
-        let session = null;
-        let error = null;
-        let retries = 3;
-
-        while (retries > 0 && !session) {
-            const result = await supabaseClient.auth.getSession();
-            session = result.data.session;
-            error = result.error;
-
-            if (session) break;
-
-            // Wait 500ms before retry
-            retries--;
-            if (retries > 0) await new Promise(r => setTimeout(r, 500));
-        }
+        const { data: { session }, error } = await supabaseClient.auth.getSession();
 
         if (error || !session) {
             // DEBUG: Stop redirect loop and show info
@@ -78,7 +62,7 @@ async function initApp() {
                     <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; text-align: left; font-family: monospace; overflow: auto; max-width: 600px; margin: 0 auto;">
                         <p><strong>Error:</strong> ${error ? error.message : 'None'}</p>
                         <p><strong>Session:</strong> ${session ? 'Found' : 'Null'}</p>
-                        <p><strong>Storage Key:</strong> school_auth_token</p>
+                        <p><strong>Storage Key:</strong> Default (sb-...-auth-token)</p>
                         <p><strong>SessionStorage Keys:</strong> ${Object.keys(sessionStorage).join(', ') || 'EMPTY'}</p>
                         <p><strong>LocalStorage Keys:</strong> ${Object.keys(localStorage).join(', ') || 'EMPTY'}</p>
                         <p><strong>Supabase URL:</strong> ${window.SUPABASE_URL}</p>
@@ -211,7 +195,7 @@ async function loadModule(moduleId) {
                 throw new Error('Supabase client not initialized. Please refresh the page.');
             }
 
-            const module = await import(`./modules/${moduleId}.js?v=3`);
+            const module = await import(`./modules/${moduleId}.js`);
             if (module && module.render) {
                 await module.render(mainContent);
             } else {
