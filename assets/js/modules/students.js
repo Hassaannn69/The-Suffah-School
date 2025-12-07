@@ -1,4 +1,4 @@
-// Use global Supabase client for production compatibility
+﻿// Use global Supabase client for production compatibility
 const supabase = window.supabase || (() => {
     console.error('Supabase client not found on window object');
     throw new Error('Supabase client not initialized');
@@ -1269,7 +1269,7 @@ async function fixAllRollNumbers() {
 
     try {
         const tbody = document.getElementById('studentsTableBody');
-        tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-blue-600 font-bold">📊 Loading students...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-blue-600 font-bold">ðŸ“Š Loading students...</td></tr>';
 
         const { data: students, error: fetchError } = await supabase
             .from('students')
@@ -1284,18 +1284,18 @@ async function fixAllRollNumbers() {
         }
 
         const totalStudents = students.length;
-        console.log(`🔄 Processing ${totalStudents} students...`);
+        console.log(`ðŸ”„ Processing ${totalStudents} students...`);
 
         // Check which students already have SUF format
         const sufPattern = /^SUF\d{2}\d{2}\d{4}$/;
         const alreadyConverted = students.filter(s => sufPattern.test(s.roll_no));
         const needsConversion = students.filter(s => !sufPattern.test(s.roll_no));
 
-        console.log(`✓ Already in SUF format: ${alreadyConverted.length}`);
-        console.log(`⚠ Needs conversion: ${needsConversion.length}`);
+        console.log(`âœ“ Already in SUF format: ${alreadyConverted.length}`);
+        console.log(`âš  Needs conversion: ${needsConversion.length}`);
 
         if (needsConversion.length === 0) {
-            alert('✅ All students already have SUF format roll numbers!');
+            alert('âœ… All students already have SUF format roll numbers!');
             return;
         }
 
@@ -1335,8 +1335,8 @@ async function fixAllRollNumbers() {
         });
 
         // PHASE: Assign new roll numbers to students that need conversion
-        tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-green-600 font-bold">⚙️ Assigning roll numbers...</td></tr>';
-        console.log('⚡ Assigning SUF format roll numbers...');
+        tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-green-600 font-bold">âš™ï¸ Assigning roll numbers...</td></tr>';
+        console.log('âš¡ Assigning SUF format roll numbers...');
 
         let successCount = 0;
         let failedCount = 0;
@@ -1353,7 +1353,7 @@ async function fixAllRollNumbers() {
 
                 // Skip if already in SUF format
                 if (sufPattern.test(student.roll_no)) {
-                    console.log(`⏭ Skipping ${student.name}: Already has ${student.roll_no}`);
+                    console.log(`â­ Skipping ${student.name}: Already has ${student.roll_no}`);
                     skippedCount++;
                     continue;
                 }
@@ -1366,7 +1366,7 @@ async function fixAllRollNumbers() {
                     serial++;
                     attempts++;
                     if (attempts > 1000) {
-                        console.error(`❌ Too many attempts for ${student.name}`);
+                        console.error(`âŒ Too many attempts for ${student.name}`);
                         failedCount++;
                         break;
                     }
@@ -1384,36 +1384,36 @@ async function fixAllRollNumbers() {
                     .eq('id', student.id);
 
                 if (error) {
-                    console.error(`❌ Error updating ${student.name}:`, error);
+                    console.error(`âŒ Error updating ${student.name}:`, error);
                     console.error('Error details:', error.message, error.details, error.hint);
                     failedCount++;
                 } else {
-                    console.log(`✅ ${student.name}: ${student.roll_no} → ${newRollNo}`);
+                    console.log(`âœ… ${student.name}: ${student.roll_no} â†’ ${newRollNo}`);
                     usedRollNumbers.add(newRollNo); // Mark as used
                     successCount++;
                 }
 
                 // Update progress every 5 students
                 if (processedCount % 5 === 0 || processedCount === totalStudents) {
-                    tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-green-600 font-bold">⚙️ Processing: ${processedCount}/${totalStudents} students...</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-green-600 font-bold">âš™ï¸ Processing: ${processedCount}/${totalStudents} students...</td></tr>`;
                 }
             }
         }
 
-        console.log('✅ Process Complete!');
+        console.log('âœ… Process Complete!');
         console.log(`Skipped: ${skippedCount} | Converted: ${successCount} | Failed: ${failedCount}`);
 
         if (failedCount > 0) {
-            alert(`⚠️ Completed:\n\n⏭ Already converted: ${skippedCount}\n✓ Newly converted: ${successCount}\n✗ Failed: ${failedCount}\n\nCheck console for error details.`);
+            alert(`âš ï¸ Completed:\n\nâ­ Already converted: ${skippedCount}\nâœ“ Newly converted: ${successCount}\nâœ— Failed: ${failedCount}\n\nCheck console for error details.`);
         } else {
-            alert(`✅ SUCCESS!\n\n⏭ Already in SUF format: ${skippedCount}\n✓ Newly converted: ${successCount}\n\nAll students now have proper SUF<YY><CLASSCODE><NNNN> roll numbers!`);
+            alert(`âœ… SUCCESS!\n\nâ­ Already in SUF format: ${skippedCount}\nâœ“ Newly converted: ${successCount}\n\nAll students now have proper SUF<YY><CLASSCODE><NNNN> roll numbers!`);
         }
 
         // Refresh table
         await fetchStudents();
 
     } catch (error) {
-        console.error('❌ Error:', error);
+        console.error('âŒ Error:', error);
         alert('Error: ' + error.message);
         await fetchStudents();
     }
@@ -1768,11 +1768,11 @@ function showUploadSummary(students, errors) {
     let html = '';
 
     if (students.length > 0) {
-        html += `<div class="text-green-600 font-semibold mb-2">✓ ${students.length} student(s) ready to upload</div>`;
+        html += `<div class="text-green-600 font-semibold mb-2">âœ“ ${students.length} student(s) ready to upload</div>`;
     }
 
     if (errors.length > 0) {
-        html += `<div class="text-red-600 font-semibold mb-2">✗ ${errors.length} error(s) found:</div>`;
+        html += `<div class="text-red-600 font-semibold mb-2">âœ— ${errors.length} error(s) found:</div>`;
         html += '<ul class="list-disc list-inside text-red-600 text-xs space-y-1">';
         errors.forEach(err => {
             html += `<li>${err}</li>`;
@@ -1917,5 +1917,3 @@ async function fixClassNames() {
         else alert('Failed to fix class names');
     }
 }
-/ /   F o r c e   u p d a t e  
- 
