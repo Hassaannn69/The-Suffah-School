@@ -109,51 +109,94 @@ export async function render(container) {
                 <form id="studentForm" class="p-6 space-y-4">
                     <input type="hidden" id="studentId">
                     
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-300 mb-1">Full Name *</label>
-                            <input type="text" id="name" required class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-primary-500 outline-none">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-300 mb-1">Roll Number *</label>
-                            <input type="text" id="roll_no" required class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-primary-500 outline-none">
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-300 mb-1">Class *</label>
-                            <select id="class" required class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-primary-500 outline-none">
-                                <option value="">Select Class</option>
-                                <!-- Populated dynamically -->
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-300 mb-1">Section *</label>
-                            <select id="section" required class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-primary-500 outline-none">
-                                <option value="">Select Section</option>
-                                <!-- Populated dynamically -->
-                            </select>
+                    <!-- Personal Information Section -->
+                    <div class="mb-6">
+                        <h4 class="text-sm font-bold text-primary-400 uppercase tracking-wide mb-3 pb-2 border-b border-gray-800">Personal Information</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-1">Full Name *</label>
+                                <input type="text" id="name" required class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-primary-500 outline-none" placeholder="Enter student's full name">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-1">Date of Birth *</label>
+                                <input type="date" id="date_of_birth" required class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-primary-500 outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-1">Gender *</label>
+                                <select id="gender" required class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-primary-500 outline-none">
+                                    <option value="Male">Male</option>
+                                    <option value="Female">Female</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-1">Contact Number *</label>
+                                <input type="tel" id="phone" required maxlength="11" class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-primary-500 outline-none" placeholder="03001234567">
+                            </div>
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-300 mb-1">Gender</label>
-                            <select id="gender" class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-primary-500 outline-none">
-                                <option value="Male">Male</option>
-                                <option value="Female">Female</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-300 mb-1">Phone</label>
-                            <input type="tel" id="phone" class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-primary-500 outline-none">
+                    <!-- Father Information Section -->
+                    <div class="mb-6">
+                        <h4 class="text-sm font-bold text-primary-400 uppercase tracking-wide mb-3 pb-2 border-b border-gray-800">Father Information</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-1">Father Name *</label>
+                                <input type="text" id="father_name" required class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-primary-500 outline-none" placeholder="Enter father's name">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-1">Father CNIC Number *</label>
+                                <input type="text" id="father_cnic" required maxlength="15" class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-primary-500 outline-none" placeholder="12345-1234567-1">
+                            </div>
                         </div>
                     </div>
 
-                    <div>
-                        <label class="block text-sm font-medium text-gray-300 mb-1">Email</label>
-                        <input type="email" id="email" class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-primary-500 outline-none" placeholder="Leave empty to auto-generate">
+                    <!-- Academic Information Section -->
+                    <div class="mb-6">
+                        <h4 class="text-sm font-bold text-primary-400 uppercase tracking-wide mb-3 pb-2 border-b border-gray-800">Academic Information</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-1">Class *</label>
+                                <select id="class" required class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-primary-500 outline-none">
+                                    <option value="">Select Class</option>
+                                    <!-- Populated dynamically -->
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-1">Section *</label>
+                                <select id="section" required class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-primary-500 outline-none">
+                                    <option value="">Select Section</option>
+                                    <!-- Populated dynamically -->
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-1">Roll Number *</label>
+                                <input type="text" id="roll_no" required class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-primary-500 outline-none" placeholder="Auto-generated">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-1">Admission Date</label>
+                                <input type="date" id="admission_date" class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-primary-500 outline-none">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Additional Information Section -->
+                    <div class="mb-6">
+                        <h4 class="text-sm font-bold text-primary-400 uppercase tracking-wide mb-3 pb-2 border-b border-gray-800">Additional Information</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-1">From Which School</label>
+                                <input type="text" id="from_which_school" class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-primary-500 outline-none" placeholder="Previous school name">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-1">Family Code</label>
+                                <input type="text" id="family_code" maxlength="20" class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-primary-500 outline-none" placeholder="For sibling identification">
+                            </div>
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-medium text-gray-300 mb-1">Gmail (Optional)</label>
+                                <input type="email" id="email" class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-primary-500 outline-none" placeholder="student@gmail.com (optional)">
+                                <p class="text-xs text-gray-500 mt-1">Note: Login uses Student ID + Date of Birth, not email</p>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="flex justify-end space-x-3 pt-4 border-t border-gray-800">
@@ -363,6 +406,10 @@ export async function render(container) {
                                         <span id="profileRollNo" class="text-sm font-medium text-white">-</span>
                                     </div>
                                     <div>
+                                        <label class="text-xs text-gray-500 block">Date of Birth</label>
+                                        <span id="profileDOB" class="text-sm font-medium text-white">-</span>
+                                    </div>
+                                    <div>
                                         <label class="text-xs text-gray-500 block">Gender</label>
                                         <span id="profileGender" class="text-sm font-medium text-white">-</span>
                                     </div>
@@ -371,8 +418,24 @@ export async function render(container) {
                                         <span id="profilePhone" class="text-sm font-medium text-white">-</span>
                                     </div>
                                     <div>
+                                        <label class="text-xs text-gray-500 block">Father Name</label>
+                                        <span id="profileFatherName" class="text-sm font-medium text-white">-</span>
+                                    </div>
+                                    <div>
+                                        <label class="text-xs text-gray-500 block">Father CNIC</label>
+                                        <span id="profileFatherCNIC" class="text-sm font-medium text-white">-</span>
+                                    </div>
+                                    <div>
+                                        <label class="text-xs text-gray-500 block">From Which School</label>
+                                        <span id="profileFromSchool" class="text-sm font-medium text-white">-</span>
+                                    </div>
+                                    <div>
                                         <label class="text-xs text-gray-500 block">Admission Date</label>
                                         <span id="profileDate" class="text-sm font-medium text-white">-</span>
+                                    </div>
+                                    <div>
+                                        <label class="text-xs text-gray-500 block">Family Code</label>
+                                        <span id="profileFamilyCode" class="text-sm font-medium text-white">-</span>
                                     </div>
                                     <div class="sm:col-span-2">
                                         <label class="text-xs text-gray-500 block">Email</label>
@@ -569,7 +632,7 @@ export async function render(container) {
                                 <h3 class="text-sm font-bold text-primary-400 uppercase tracking-wide mb-4 border-b border-gray-800 pb-2">Login Credentials</h3>
                                 <div class="space-y-3">
                                     <div>
-                                        <label class="text-xs text-gray-500 block">Username / Email</label>
+                                        <label class="text-xs text-gray-500 block">Student ID</label>
                                         <div class="flex items-center justify-between">
                                             <code id="profileCredEmail" class="text-sm font-mono font-bold text-white truncate mr-2">user@school.com</code>
                                             <button onclick="navigator.clipboard.writeText(document.getElementById('profileCredEmail').textContent)" class="text-primary-400 hover:text-primary-300">
@@ -592,9 +655,68 @@ export async function render(container) {
                                     </div>
                                 </div>
                             </div>
+
+                            <!-- Password Management Card -->
+                            <div class="bg-gray-900 rounded-lg border border-gray-800 p-5 shadow-sm">
+                                <h3 class="text-sm font-bold text-primary-400 uppercase tracking-wide mb-4 border-b border-gray-800 pb-2">Password Management</h3>
+                                <div class="space-y-3">
+                                    <button id="changePasswordBtn" class="w-full flex items-center justify-center px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors font-medium text-sm">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                                        </svg>
+                                        Change Password
+                                    </button>
+                                    <button id="resetPasswordBtn" class="w-full flex items-center justify-center px-4 py-2.5 border border-gray-700 hover:bg-gray-800 text-gray-300 hover:text-white rounded-lg transition-colors font-medium text-sm">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                        </svg>
+                                        Reset to DOB Password (Admin)
+                                    </button>
+                                    <p class="text-xs text-gray-500 mt-2">
+                                        <span class="font-semibold">Note:</span> Default password is your date of birth in DDMMYYYY format.
+                                    </p>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <!-- Change Password Modal -->
+        <div id="changePasswordModal" class="modal-overlay fixed inset-0 bg-black/80 hidden items-center justify-center z-50 backdrop-blur-sm">
+            <div class="bg-gray-900 rounded-xl shadow-2xl w-full max-w-md mx-4 overflow-hidden transform transition-all duration-300 ease-out opacity-0 scale-95 translate-y-4 border border-gray-800">
+                <div class="bg-gradient-to-r from-primary-600 to-indigo-600 p-6 flex justify-between items-center">
+                    <h3 class="text-lg font-bold text-white">Change Password</h3>
+                    <button id="closeChangePasswordBtn" class="text-white hover:text-gray-200 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                <form id="changePasswordForm" class="p-6 space-y-4">
+                    <input type="hidden" id="changePasswordStudentId">
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-1">Current Password *</label>
+                        <input type="password" id="currentPassword" required class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-primary-500 outline-none">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-1">New Password * (min 6 characters)</label>
+                        <input type="password" id="newPassword" required minlength="6" class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-primary-500 outline-none">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-1">Confirm New Password *</label>
+                        <input type="password" id="confirmPassword" required minlength="6" class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-primary-500 outline-none">
+                    </div>
+
+                    <div class="flex justify-end space-x-3 pt-4 border-t border-gray-800">
+                        <button type="button" id="cancelChangePasswordBtn" class="px-4 py-2 text-gray-300 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors border border-gray-700">Cancel</button>
+                        <button type="submit" class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors shadow-lg shadow-primary-500/20">Change Password</button>
+                    </div>
+                </form>
             </div>
         </div>
     `;
@@ -686,6 +808,16 @@ export async function render(container) {
         }
     });
     addEvent('profilePhotoInput', 'change', handlePhotoUpload);
+
+    // Password Management Listeners
+    addEvent('changePasswordBtn', 'click', openChangePasswordModal);
+    addEvent('closeChangePasswordBtn', 'click', closeChangePasswordModal);
+    addEvent('cancelChangePasswordBtn', 'click', closeChangePasswordModal);
+    addEvent('changePasswordForm', 'submit', handleChangePassword);
+    addEvent('resetPasswordBtn', 'click', handleResetPassword);
+
+    // CNIC Auto-formatting
+    addEvent('father_cnic', 'input', formatCNICInput);
 
     // Search Listener
     addEvent('searchInput', 'input', handleSearch);
@@ -864,6 +996,13 @@ window.viewProfile = async (id) => {
     document.getElementById('profileEmail').textContent = student.email || '-';
     document.getElementById('profileDate').textContent = student.admission_date || (student.created_at ? new Date(student.created_at).toLocaleDateString() : '-');
 
+    // Populate new fields
+    document.getElementById('profileDOB').textContent = student.date_of_birth || '-';
+    document.getElementById('profileFatherName').textContent = student.father_name || '-';
+    document.getElementById('profileFatherCNIC').textContent = student.father_cnic || '-';
+    document.getElementById('profileFromSchool').textContent = student.from_which_school || '-';
+    document.getElementById('profileFamilyCode').textContent = student.family_code || '-';
+
     // Photo
     const photoImg = document.getElementById('profilePhoto');
     const placeholder = document.getElementById('profilePhotoPlaceholder');
@@ -879,27 +1018,51 @@ window.viewProfile = async (id) => {
     }
 
     // Credentials
-    document.getElementById('profileCredEmail').textContent = student.email || 'No email';
-    const firstName = student.name ? student.name.split(' ')[0] : 'Student';
-    document.getElementById('profileCredPass').textContent = `${firstName}123!`;
+    document.getElementById('profileCredEmail').textContent = student.roll_no || 'Not assigned';
+    const dobPassword = student.date_of_birth ? generatePasswordFromDOB(student.date_of_birth) : 'Not set';
+    document.getElementById('profileCredPass').textContent = dobPassword;
 
     // Fetch Fees
     await fetchStudentFees(student.id);
 };
 
-window.editStudent = (id) => {
+window.editStudent = async (id) => {
     console.log('editStudent called with ID:', id);
     console.log('currentStudents array length:', currentStudents.length);
-    const student = currentStudents.find(s => s.id === id);
-    if (student) {
-        console.log('Student found:', student);
-        closeProfileModal(); // Close profile modal first
-        openModal(student);
+
+    let student = currentStudents.find(s => s.id === id);
+
+    // If not found in array, fetch from database
+    if (!student) {
+        console.warn('Student not found in currentStudents array, fetching from database...');
+        try {
+            const { data, error } = await supabase
+                .from('students')
+                .select('*')
+                .eq('id', id)
+                .single();
+
+            if (error) throw error;
+
+            if (data) {
+                student = data;
+                console.log('Student fetched from database:', student);
+            } else {
+                console.error('Student not found in database');
+                alert('Error: Student not found. Please refresh the page.');
+                return;
+            }
+        } catch (err) {
+            console.error('Error fetching student:', err);
+            alert('Error loading student: ' + err.message);
+            return;
+        }
     } else {
-        console.error('Student not found in currentStudents array. ID:', id);
-        console.error('Available IDs:', currentStudents.map(s => s.id));
-        alert('Error: Student data not found. Please refresh the page and try again.');
+        console.log('Student found:', student);
     }
+
+    closeProfileModal(); // Close profile modal first
+    await openModal(student); // Open edit modal
 };
 
 window.deleteStudent = async (id) => {
@@ -1013,6 +1176,149 @@ async function handlePhotoUpload(e) {
     }
 }
 
+// Password Management Functions
+function openChangePasswordModal() {
+    const studentId = document.getElementById('profileStudentId').value;
+    if (!studentId) return;
+
+    const modal = document.getElementById('changePasswordModal');
+    if (modal.parentElement !== document.body) {
+        document.body.appendChild(modal);
+    }
+
+    const content = modal.querySelector('div');
+    document.getElementById('changePasswordStudentId').value = studentId;
+    document.getElementById('changePasswordForm').reset();
+
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+
+    void modal.offsetWidth;
+    content.classList.remove('opacity-0', 'scale-95', 'translate-y-4');
+    content.classList.add('opacity-100', 'scale-100', 'translate-y-0');
+}
+
+function closeChangePasswordModal() {
+    const modal = document.getElementById('changePasswordModal');
+    const content = modal.querySelector('div');
+
+    content.classList.remove('opacity-100', 'scale-100', 'translate-y-0');
+    content.classList.add('opacity-0', 'scale-95', 'translate-y-4');
+
+    setTimeout(() => {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }, 300);
+}
+
+async function handleChangePassword(e) {
+    e.preventDefault();
+
+    const studentId = document.getElementById('changePasswordStudentId').value;
+    const currentPassword = document.getElementById('currentPassword').value;
+    const newPassword = document.getElementById('newPassword').value;
+    const confirmPassword = document.getElementById('confirmPassword').value;
+
+    // Validation
+    if (newPassword !== confirmPassword) {
+        alert('New passwords do not match!');
+        return;
+    }
+
+    if (newPassword.length < 6) {
+        alert('Password must be at least 6 characters long!');
+        return;
+    }
+
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    const originalText = submitBtn.textContent;
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Changing...';
+
+    try {
+        // Get student email
+        const student = currentStudents.find(s => s.id === studentId);
+        if (!student || !student.email) {
+            throw new Error('Student email not found');
+        }
+
+        // Verify current password by attempting to sign in
+        const tempClient = window.SupabaseLib.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY, {
+            auth: {
+                persistSession: false,
+                autoRefreshToken: false,
+                detectSessionInUrl: false
+            }
+        });
+
+        const { error: signInError } = await tempClient.auth.signInWithPassword({
+            email: student.email,
+            password: currentPassword
+        });
+
+        if (signInError) {
+            throw new Error('Current password is incorrect');
+        }
+
+        // Update password
+        const { error: updateError } = await tempClient.auth.updateUser({
+            password: newPassword
+        });
+
+        if (updateError) throw updateError;
+
+        // Update password_changed flag in database
+        await supabase.from('students').update({ password_changed: true }).eq('id', studentId);
+
+        alert('Password changed successfully!');
+        closeChangePasswordModal();
+
+    } catch (error) {
+        console.error('Error changing password:', error);
+        alert('Error: ' + error.message);
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+    }
+}
+
+async function handleResetPassword() {
+    const studentId = document.getElementById('profileStudentId').value;
+    if (!studentId) return;
+
+    const student = currentStudents.find(s => s.id === studentId);
+    if (!student) {
+        alert('Student not found');
+        return;
+    }
+
+    if (!student.date_of_birth) {
+        alert('Cannot reset password: Date of birth not set for this student');
+        return;
+    }
+
+    if (!confirm(`Reset password to DOB (${student.date_of_birth}) for ${student.name}?`)) {
+        return;
+    }
+
+    try {
+        // Generate password from DOB
+        const password = generatePasswordFromDOB(student.date_of_birth);
+        if (!password) {
+            throw new Error('Invalid date of birth format');
+        }
+
+        // Update password_changed flag
+        await supabase.from('students').update({ password_changed: false }).eq('id', studentId);
+
+        alert(`Password reset to DOB format!\n\nNew Password: ${password}\n\nNote: Admin will need to manually reset the auth password in Supabase.`);
+
+    } catch (error) {
+        console.error('Error resetting password:', error);
+        alert('Error resetting password: ' + error.message);
+    }
+}
+
 function closeProfileModal() {
     const modal = document.getElementById('profileModal');
     const content = modal.querySelector('div');
@@ -1034,7 +1340,7 @@ async function openModal(student = null) {
         document.body.appendChild(modal);
     }
 
-    const content = modal.querySelector('.bg-white');
+    const content = modal.querySelector('.bg-gray-900');
     const title = document.getElementById('modalTitle');
     const form = document.getElementById('studentForm');
     const rollNoInput = document.getElementById('roll_no');
@@ -1057,7 +1363,7 @@ async function openModal(student = null) {
 
         rollNoInput.value = student.roll_no;
         rollNoInput.readOnly = true; // Roll no shouldn't change usually
-        rollNoInput.classList.add('bg-gray-100');
+        rollNoInput.classList.add('bg-gray-100', 'text-gray-900');
 
         document.getElementById('class').value = student.class;
 
@@ -1068,6 +1374,14 @@ async function openModal(student = null) {
         document.getElementById('email').value = student.email || '';
         document.getElementById('phone').value = student.phone || '';
         document.getElementById('gender').value = student.gender || 'Male';
+        document.getElementById('date_of_birth').value = student.date_of_birth || '';
+
+        // Populate new fields
+        document.getElementById('father_name').value = student.father_name || '';
+        document.getElementById('father_cnic').value = student.father_cnic || '';
+        document.getElementById('from_which_school').value = student.from_which_school || '';
+        document.getElementById('family_code').value = student.family_code || '';
+        document.getElementById('admission_date').value = student.admission_date || '';
     } else {
         title.textContent = 'Add New Student';
         form.reset();
@@ -1076,7 +1390,7 @@ async function openModal(student = null) {
         // Roll number will be auto-generated when class is selected
         rollNoInput.value = 'Select class first...';
         rollNoInput.readOnly = true;
-        rollNoInput.classList.add('bg-gray-100');
+        rollNoInput.classList.add('bg-gray-100', 'text-gray-900');
     }
 }
 
@@ -1422,7 +1736,7 @@ async function fixAllRollNumbers() {
 
 function closeModal() {
     const modal = document.getElementById('studentModal');
-    const content = modal.querySelector('.bg-white');
+    const content = modal.querySelector('.bg-gray-900');
 
     content.classList.remove('opacity-100', 'scale-100', 'translate-y-0');
     content.classList.add('opacity-0', 'scale-95', 'translate-y-4');
@@ -1433,6 +1747,41 @@ function closeModal() {
     }, 300);
 }
 
+// Validation and Formatting Functions
+function formatCNICInput(e) {
+    let value = e.target.value.replace(/\D/g, ''); // Remove non-digits
+    if (value.length > 13) value = value.substring(0, 13);
+
+    // Format as XXXXX-XXXXXXX-X
+    if (value.length > 5) {
+        value = value.substring(0, 5) + '-' + value.substring(5);
+    }
+    if (value.length > 13) {
+        value = value.substring(0, 13) + '-' + value.substring(13);
+    }
+
+    e.target.value = value;
+}
+
+function validateCNIC(cnic) {
+    const cnicPattern = /^\d{5}-\d{7}-\d{1}$/;
+    return cnicPattern.test(cnic);
+}
+
+function validatePhone(phone) {
+    const cleaned = phone.replace(/\D/g, '');
+    return cleaned.length === 11 && cleaned.startsWith('0');
+}
+
+// Helper function to generate password from DOB
+function generatePasswordFromDOB(dateOfBirth) {
+    if (!dateOfBirth) return null;
+    // Convert YYYY-MM-DD to DDMMYYYY
+    const parts = dateOfBirth.split('-');
+    if (parts.length !== 3) return null;
+    return `${parts[2]}${parts[1]}${parts[0]}`; // DDMMYYYY
+}
+
 async function handleFormSubmit(e) {
     e.preventDefault();
 
@@ -1441,9 +1790,28 @@ async function handleFormSubmit(e) {
     const roll_no = document.getElementById('roll_no').value;
     const studentClass = document.getElementById('class').value;
     const section = document.getElementById('section').value;
-    const phone = document.getElementById('phone').value;
+    const phone = document.getElementById('phone').value.trim();
     const gender = document.getElementById('gender').value;
+    const dateOfBirth = document.getElementById('date_of_birth').value;
     let email = document.getElementById('email').value.trim();
+
+    // New fields
+    const fatherName = document.getElementById('father_name').value.trim();
+    const fatherCNIC = document.getElementById('father_cnic').value.trim();
+    const fromWhichSchool = document.getElementById('from_which_school').value.trim();
+    const familyCode = document.getElementById('family_code').value.trim();
+    const admissionDate = document.getElementById('admission_date').value;
+
+    // Validation
+    if (!validatePhone(phone)) {
+        alert('Invalid phone number. Please enter 11 digits starting with 0 (e.g., 03001234567)');
+        return;
+    }
+
+    if (!validateCNIC(fatherCNIC)) {
+        alert('Invalid CNIC format. Please use format: 12345-1234567-1');
+        return;
+    }
 
     const saveBtn = e.target.querySelector('button[type="submit"]');
     const originalBtnText = saveBtn.textContent;
@@ -1455,18 +1823,17 @@ async function handleFormSubmit(e) {
 
         // If new student (no ID), handle credential generation
         if (!id) {
-            // 1. Generate Credentials if email is empty
+            // 1. Generate email from roll number if not provided
             if (!email) {
-                // Generate username from name (e.g., John Doe -> john.doe)
-                const cleanName = name.toLowerCase().replace(/[^a-z0-9]/g, '');
-                const randomSuffix = Math.floor(Math.random() * 100); // Add small number to avoid collision
-                const username = `${cleanName}${randomSuffix}`;
-                email = `${username}@school.com`;
+                // Use roll number as email (e.g., SUF2501001@student.suffah.school)
+                email = `${roll_no}@student.suffah.school`;
             }
 
-            // 2. Generate Password (e.g., Name123!)
-            const firstName = name.split(' ')[0];
-            const password = `${firstName}123!`;
+            // 2. Generate Password from DOB (DDMMYYYY format)
+            const password = generatePasswordFromDOB(dateOfBirth);
+            if (!password) {
+                throw new Error('Invalid date of birth. Cannot generate password.');
+            }
 
             // 3. Create Auth User (using secondary client)
             console.log('Creating auth user for:', email);
@@ -1485,6 +1852,14 @@ async function handleFormSubmit(e) {
             email,
             phone,
             gender,
+            date_of_birth: dateOfBirth,
+            password_changed: false,
+            // New fields
+            father_name: fatherName,
+            father_cnic: fatherCNIC,
+            from_which_school: fromWhichSchool || null,
+            family_code: familyCode || null,
+            admission_date: admissionDate || new Date().toISOString().split('T')[0]
         };
 
         // Add admission_year for new students
@@ -1510,7 +1885,7 @@ async function handleFormSubmit(e) {
 
         // Show credentials if generated
         if (generatedCreds) {
-            showCredentialsModal(generatedCreds.email, generatedCreds.password);
+            showCredentialsModal(roll_no, generatedCreds.password);
         } else {
             // alert('Student saved successfully!');
         }
@@ -1564,7 +1939,7 @@ async function createAuthUser(email, password, name) {
     }
 }
 
-function showCredentialsModal(email, password) {
+function showCredentialsModal(studentId, password) {
     const modal = document.getElementById('credentialsModal');
 
     // Move modal to body to break out of dashboard layout
@@ -1574,7 +1949,7 @@ function showCredentialsModal(email, password) {
 
     const content = modal.querySelector('div');
 
-    document.getElementById('credEmail').textContent = email;
+    document.getElementById('credEmail').textContent = studentId;
     document.getElementById('credPassword').textContent = password;
 
     modal.classList.remove('hidden');
@@ -1656,8 +2031,8 @@ function downloadTemplate() {
 
     // Template data with headers and sample row (Roll No will be auto-generated)
     const templateData = [
-        ['Name', 'Class', 'Section', 'Gender', 'Email', 'Phone', 'Address'],
-        ['John Doe', 'Class 10', 'A', 'Male', 'john@example.com', '1234567890', '123 Main St']
+        ['Name', 'Father Name', 'Father CNIC', 'Contact Number', 'Date of Birth', 'Class', 'Section', 'Gender', 'From Which School', 'Admission Date', 'Family Code', 'Gmail'],
+        ['John Doe', 'Mr. John Sr.', '12345-1234567-1', '03001234567', '2010-08-15', 'Class 10', 'A', 'Male', 'ABC School', '2025-01-01', 'FAM001', 'john@gmail.com']
     ];
 
     const ws = XLSX.utils.aoa_to_sheet(templateData);
@@ -1665,12 +2040,17 @@ function downloadTemplate() {
     // Set column widths
     ws['!cols'] = [
         { wch: 20 }, // Name
+        { wch: 20 }, // Father Name
+        { wch: 18 }, // Father CNIC
+        { wch: 15 }, // Contact Number
+        { wch: 15 }, // Date of Birth
         { wch: 12 }, // Class
         { wch: 10 }, // Section
         { wch: 10 }, // Gender
-        { wch: 25 }, // Email
-        { wch: 15 }, // Phone
-        { wch: 30 }  // Address
+        { wch: 20 }, // From Which School
+        { wch: 15 }, // Admission Date
+        { wch: 12 }, // Family Code
+        { wch: 25 }  // Gmail
     ];
 
     XLSX.utils.book_append_sheet(wb, ws, 'Students');
@@ -1728,23 +2108,44 @@ function validateExcelData(jsonData) {
         if (!row['Name'] || row['Name'].toString().trim() === '') {
             rowErrors.push(`Row ${rowNum}: Name is required`);
         }
+        if (!row['Father Name'] || row['Father Name'].toString().trim() === '') {
+            rowErrors.push(`Row ${rowNum}: Father Name is required`);
+        }
+        if (!row['Father CNIC'] || row['Father CNIC'].toString().trim() === '') {
+            rowErrors.push(`Row ${rowNum}: Father CNIC is required`);
+        } else if (!validateCNIC(row['Father CNIC'].toString().trim())) {
+            rowErrors.push(`Row ${rowNum}: Invalid CNIC format (use: 12345-1234567-1)`);
+        }
+        if (!row['Contact Number'] || row['Contact Number'].toString().trim() === '') {
+            rowErrors.push(`Row ${rowNum}: Contact Number is required`);
+        } else if (!validatePhone(row['Contact Number'].toString().trim())) {
+            rowErrors.push(`Row ${rowNum}: Invalid phone format (11 digits starting with 0)`);
+        }
         if (!row['Class'] || row['Class'].toString().trim() === '') {
             rowErrors.push(`Row ${rowNum}: Class is required`);
         }
         if (!row['Section'] || row['Section'].toString().trim() === '') {
             rowErrors.push(`Row ${rowNum}: Section is required`);
         }
+        if (!row['Date of Birth'] || row['Date of Birth'].toString().trim() === '') {
+            rowErrors.push(`Row ${rowNum}: Date of Birth is required`);
+        }
 
         if (rowErrors.length === 0) {
             students.push({
                 name: row['Name'].toString().trim(),
+                father_name: row['Father Name'].toString().trim(),
+                father_cnic: row['Father CNIC'].toString().trim(),
+                phone: row['Contact Number'].toString().trim(),
+                date_of_birth: row['Date of Birth'].toString().trim(),
                 // roll_no will be auto-generated in handleBulkUpload
                 class: row['Class'].toString().trim(),
                 section: row['Section'].toString().trim(),
                 gender: row['Gender'] ? row['Gender'].toString().trim() : 'Male',
-                email: row['Email'] ? row['Email'].toString().trim() : '',
-                phone: row['Phone'] ? row['Phone'].toString().trim() : '',
-                address: row['Address'] ? row['Address'].toString().trim() : ''
+                from_which_school: row['From Which School'] ? row['From Which School'].toString().trim() : null,
+                admission_date: row['Admission Date'] ? row['Admission Date'].toString().trim() : null,
+                family_code: row['Family Code'] ? row['Family Code'].toString().trim() : null,
+                email: row['Gmail'] ? row['Gmail'].toString().trim() : ''
             });
         } else {
             errors.push(...rowErrors);
@@ -1813,9 +2214,12 @@ async function handleBulkUpload() {
 
             // Assign roll numbers to students in this class
             classStudents.forEach((student, index) => {
+                const rollNo = rollNumbers[index];
                 studentsWithRollNo.push({
                     ...student,
-                    roll_no: rollNumbers[index],
+                    roll_no: rollNo,
+                    // Generate email from roll number if not provided
+                    email: student.email || `${rollNo}@student.suffah.school`,
                     admission_year: currentYear
                 });
             });
