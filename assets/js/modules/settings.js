@@ -6,29 +6,29 @@ const supabase = window.supabase || (() => {
 
 export async function render(container) {
     container.innerHTML = `
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden max-w-3xl mx-auto">
-            <div class="p-6 border-b border-gray-100">
-                <h2 class="text-xl font-bold text-gray-800">School Settings</h2>
-                <p class="text-sm text-gray-500 mt-1">Manage your school profile and default configurations.</p>
+        <div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden max-w-3xl mx-auto transition-colors duration-200">
+            <div class="p-6 border-b border-gray-200 dark:border-gray-800">
+                <h2 class="text-xl font-bold text-gray-900 dark:text-white">School Settings</h2>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Manage your school profile and default configurations.</p>
             </div>
             
             <form id="settingsForm" class="p-6 space-y-6">
                 <input type="hidden" id="settingsId">
                 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">School Name</label>
-                    <input type="text" id="schoolName" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-gray-900">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">School Name</label>
+                    <input type="text" id="schoolName" required class="w-full px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-gray-900 dark:text-white placeholder-gray-500 transition-colors">
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Logo URL</label>
-                    <input type="url" id="logoUrl" placeholder="https://example.com/logo.png" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-gray-900">
-                    <p class="text-xs text-gray-400 mt-1">Direct link to your school logo image.</p>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Logo URL</label>
+                    <input type="url" id="logoUrl" placeholder="https://example.com/logo.png" class="w-full px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-gray-900 dark:text-white placeholder-gray-500 transition-colors">
+                    <p class="text-xs text-gray-500 dark:text-gray-500 mt-1">Direct link to your school logo image.</p>
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Currency</label>
-                    <select id="currency" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-gray-900">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Currency</label>
+                    <select id="currency" class="w-full px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-gray-900 dark:text-white transition-colors">
                         <option value="PKR">PKR (Rs)</option>
                         <option value="USD">USD ($)</option>
                         <option value="INR">INR (₹)</option>
@@ -39,22 +39,22 @@ export async function render(container) {
                     </select>
                 </div>
 
-                <div class="border-t border-gray-100 pt-6">
-                    <h3 class="text-lg font-medium text-gray-800 mb-4">Default Fee Structure</h3>
+                <div class="border-t border-gray-200 dark:border-gray-800 pt-6">
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Default Fee Structure</h3>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Default Tuition Fee</label>
-                            <input type="number" id="defaultTuition" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-gray-900">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Default Tuition Fee</label>
+                            <input type="number" id="defaultTuition" class="w-full px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-gray-900 dark:text-white placeholder-gray-500 transition-colors">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Default Transport Fee</label>
-                            <input type="number" id="defaultTransport" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-gray-900">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Default Transport Fee</label>
+                            <input type="number" id="defaultTransport" class="w-full px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-gray-900 dark:text-white placeholder-gray-500 transition-colors">
                         </div>
                     </div>
                 </div>
 
                 <div class="flex justify-end pt-4">
-                    <button type="submit" id="saveBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg font-medium transition-colors shadow-lg shadow-indigo-200">
+                    <button type="submit" id="saveBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg font-medium transition-colors shadow-lg shadow-indigo-500/20">
                         Save Changes
                     </button>
                 </div>

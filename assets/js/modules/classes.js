@@ -6,10 +6,10 @@ const supabase = window.supabase || (() => {
 
 export async function render(container) {
     container.innerHTML = `
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-            <div class="p-6 border-b border-gray-100 flex items-center justify-between">
-                <h2 class="text-xl font-bold text-gray-800">Classes & Sections</h2>
-                <button id="addClassBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center transition-colors">
+        <div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden transition-colors duration-200">
+            <div class="p-6 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
+                <h2 class="text-xl font-bold text-gray-900 dark:text-white">Classes & Sections</h2>
+                <button id="addClassBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center transition-colors shadow-lg shadow-indigo-500/20">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                     </svg>
@@ -18,16 +18,16 @@ export async function render(container) {
             </div>
             
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-6" id="classesGrid">
-                <div class="col-span-full text-center py-10 text-gray-500">Loading classes...</div>
+                <div class="col-span-full text-center py-10 text-gray-500 dark:text-gray-400">Loading classes...</div>
             </div>
         </div>
 
         <!-- Modal -->
-        <div id="classModal" class="modal-overlay fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 backdrop-blur-sm">
-            <div class="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 my-4 overflow-hidden">
-                <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-                    <h3 class="text-lg font-bold text-gray-800">Add New Class</h3>
-                    <button id="closeModalBtn" class="text-gray-400 hover:text-gray-600">
+        <div id="classModal" class="modal-overlay fixed inset-0 bg-black/80 hidden items-center justify-center z-50 backdrop-blur-sm transition-opacity duration-300">
+            <div class="bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-md mx-4 my-4 overflow-hidden border border-gray-200 dark:border-gray-800 transform transition-all scale-95 opacity-0">
+                <div class="p-6 border-b border-gray-200 dark:border-gray-800 flex justify-between items-center bg-gray-50 dark:bg-gray-800/50">
+                    <h3 class="text-lg font-bold text-gray-900 dark:text-white">Add New Class</h3>
+                    <button id="closeModalBtn" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                         </svg>
@@ -35,17 +35,17 @@ export async function render(container) {
                 </div>
                 <form id="classForm" class="p-6 space-y-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Class Name</label>
-                        <input type="text" id="className" required placeholder="e.g. Class 10" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-gray-900">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Class Name</label>
+                        <input type="text" id="className" required placeholder="e.g. Class 10" class="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-gray-900 dark:text-white placeholder-gray-500 transition-colors">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Sections (comma separated)</label>
-                        <input type="text" id="sections" required placeholder="e.g. A, B, C" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-gray-900">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Sections (comma separated)</label>
+                        <input type="text" id="sections" required placeholder="e.g. A, B, C" class="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-gray-900 dark:text-white placeholder-gray-500 transition-colors">
                     </div>
 
-                    <div class="flex justify-end pt-4">
-                        <button type="button" id="cancelBtn" class="mr-3 px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">Cancel</button>
-                        <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors">Save Class</button>
+                    <div class="flex justify-end pt-4 border-t border-gray-100 dark:border-gray-800">
+                        <button type="button" id="cancelBtn" class="mr-3 px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors border border-transparent dark:border-gray-700">Cancel</button>
+                        <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors shadow-lg shadow-indigo-500/20">Save Class</button>
                     </div>
                 </form>
             </div>
@@ -71,13 +71,13 @@ async function fetchClasses() {
 
     if (error) {
         console.error('Error fetching classes:', error);
-        grid.innerHTML = `<div class="col-span-full text-center text-red-500">Error: ${error.message}</div>`;
+        grid.innerHTML = `<div class="col-span-full text-center text-red-500 dark:text-red-400">Error: ${error.message}</div>`;
         return;
     }
 
     if (data.length === 0) {
-        grid.innerHTML = `<div class="col-span-full text-center py-10 text-gray-400">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto mb-3 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        grid.innerHTML = `<div class="col-span-full text-center py-10 text-gray-400 dark:text-gray-500">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto mb-3 text-gray-300 dark:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
             </svg>
             No classes found. Add one to get started.
@@ -86,20 +86,20 @@ async function fetchClasses() {
     }
 
     grid.innerHTML = data.map(cls => `
-        <div class="bg-gray-50 rounded-xl p-5 border border-gray-200 hover:shadow-md transition-shadow relative group">
+        <div class="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-5 border border-gray-200 dark:border-gray-700 hover:shadow-md hover:border-indigo-300 dark:hover:border-indigo-700 transition-all relative group">
             <div class="flex justify-between items-start mb-4">
-                <div class="bg-indigo-100 text-indigo-700 font-bold text-xl h-12 w-12 rounded-lg flex items-center justify-center">
+                <div class="bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 font-bold text-xl h-12 w-12 rounded-lg flex items-center justify-center border border-indigo-200 dark:border-indigo-900/50">
                     ${cls.class_name.replace(/[^0-9]/g, '') || cls.class_name.charAt(0)}
                 </div>
-                <button onclick="window.deleteClass('${cls.id}')" class="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button onclick="window.deleteClass('${cls.id}')" class="text-gray-400 hover:text-red-500 dark:hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                     </svg>
                 </button>
             </div>
-            <h3 class="text-lg font-bold text-gray-800 mb-2">${cls.class_name}</h3>
+            <h3 class="text-lg font-bold text-gray-800 dark:text-white mb-2">${cls.class_name}</h3>
             <div class="flex flex-wrap gap-2">
-                ${cls.sections.map(sec => `<span class="bg-white border border-gray-200 text-gray-600 text-xs font-medium px-2.5 py-0.5 rounded">${sec}</span>`).join('')}
+                ${cls.sections.map(sec => `<span class="bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 text-xs font-medium px-2.5 py-0.5 rounded shadow-sm">${sec}</span>`).join('')}
             </div>
         </div>
     `).join('');
@@ -126,11 +126,26 @@ function openModal() {
 
     modal.classList.remove('hidden');
     modal.classList.add('flex');
+
+    const content = modal.querySelector('div');
+    // Animate In
+    setTimeout(() => {
+        content.classList.remove('scale-95', 'opacity-0');
+        content.classList.add('scale-100', 'opacity-100');
+    }, 10);
 }
 
 function closeModal() {
-    document.getElementById('classModal').classList.add('hidden');
-    document.getElementById('classModal').classList.remove('flex');
+    const modal = document.getElementById('classModal');
+    const content = modal.querySelector('div');
+
+    content.classList.remove('scale-100', 'opacity-100');
+    content.classList.add('scale-95', 'opacity-0');
+
+    setTimeout(() => {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }, 300);
 }
 
 async function handleFormSubmit(e) {
