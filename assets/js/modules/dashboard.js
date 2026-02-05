@@ -303,6 +303,19 @@ async function loadDashboardStats() {
 
         const collectionPercent = totalFees > 0 ? Math.round((collected / totalFees) * 100) : 0;
 
+        // Calculate Real Attendance
+        const today = new Date().toISOString().split('T')[0];
+        const { data: attendanceData } = await supabase
+            .from('attendance')
+            .select('status')
+            .eq('date', today);
+
+        let attendancePercent = 0;
+        if (attendanceData && attendanceData.length > 0) {
+            const presentCount = attendanceData.filter(a => a.status === 'Present' || a.status === 'Late').length;
+            attendancePercent = Math.round((presentCount / attendanceData.length) * 100);
+        }
+
         // Update UI
         document.getElementById('statTotalStudents').textContent = totalStudents;
         document.getElementById('statFeesCollected').textContent = 'PKR ' + collected.toLocaleString('en-PK', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
@@ -310,17 +323,22 @@ async function loadDashboardStats() {
         document.getElementById('statPendingFees').textContent = 'PKR ' + pending.toLocaleString('en-PK', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
         document.getElementById('feePercentage').textContent = collectionPercent + '%';
 
+        // Update Attendance UI
+        document.getElementById('attendancePercent').textContent = attendancePercent + '%';
+        document.getElementById('attendanceGaugeText').textContent = attendancePercent + '%';
+
         // Animate progress bar
         setTimeout(() => {
-            document.getElementById('feeProgressBar').style.width = collectionPercent + '%';
+            const progressBar = document.getElementById('feeProgressBar');
+            if (progressBar) progressBar.style.width = collectionPercent + '%';
         }, 100);
 
-        // Animate attendance gauge (mock 85%)
-        const attendancePercent = 85;
+        // Animate attendance gauge (Real Data)
         const circumference = 2 * Math.PI * 32;
         const offset = circumference - (attendancePercent / 100) * circumference;
         setTimeout(() => {
-            document.getElementById('attendanceCircle').style.strokeDashoffset = offset;
+            const circle = document.getElementById('attendanceCircle');
+            if (circle) circle.style.strokeDashoffset = offset;
         }, 100);
 
     } catch (error) {
