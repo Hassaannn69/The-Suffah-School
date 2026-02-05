@@ -1041,7 +1041,7 @@ window.viewProfile = async (id) => {
 
     // Credentials
     document.getElementById('profileCredEmail').textContent = student.roll_no || 'Not assigned';
-    const dobPassword = student.date_of_birth ? generatePasswordFromDOB(student.date_of_birth) : 'Not set';
+    const dobPassword = student.date_of_birth ? student.date_of_birth.split('-').reverse().join('') : 'Not set';
     document.getElementById('profileCredPass').textContent = dobPassword;
 
     // Fetch Fees
@@ -1797,14 +1797,7 @@ function validatePhone(phone) {
     return cleaned.length === 11 && cleaned.startsWith('0');
 }
 
-// Helper function to generate password from DOB
-function generatePasswordFromDOB(dateOfBirth) {
-    if (!dateOfBirth) return null;
-    // Convert YYYY-MM-DD to DDMMYYYY
-    const parts = dateOfBirth.split('-');
-    if (parts.length !== 3) return null;
-    return `${parts[2]}${parts[1]}${parts[0]}`; // DDMMYYYY
-}
+
 
 async function handleFormSubmit(e) {
     e.preventDefault();
@@ -1865,24 +1858,9 @@ async function handleFormSubmit(e) {
                 return;
             }
 
-            // 1. Generate email from roll number if not provided
+            // 1. Generate email from roll number if not provided (fallback logic)
             if (!email) {
-                // Use roll number as email (e.g., SUF2501001@student.suffah.school)
                 email = `${roll_no}@student.suffah.school`;
-            }
-
-            // 2. Generate Password from DOB (DDMMYYYY format)
-            const password = generatePasswordFromDOB(dateOfBirth);
-            if (!password) {
-                throw new Error('Invalid date of birth. Cannot generate password.');
-            }
-
-            // 3. Create Auth User (using secondary client)
-            console.log('Creating auth user for:', email);
-            const authUser = await createAuthUser(email, password, name);
-
-            if (authUser) {
-                generatedCreds = { email, password };
             }
         }
 
@@ -1909,29 +1887,25 @@ async function handleFormSubmit(e) {
             studentData.admission_year = new Date().getFullYear();
         }
 
-        let error;
+        let result;
         if (id) {
             // Update
-            const res = await supabase.from('students').update(studentData).eq('id', id);
-            error = res.error;
+            result = await supabase.from('students').update(studentData).eq('id', id).select();
         } else {
             // Insert
-            const res = await supabase.from('students').insert([studentData]);
-            error = res.error;
+            result = await supabase.from('students').insert([studentData]).select();
         }
 
-        if (error) throw error;
+        if (result.error) throw result.error;
+
+        // AUTH SYNC: Create/Update student portal access
+        const student = result.data ? result.data[0] : null;
+        if (student && student.date_of_birth) {
+            await syncStudentAuth(student);
+        }
 
         closeModal();
         fetchStudents();
-
-        // Show credentials if generated
-        if (generatedCreds) {
-            showCredentialsModal(roll_no, generatedCreds.password);
-        } else {
-            // alert('Student saved successfully!');
-        }
-
     } catch (error) {
         console.error('Error saving student:', error);
         alert('Error saving student: ' + error.message);
@@ -1941,45 +1915,36 @@ async function handleFormSubmit(e) {
     }
 }
 
-// Helper to create auth user without logging out admin
-async function createAuthUser(email, password, name) {
+async function syncStudentAuth(student) {
     try {
-        // Create a temporary client using the global config
-        if (!window.SUPABASE_URL || !window.SUPABASE_ANON_KEY) {
-            throw new Error('Supabase config not found');
-        }
+        const password = student.date_of_birth.split('-').reverse().join('');
+        const loginEmail = `${student.roll_no.toLowerCase()}@student.suffah.school`;
 
-        // Use the global SupabaseLib saved in supabase-init.js
         const tempClient = window.SupabaseLib.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY, {
-            auth: {
-                persistSession: false, // IMPORTANT: Do not persist session
-                autoRefreshToken: false,
-                detectSessionInUrl: false
-            }
+            auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
         });
 
         const { data, error } = await tempClient.auth.signUp({
-            email,
-            password,
+            email: loginEmail,
+            password: password,
             options: {
                 data: {
                     role: 'student',
-                    name: name
+                    name: student.name,
+                    roll_no: student.roll_no
                 }
             }
         });
 
-        if (error) throw error;
-        return data.user;
+        if (error && !error.message.includes('already registered')) throw error;
+
+        // Link auth_id back to profile
+        if (data && data.user) {
+            await supabase.from('students').update({ auth_id: data.user.id }).eq('id', student.id);
+        }
 
     } catch (err) {
-        console.error('Error creating auth user:', err);
-        if (err.message.includes('already registered')) {
-            console.log('Auth user already exists, skipping creation.');
-            return { id: 'existing' }; // Return a dummy object to indicate success (no new user created but exists)
-        }
-        alert('Warning: Could not create login account. ' + err.message);
-        return null;
+        console.error('Student Auth Sync Failed:', err);
     }
 }
 
@@ -2389,52 +2354,30 @@ async function syncAllPortals() {
     if (window.loadingOverlay) window.loadingOverlay.show('Syncing Student Portals...');
 
     try {
-        const { data: students, error } = await supabase.from('students').select('name, roll_no, date_of_birth, email');
+        const { data: students, error } = await supabase.from('students').select('*');
         if (error) throw error;
 
         let successCount = 0;
         let skipCount = 0;
-        let errorCount = 0;
 
         for (const student of students) {
-            const dob = student.date_of_birth;
-            if (!dob) {
-                skipCount++;
-                continue;
-            }
-
-            // FOR PORTAL: ALWAYS use Roll Number format to match UI display
-            // This fixes the bug where personal emails were used for Auth but roll numbers for display
-            const authEmail = `${student.roll_no.trim().toLowerCase()}@student.suffah.school`;
-            const password = generatePasswordFromDOB(dob);
-
-            try {
-                const user = await createAuthUser(authEmail, password, student.name);
-                if (user) {
-                    // Update student record with standardized login info and linked ID
-                    await supabase.from('students')
-                        .update({
-                            id: user.id, // Link to Auth ID
-                            email: authEmail // Force update to portal email
-                        })
-                        .eq('roll_no', student.roll_no);
-
+            // Only attempt if they have DOB
+            if (student.date_of_birth) {
+                try {
+                    // Use the new centralized helper
+                    await syncStudentAuth(student);
                     successCount++;
-                } else {
-                    skipCount++;
+                } catch (e) {
+                    console.error('Error syncing individual student:', e);
+                    skipCount++; // Count as skipped/failed but continue
                 }
-            } catch (err) {
-                if (err.message.includes('already registered') || err.message.includes('email_exists')) {
-                    skipCount++;
-                } else {
-                    console.error(`Error syncing ${student.roll_no}:`, err);
-                    errorCount++;
-                }
+            } else {
+                skipCount++;
             }
         }
 
         if (window.loadingOverlay) window.loadingOverlay.hide();
-        alert(`Portal Sync Complete!\n\nAccess Enabled: ${successCount} students\nAlready Enabled/Skipped: ${skipCount}\nErrors: ${errorCount}`);
+        alert(`Portal Sync Complete!\n\nProcessed: ${successCount} students\nSkipped (No DOB/Error): ${skipCount}`);
         await fetchStudents();
 
     } catch (error) {
@@ -2459,29 +2402,14 @@ async function handleSyncSinglePortal() {
     btn.disabled = true;
     btn.innerHTML = 'Syncing...';
 
-    // FOR PORTAL: ALWAYS use Roll Number format to match UI display
-    const authEmail = `${student.roll_no.trim().toLowerCase()}@student.suffah.school`;
-    const password = generatePasswordFromDOB(student.date_of_birth);
-
     try {
-        const user = await createAuthUser(authEmail, password, student.name);
+        await syncStudentAuth(student);
 
-        // Update student record to link it properly
-        await supabase.from('students')
-            .update({
-                id: user.id,
-                email: authEmail
-            })
-            .eq('roll_no', student.roll_no);
-
+        const password = student.date_of_birth.split('-').reverse().join('');
         alert(`Portal access enabled successfully!\n\nLogin User ID: ${student.roll_no}\nPassword: ${password}\n\nThe student can now log in using only their Roll Number.`);
         await fetchStudents();
     } catch (error) {
-        if (error.message.includes('already registered') || error.message.includes('email_exists')) {
-            alert('This student already has portal access enabled.');
-        } else {
-            alert('Sync failed: ' + error.message);
-        }
+        alert('Sync failed: ' + error.message);
     } finally {
         btn.disabled = false;
         btn.innerHTML = originalText;

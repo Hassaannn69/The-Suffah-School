@@ -57,17 +57,18 @@ export async function render(container) {
         currentStudent = student;
 
         // Fetch all data in parallel
-        const [feesData, familyData, attendanceData, notificationsData] = await Promise.all([
+        const [feesData, familyData, attendanceData, notificationsData, paymentsData] = await Promise.all([
             fetchStudentFees(student.id),
             fetchFamilyMembers(student.family_code, student.id),
             fetchAttendance(student.id),
-            fetchNotifications(student.class, student.section, student.id)
+            fetchNotifications(student.class, student.section, student.id),
+            fetchPaymentHistory(student.id, student.family_code)
         ]);
 
         familyMembers = familyData || [];
 
         // Render the dashboard
-        renderStudentDashboard(container, student, feesData, familyData, attendanceData, notificationsData);
+        renderStudentDashboard(container, student, feesData, familyData, attendanceData, notificationsData, paymentsData);
 
     } catch (err) {
         console.error('Student Dashboard Error:', err);
@@ -75,18 +76,18 @@ export async function render(container) {
     }
 }
 
-function renderStudentDashboard(container, student, fees, family, attendance, notifications) {
-    const totalFees = fees.reduce((sum, f) => sum + (f.amount || 0), 0);
-    const paidFees = fees.filter(f => f.status === 'paid').reduce((sum, f) => sum + (f.amount || 0), 0);
-    const pendingFees = totalFees - paidFees;
+function renderStudentDashboard(container, student, fees, family, attendance, notifications, payments = []) {
+    const totalFees = fees.reduce((sum, f) => sum + (f.final_amount || f.amount || 0), 0);
+    const paidFees = fees.reduce((sum, f) => sum + (f.paid_amount || 0), 0);
+    const pendingFees = Math.max(0, totalFees - paidFees);
 
     // Calculate family totals
     let familyPending = pendingFees;
     family.forEach(member => {
         if (member.fees) {
-            const memberTotal = member.fees.reduce((sum, f) => sum + (f.amount || 0), 0);
-            const memberPaid = member.fees.filter(f => f.status === 'paid').reduce((sum, f) => sum + (f.amount || 0), 0);
-            familyPending += (memberTotal - memberPaid);
+            const memberTotal = member.fees.reduce((sum, f) => sum + (f.final_amount || f.amount || 0), 0);
+            const memberPaid = member.fees.reduce((sum, f) => sum + (f.paid_amount || 0), 0);
+            familyPending += Math.max(0, memberTotal - memberPaid);
         }
     });
 
@@ -238,51 +239,264 @@ function renderStudentDashboard(container, student, fees, family, attendance, no
                         </div>
                     </div>
                     ` : ''}
-                </div>
 
-                <!-- Middle Column: Attendance & Fees -->
-                <div class="space-y-6">
-                    <!-- My Fee Details -->
+                    <!-- Quick Actions -->
                     <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
                         <div class="p-4 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700">
+                            <h3 class="font-bold text-gray-900 dark:text-white">Quick Actions</h3>
+                        </div>
+                        <div class="p-4 grid grid-cols-2 gap-3">
+                            <button onclick="document.getElementById('fees-section')?.scrollIntoView({behavior: 'smooth'})" class="p-3 bg-primary-50 dark:bg-primary-900/20 rounded-lg text-center hover:bg-primary-100 dark:hover:bg-primary-900/40 transition-colors group">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mx-auto text-primary-500 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                                <p class="text-xs font-medium text-gray-700 dark:text-gray-300 mt-2">Fees</p>
+                            </button>
+                            <button class="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg text-center hover:bg-green-100 dark:hover:bg-green-900/40 transition-colors group">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mx-auto text-green-500 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <p class="text-xs font-medium text-gray-700 dark:text-gray-300 mt-2">Attendance</p>
+                            </button>
+                            <button class="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-center hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors group">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mx-auto text-blue-500 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                </svg>
+                                <p class="text-xs font-medium text-gray-700 dark:text-gray-300 mt-2">Results</p>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Notifications -->
+                    <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
+                        <div class="p-4 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700">
+                            <h3 class="font-bold text-gray-900 dark:text-white flex items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                                </svg>
+                                Notifications
+                            </h3>
+                        </div>
+                        <div class="divide-y divide-gray-100 dark:divide-gray-800 max-h-64 overflow-y-auto">
+                            ${notifications.length > 0 ? notifications.map(n => `
+                            <div class="p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                                <div class="flex items-start space-x-3">
+                                    <div class="w-8 h-8 rounded-full flex items-center justify-center ${n.type === 'fee_reminder' ? 'bg-red-100 text-red-500' :
+                n.type === 'exam' ? 'bg-purple-100 text-purple-500' :
+                    n.type === 'assignment' ? 'bg-blue-100 text-blue-500' :
+                        'bg-gray-100 text-gray-500'
+            }">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <p class="text-sm font-medium text-gray-900 dark:text-white">${n.title}</p>
+                                        <p class="text-xs text-gray-500 mt-1 truncate">${n.message}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            `).join('') : `
+                            <div class="p-8 text-center text-gray-500">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-gray-300 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                                </svg>
+                                <p class="text-sm">No notifications</p>
+                            </div>
+                            `}
+                        </div>
+                    </div>
+
+                    <!-- Quick Links (Moved from Right Column) -->
+                    <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
+                        <div class="p-4 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700">
+                            <h3 class="font-bold text-gray-900 dark:text-white">Quick Links</h3>
+                        </div>
+                        <div class="p-4 grid grid-cols-2 gap-3">
+                            <button class="p-3 bg-primary-50 dark:bg-primary-900/20 rounded-lg text-center hover:bg-primary-100 dark:hover:bg-primary-900/40 transition-colors group">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mx-auto text-primary-500 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                                <p class="text-xs font-medium text-gray-700 dark:text-gray-300 mt-2">Fee History</p>
+                            </button>
+                            <button class="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg text-center hover:bg-green-100 dark:hover:bg-green-900/40 transition-colors group">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mx-auto text-green-500 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <p class="text-xs font-medium text-gray-700 dark:text-gray-300 mt-2">Attendance</p>
+                            </button>
+                            <button class="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-center hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors group">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mx-auto text-blue-500 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                </svg>
+                                <p class="text-xs font-medium text-gray-700 dark:text-gray-300 mt-2">Results</p>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Notifications (Moved from Right Column) -->
+                    <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
+                        <div class="p-4 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700">
+                            <h3 class="font-bold text-gray-900 dark:text-white flex items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                                </svg>
+                                Notifications
+                            </h3>
+                        </div>
+                        <div class="divide-y divide-gray-100 dark:divide-gray-800 max-h-64 overflow-y-auto">
+                            ${notifications.length > 0 ? notifications.map(n => `
+                            <div class="p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                                <div class="flex items-start space-x-3">
+                                    <div class="w-8 h-8 rounded-full flex items-center justify-center ${n.type === 'fee_reminder' ? 'bg-red-100 text-red-500' :
+                    n.type === 'exam' ? 'bg-purple-100 text-purple-500' :
+                        n.type === 'assignment' ? 'bg-blue-100 text-blue-500' :
+                            'bg-gray-100 text-gray-500'
+                }">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <p class="text-sm font-medium text-gray-900 dark:text-white">${n.title}</p>
+                                        <p class="text-xs text-gray-500 mt-1 truncate">${n.message}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            `).join('') : `
+                            <div class="p-8 text-center text-gray-500">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-gray-300 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                                </svg>
+                                <p class="text-sm">No notifications</p>
+                            </div>
+                            `}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Middle Column: Fees Module -->
+                <div class="lg:col-span-2 space-y-6">
+                    <!-- Professional Fees Module -->
+                    <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
+                        <div class="p-4 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
                             <h3 class="font-bold text-gray-900 dark:text-white flex items-center">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                 </svg>
-                                My Fees
+                                Fees & Payments
                             </h3>
+                            <div class="flex items-center gap-2">
+                                ${pendingFees > 0 ? `
+                                <button id="printFeeBill" class="text-xs bg-primary-500 hover:bg-primary-600 text-white px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1 shadow-sm">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2-2v4a2 2 0 002 2h6z" />
+                                    </svg>
+                                    Print Bill
+                                </button>
+                                ` : ''}
+                                <span class="px-2 py-0.5 text-[10px] font-bold rounded-full ${pendingFees <= 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}">
+                                    ${pendingFees <= 0 ? 'CLEAR' : 'PENDING'}
+                                </span>
+                            </div>
                         </div>
-                        <div class="p-4">
-                            <div class="grid grid-cols-3 gap-4 mb-4">
-                                <div class="text-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                                    <p class="text-xs text-gray-500">Total</p>
-                                    <p class="font-bold text-gray-900 dark:text-white">PKR ${totalFees.toLocaleString()}</p>
+                        
+                        <div class="p-4 space-y-6">
+                            <!-- 1. Fee Overview (Read-only Summary) -->
+                            <div class="grid grid-cols-3 gap-3">
+                                <div class="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg text-center border border-gray-100 dark:border-gray-700">
+                                    <p class="text-[10px] text-gray-500 uppercase tracking-wider">Total Fee</p>
+                                    <p class="font-bold text-gray-900 dark:text-white mt-1">PKR ${totalFees.toLocaleString()}</p>
                                 </div>
-                                <div class="text-center p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                                    <p class="text-xs text-gray-500">Paid</p>
-                                    <p class="font-bold text-green-600">PKR ${paidFees.toLocaleString()}</p>
+                                <div class="p-3 bg-green-50 dark:bg-green-900/10 rounded-lg text-center border border-green-100 dark:border-green-900/20">
+                                    <p class="text-[10px] text-green-600 uppercase tracking-wider">Paid</p>
+                                    <p class="font-bold text-green-700 dark:text-green-400 mt-1">PKR ${paidFees.toLocaleString()}</p>
                                 </div>
-                                <div class="text-center p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
-                                    <p class="text-xs text-gray-500">Pending</p>
-                                    <p class="font-bold text-red-600">PKR ${pendingFees.toLocaleString()}</p>
+                                <div class="p-3 bg-red-50 dark:bg-red-900/10 rounded-lg text-center border border-red-100 dark:border-red-900/20">
+                                    <p class="text-[10px] text-red-600 uppercase tracking-wider">Pending</p>
+                                    <p class="font-bold text-red-700 dark:text-red-400 mt-1">PKR ${pendingFees.toLocaleString()}</p>
                                 </div>
                             </div>
-                            ${fees.length > 0 ? `
-                            <div class="space-y-2 max-h-48 overflow-y-auto">
-                                ${fees.slice(0, 5).map(fee => `
-                                <div class="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded-lg text-sm">
-                                    <div>
-                                        <p class="font-medium text-gray-900 dark:text-white">${fee.fee_type || 'Fee'}</p>
-                                        <p class="text-xs text-gray-500">${fee.month || ''}</p>
-                                    </div>
-                                    <div class="text-right">
-                                        <p class="font-medium">PKR ${(fee.amount || 0).toLocaleString()}</p>
-                                        <span class="text-xs px-2 py-0.5 rounded-full ${fee.status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}">${fee.status}</span>
+
+                            <!-- 2. Fee Breakdown & History -->
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <h4 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 flex items-center">
+                                        <span class="w-1 h-3 bg-primary-500 mr-2 rounded-full"></span>
+                                        Fee Breakdown
+                                    </h4>
+                                    <div class="space-y-2 max-h-60 overflow-y-auto pr-1">
+                                        ${fees.length > 0 ? fees.map(fee => {
+                    const isPaid = fee.status === 'paid';
+                    return `
+                                            <div class="flex items-center justify-between p-3 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-lg group hover:border-primary-200 transition-colors">
+                                                <div class="flex-1">
+                                                    <div class="flex items-center gap-2">
+                                                        <p class="font-bold text-gray-800 dark:text-gray-200 text-sm">${fee.fee_type}</p>
+                                                        <span class="text-[9px] px-1.5 py-0.5 rounded-full ${isPaid ? 'bg-green-100 text-green-700' :
+                            fee.status === 'partial' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-50 text-red-600'}">
+                                                            ${fee.status.toUpperCase()}
+                                                        </span>
+                                                    </div>
+                                                    <div class="flex items-center gap-3 mt-1">
+                                                        <p class="text-[10px] text-gray-400">${fee.month}</p>
+                                                        ${isPaid && fee.paid_date ? `
+                                                        <p class="text-[10px] text-green-500 font-medium">Paid: ${new Date(fee.paid_date).toLocaleDateString()}</p>
+                                                        ` : ''}
+                                                    </div>
+                                                </div>
+                                                <div class="text-right">
+                                                    <p class="font-bold text-gray-900 dark:text-white text-sm">PKR ${(fee.final_amount || fee.amount || 0).toLocaleString()}</p>
+                                                    <p class="text-[9px] text-gray-400">Bal: PKR ${((fee.final_amount || fee.amount || 0) - (fee.paid_amount || 0)).toLocaleString()}</p>
+                                                </div>
+                                            </div>
+                                            `;
+                }).join('') : '<div class="text-center py-4 bg-gray-50 dark:bg-gray-800/20 rounded-lg text-xs text-gray-500">No fee records found.</div>'}
                                     </div>
                                 </div>
-                                `).join('')}
+
+                                <div>
+                                    <h4 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 flex items-center">
+                                        <span class="w-1 h-3 bg-green-500 mr-2 rounded-full"></span>
+                                        Recent Payments
+                                    </h4>
+                                    ${payments.length > 0 ? `
+                                    <div class="overflow-x-auto">
+                                        <table class="w-full text-xs text-left">
+                                            <thead>
+                                                <tr class="text-gray-400 border-b border-gray-100 dark:border-gray-800">
+                                                    <th class="pb-2 font-medium">Date</th>
+                                                    <th class="pb-2 font-medium text-right">Amount</th>
+                                                    <th class="pb-2 font-medium text-center">Receipt</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="divide-y divide-gray-50 dark:divide-gray-800">
+                                                ${payments.slice(0, 5).map(payment => `
+                                                <tr class="group">
+                                                    <td class="py-3">
+                                                        <p class="text-gray-800 dark:text-gray-200 font-medium">${new Date(payment.payment_date).toLocaleDateString()}</p>
+                                                        <p class="text-[9px] text-gray-400">${payment.payment_method}</p>
+                                                    </td>
+                                                    <td class="py-3 text-right">
+                                                        <p class="font-bold text-green-600 dark:text-green-400">PKR ${payment.amount_paid.toLocaleString()}</p>
+                                                        <p class="text-[9px] text-gray-400">${payment.receipt_no || '#' + payment.id.toString().slice(-6).toUpperCase()}</p>
+                                                    </td>
+                                                    <td class="py-3 text-center">
+                                                        <button onclick="window.printTransactionReceipt('${payment.id}', '${payment.student_id}')" 
+                                                            class="p-1.5 bg-gray-100 dark:bg-gray-700 hover:bg-primary-500 hover:text-white rounded transition-all text-gray-500">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2-2v4a2 2 0 002 2h6z" />
+                                                            </svg>
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                                `).join('')}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    ` : '<div class="text-center py-4 bg-gray-50 dark:bg-gray-800/20 rounded-lg text-xs text-gray-500">No payment history found.</div>'}
+                                </div>
                             </div>
-                            ` : '<p class="text-gray-500 text-sm text-center py-4">No fee records found</p>'}
                         </div>
                     </div>
 
@@ -353,12 +567,6 @@ function renderStudentDashboard(container, student, fees, family, attendance, no
                                 </svg>
                                 <p class="text-xs font-medium text-gray-700 dark:text-gray-300 mt-2">Results</p>
                             </button>
-                            <button class="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg text-center hover:bg-purple-100 dark:hover:bg-purple-900/40 transition-colors group">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mx-auto text-purple-500 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                                </svg>
-                                <p class="text-xs font-medium text-gray-700 dark:text-gray-300 mt-2">Homework</p>
-                            </button>
                         </div>
                     </div>
 
@@ -377,10 +585,10 @@ function renderStudentDashboard(container, student, fees, family, attendance, no
                             <div class="p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
                                 <div class="flex items-start space-x-3">
                                     <div class="w-8 h-8 rounded-full flex items-center justify-center ${n.type === 'fee_reminder' ? 'bg-red-100 text-red-500' :
-                n.type === 'exam' ? 'bg-purple-100 text-purple-500' :
-                    n.type === 'assignment' ? 'bg-blue-100 text-blue-500' :
-                        'bg-gray-100 text-gray-500'
-            }">
+                        n.type === 'exam' ? 'bg-purple-100 text-purple-500' :
+                            n.type === 'assignment' ? 'bg-blue-100 text-blue-500' :
+                                'bg-gray-100 text-gray-500'
+                    }">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                         </svg>
@@ -405,6 +613,63 @@ function renderStudentDashboard(container, student, fees, family, attendance, no
             </div>
         </div>
     `;
+
+    // Add function for printing specific transaction receipts
+    window.printTransactionReceipt = async (paymentId, studentId) => {
+        const btn = event.currentTarget;
+        const originalContent = btn.innerHTML;
+        btn.innerHTML = '...';
+        btn.disabled = true;
+
+        try {
+            const { generateReceipt } = await import('./receipt-generator.js');
+            // Fetch precise payment info
+            const { data: payment } = await supabase.from('fee_payments').select('*, students(family_code)').eq('id', paymentId).single();
+
+            // Get all siblings for the receipt
+            let familyIds = [studentId];
+            if (payment.students && payment.students.family_code) {
+                const { data: siblings } = await supabase.from('students').select('id').eq('family_code', payment.students.family_code);
+                if (siblings) familyIds = siblings.map(s => s.id);
+            }
+
+            await generateReceipt(familyIds, true, 'Student Copy', {
+                amountPaid: payment.amount_paid,
+                receiptNo: payment.receipt_no || 'REC-' + payment.id.toString().slice(-6).toUpperCase(),
+                date: new Date(payment.payment_date).toLocaleDateString('en-GB')
+            });
+        } catch (err) {
+            console.error('Print Error:', err);
+            alert('Failed to generate receipt.');
+        } finally {
+            if (btn) {
+                btn.innerHTML = originalContent;
+                btn.disabled = false;
+            }
+        }
+    };
+
+    // Add event listener for general bill printing (pending fees)
+    const printBillBtn = document.getElementById('printFeeBill');
+    if (printBillBtn) {
+        printBillBtn.onclick = async () => {
+            const originalContent = printBillBtn.innerHTML;
+            printBillBtn.innerHTML = 'Generating...';
+            printBillBtn.disabled = true;
+
+            try {
+                const { generateReceipt } = await import('./receipt-generator.js');
+                // Generate bill for current student (and potentially family arrears logic handled inside)
+                await generateReceipt([student.id], false, 'Bank Copy');
+            } catch (err) {
+                console.error('Print Error:', err);
+                alert('Failed to generate bill.');
+            } finally {
+                printBillBtn.innerHTML = originalContent;
+                printBillBtn.disabled = false;
+            }
+        };
+    }
 }
 
 // Data Fetching Functions
@@ -448,6 +713,33 @@ async function fetchFamilyMembers(familyCode, currentStudentId) {
         return members || [];
     } catch (err) {
         console.error('Error fetching family:', err);
+        return [];
+    }
+}
+
+async function fetchPaymentHistory(studentId, familyCode) {
+    try {
+        // Fetch all student IDs in the family
+        let studentIds = [studentId];
+        if (familyCode) {
+            const { data: family } = await supabase.from('students').select('id').eq('family_code', familyCode);
+            if (family) studentIds = family.map(s => s.id);
+        }
+
+        const { data, error } = await supabase
+            .from('fee_payments')
+            .select(`
+                *,
+                students (name, roll_no),
+                fees (fee_type, month)
+            `)
+            .in('student_id', studentIds)
+            .order('payment_date', { ascending: false });
+
+        if (error) throw error;
+        return data || [];
+    } catch (err) {
+        console.error('Error fetching payment history:', err);
         return [];
     }
 }

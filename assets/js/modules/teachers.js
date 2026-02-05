@@ -118,10 +118,14 @@ export async function render(container) {
                         <input type="text" id="teacherAddress" class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-primary-500 outline-none">
                     </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-300 mb-1">Qualification</label>
                             <input type="text" id="teacherQualification" placeholder="e.g. M.Ed, B.Sc" class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-primary-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-1">Date of Birth *</label>
+                            <input type="date" id="teacherDOB" required class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-primary-500 outline-none">
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-300 mb-1">Date of Joining</label>
@@ -143,8 +147,8 @@ export async function render(container) {
         </div>
 
         <!-- Profile Modal -->
-        <div id="teacherProfileModal" class="modal-overlay fixed inset-0 bg-black/80 hidden items-center justify-center z-50 backdrop-blur-sm overflow-y-auto transition-opacity duration-300">
-            <div class="bg-gray-900 rounded-xl shadow-2xl w-full max-w-3xl mx-4 my-4 max-h-[90vh] overflow-hidden transform transition-all duration-300 ease-out opacity-0 scale-95 translate-y-0 flex flex-col border border-gray-800">
+         <div id="teacherProfileModal" class="modal-overlay fixed inset-0 bg-black/80 hidden items-center justify-center z-50 backdrop-blur-sm overflow-y-auto">
+            <div class="bg-gray-900 rounded-xl shadow-2xl w-full max-w-3xl mx-4 my-4 overflow-hidden border border-gray-800 flex flex-col">
                 <!-- Header with Photo -->
                 <div class="relative h-40 flex-shrink-0 group">
                     <div class="absolute inset-0 overflow-hidden">
@@ -185,76 +189,77 @@ export async function render(container) {
                     </div>
                 </div>
 
-                <!-- Content -->
-                <div class="p-8 pt-16 overflow-y-auto flex-grow bg-gray-950">
-                    <input type="hidden" id="profileTeacherId">
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <!-- Left Column -->
-                        <div class="space-y-6">
-                            <div class="bg-gray-900 rounded-lg border border-gray-800 p-5 shadow-sm">
-                                <h3 class="text-sm font-bold text-white uppercase tracking-wide mb-4 border-b border-gray-800 pb-2">Personal Details</h3>
-                                <div class="space-y-3">
-                                    <div>
-                                        <label class="text-xs text-gray-500 block">Email</label>
-                                        <span id="teacherProfileEmail" class="text-sm font-medium text-white">-</span>
-                                    </div>
-                                    <div>
-                                        <label class="text-xs text-gray-500 block">Phone</label>
-                                        <span id="teacherProfilePhone" class="text-sm font-medium text-white">-</span>
-                                    </div>
-                                    <div>
-                                        <label class="text-xs text-gray-500 block">Address</label>
-                                        <span id="teacherProfileAddress" class="text-sm font-medium text-white">-</span>
-                                    </div>
+                <div class="flex-1 p-6 pt-16 overflow-y-auto">
+                    <!-- Tabs -->
+                    <div class="flex border-b border-gray-800 mb-6">
+                        <button id="teacherTabBtnPersonal" class="px-4 py-2 text-primary-500 border-b-2 border-primary-500 font-medium transition-all">Personal Info</button>
+                        <button id="teacherTabBtnAccount" class="px-4 py-2 text-gray-400 hover:text-white font-medium transition-all">Account & Credentials</button>
+                    </div>
+
+                    <div id="teacherTabPersonal" class="space-y-6">
+                        <input type="hidden" id="profileTeacherId">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-white">
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="text-[10px] text-gray-500 uppercase font-bold">Official Email</label>
+                                    <p id="teacherProfileEmail" class="font-medium lowercase"></p>
+                                </div>
+                                <div>
+                                    <label class="text-[10px] text-gray-500 uppercase font-bold">Contact Number</label>
+                                    <p id="teacherProfilePhone" class="font-medium"></p>
+                                </div>
+                            </div>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="text-[10px] text-gray-500 uppercase font-bold">Qualification</label>
+                                    <p id="teacherProfileQualification" class="font-medium"></p>
+                                </div>
+                                <div>
+                                    <label class="text-[10px] text-gray-500 uppercase font-bold">Joining Date</label>
+                                    <p id="teacherProfileDoj" class="font-medium"></p>
                                 </div>
                             </div>
                         </div>
+                        <div>
+                            <label class="text-[10px] text-gray-500 uppercase font-bold mb-2 block">residential Address</label>
+                            <p id="teacherProfileAddress" class="text-white text-sm"></p>
+                        </div>
+                        <div>
+                            <label class="text-[10px] text-gray-500 uppercase font-bold mb-2 block">Subjects Expertise</label>
+                            <div id="teacherProfileSubjects" class="flex flex-wrap gap-2"></div>
+                        </div>
+                        
+                        <div class="flex gap-3 pt-4 border-t border-gray-800 mt-6">
+                            <button id="editTeacherProfileBtn" class="flex-1 flex items-center justify-center px-4 py-2 bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-lg text-sm font-medium text-white transition-colors">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                                Edit Profile
+                            </button>
+                            <button id="toggleTeacherStatusBtn" class="flex-1 flex items-center justify-center px-4 py-2 bg-yellow-900/10 hover:bg-yellow-900/30 border border-yellow-700/50 rounded-lg text-sm font-medium text-yellow-400 transition-colors">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg>
+                                <span id="toggleStatusText">Deactivate</span>
+                            </button>
+                            <button id="deleteTeacherProfileBtn" class="px-4 py-2 bg-red-900/10 hover:bg-red-900/30 border border-red-700/50 rounded-lg text-sm font-medium text-red-500 transition-colors">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                            </button>
+                        </div>
+                    </div>
 
-                        <!-- Right Column -->
-                        <div class="space-y-6">
-                            <div class="bg-gray-900 rounded-lg border border-gray-800 p-5 shadow-sm">
-                                <h3 class="text-sm font-bold text-white uppercase tracking-wide mb-4 border-b border-gray-800 pb-2">Professional Details</h3>
-                                <div class="space-y-3">
-                                    <div>
-                                        <label class="text-xs text-gray-500 block">Qualification</label>
-                                        <span id="teacherProfileQualification" class="text-sm font-medium text-white">-</span>
-                                    </div>
-                                    <div>
-                                        <label class="text-xs text-gray-500 block">Date of Joining</label>
-                                        <span id="teacherProfileDoj" class="text-sm font-medium text-white">-</span>
-                                    </div>
-                                    <div>
-                                        <label class="text-xs text-gray-500 block">Subjects</label>
-                                        <div id="teacherProfileSubjects" class="flex flex-wrap gap-2 mt-1">
-                                            <span class="px-2 py-1 bg-indigo-900/30 text-indigo-400 rounded text-xs">-</span>
-                                        </div>
-                                    </div>
+                    <div id="teacherTabAccount" class="hidden space-y-6">
+                        <div class="bg-gray-800/30 rounded-2xl p-6 border border-gray-800">
+                             <h4 class="text-white font-bold mb-4 flex items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-primary-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04M12 2.944a11.955 11.955 0 01-8.618 3.04m16.512 0L12 12V2.944m0 0a11.955 11.955 0 018.618 3.04" />
+                                </svg>
+                                Portal Credentials
+                            </h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div class="bg-gray-900/50 p-4 rounded-xl border border-gray-800">
+                                    <label class="text-[10px] text-gray-500 uppercase font-bold block mb-1">Login ID</label>
+                                    <p id="teacherProfileCredId" class="text-white font-mono text-lg"></p>
                                 </div>
-                            </div>
-
-                            <!-- Actions -->
-                            <div class="bg-gray-900 rounded-lg border border-gray-800 p-5 shadow-sm">
-                                <h3 class="text-sm font-bold text-white uppercase tracking-wide mb-4 border-b border-gray-800 pb-2">Actions</h3>
-                                <div class="space-y-3">
-                                    <button id="editTeacherProfileBtn" class="w-full flex items-center justify-center px-4 py-2 border border-gray-700 rounded-lg text-sm font-medium text-gray-300 hover:bg-gray-800 hover:text-white transition-colors">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                        </svg>
-                                        Edit Details
-                                    </button>
-                                    <button id="toggleTeacherStatusBtn" class="w-full flex items-center justify-center px-4 py-2 border border-yellow-700/50 rounded-lg text-sm font-medium text-yellow-400 hover:bg-yellow-900/20 transition-colors">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
-                                        </svg>
-                                        <span id="toggleStatusText">Deactivate</span>
-                                    </button>
-                                    <button id="deleteTeacherProfileBtn" class="w-full flex items-center justify-center px-4 py-2 border border-red-900/50 rounded-lg text-sm font-medium text-red-400 hover:bg-red-900/20 transition-colors">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                        </svg>
-                                        Delete Teacher
-                                    </button>
+                                <div class="bg-gray-900/50 p-4 rounded-xl border border-gray-800">
+                                    <label class="text-[10px] text-gray-500 uppercase font-bold block mb-1">Password</label>
+                                    <p id="teacherProfileCredPass" class="text-white font-mono text-lg"></p>
                                 </div>
                             </div>
                         </div>
@@ -390,6 +395,10 @@ export async function render(container) {
         window.deleteTeacher(id);
     });
     addEvent('teacherPhotoInput', 'change', handleTeacherPhotoUpload);
+
+    // Tab Switching
+    addEvent('teacherTabBtnPersonal', 'click', () => switchTeacherTab('personal'));
+    addEvent('teacherTabBtnAccount', 'click', () => switchTeacherTab('account'));
 
     // Search
     addEvent('searchTeacherInput', 'input', handleTeacherSearch);
@@ -528,7 +537,33 @@ window.viewTeacherProfile = async (id) => {
         placeholder.classList.remove('hidden');
         placeholder.textContent = teacher.name ? teacher.name.charAt(0).toUpperCase() : 'T';
     }
+
+    // NEW: Credentials Tab Population
+    document.getElementById('teacherProfileCredId').textContent = teacher.employee_id;
+    document.getElementById('teacherProfileCredPass').textContent = teacher.date_of_birth ? teacher.date_of_birth.split('-').reverse().join('') : 'Not Set';
+
+    // Default to Personal tab
+    switchTeacherTab('personal');
 };
+
+function switchTeacherTab(tabName) {
+    const personalBtn = document.getElementById('teacherTabBtnPersonal');
+    const accountBtn = document.getElementById('teacherTabBtnAccount');
+    const personalContent = document.getElementById('teacherTabPersonal');
+    const accountContent = document.getElementById('teacherTabAccount');
+
+    if (tabName === 'personal') {
+        personalBtn.className = 'px-4 py-2 text-primary-500 border-b-2 border-primary-500 font-medium transition-all';
+        accountBtn.className = 'px-4 py-2 text-gray-400 hover:text-white font-medium transition-all';
+        personalContent.classList.remove('hidden');
+        accountContent.classList.add('hidden');
+    } else {
+        accountBtn.className = 'px-4 py-2 text-primary-500 border-b-2 border-primary-500 font-medium transition-all';
+        personalBtn.className = 'px-4 py-2 text-gray-400 hover:text-white font-medium transition-all';
+        personalContent.classList.add('hidden');
+        accountContent.classList.remove('hidden');
+    }
+}
 
 window.editTeacher = (id) => {
     const teacher = currentTeachers.find(t => t.id === id);
@@ -683,6 +718,7 @@ async function handleTeacherFormSubmit(e) {
         phone: document.getElementById('teacherPhone').value.trim() || null,
         address: document.getElementById('teacherAddress').value.trim() || null,
         qualification: document.getElementById('teacherQualification').value.trim() || null,
+        date_of_birth: document.getElementById('teacherDOB').value || null,
         date_of_joining: document.getElementById('teacherDoj').value || null,
         subjects: subjects
     };
@@ -693,16 +729,20 @@ async function handleTeacherFormSubmit(e) {
     saveBtn.textContent = 'Saving...';
 
     try {
-        let error;
+        let result;
         if (id) {
-            const res = await supabase.from('teachers').update(teacherData).eq('id', id);
-            error = res.error;
+            result = await supabase.from('teachers').update(teacherData).eq('id', id).select();
         } else {
-            const res = await supabase.from('teachers').insert([teacherData]);
-            error = res.error;
+            result = await supabase.from('teachers').insert([teacherData]).select();
         }
 
-        if (error) throw error;
+        if (result.error) throw result.error;
+
+        // AUTH SYNC: Create/Update teacher portal access
+        const teacher = result.data[0];
+        if (teacher && teacher.date_of_birth) {
+            await syncTeacherAuth(teacher);
+        }
 
         closeTeacherModal();
         fetchTeachers();
@@ -715,19 +755,36 @@ async function handleTeacherFormSubmit(e) {
     }
 }
 
-async function toggleTeacherStatus() {
-    const id = document.getElementById('profileTeacherId').value;
-    const teacher = currentTeachers.find(t => t.id === id);
-    if (!teacher) return;
+async function syncTeacherAuth(teacher) {
+    try {
+        const password = teacher.date_of_birth.split('-').reverse().join('');
+        const loginEmail = `${teacher.employee_id.toLowerCase()}@teacher.suffah.school`;
 
-    const newStatus = !teacher.is_active;
-    const { error } = await supabase.from('teachers').update({ is_active: newStatus }).eq('id', id);
+        const tempClient = window.SupabaseLib.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY, {
+            auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
+        });
 
-    if (error) {
-        alert('Error updating status: ' + error.message);
-    } else {
-        closeTeacherProfile();
-        fetchTeachers();
+        const { data, error } = await tempClient.auth.signUp({
+            email: loginEmail,
+            password: password,
+            options: {
+                data: {
+                    role: 'teacher',
+                    name: teacher.name,
+                    employee_id: teacher.employee_id
+                }
+            }
+        });
+
+        if (error && !error.message.includes('already registered')) throw error;
+
+        // Link auth_id back to profile
+        if (data && data.user) {
+            await supabase.from('teachers').update({ auth_id: data.user.id }).eq('id', teacher.id);
+        }
+
+    } catch (err) {
+        console.error('Teacher Auth Sync Failed:', err);
     }
 }
 

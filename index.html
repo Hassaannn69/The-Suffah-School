@@ -381,13 +381,21 @@
             const password = passwordInput.value;
 
             try {
-                // Convert Student ID to email format if it doesn't contain @
-                if (selectedRole === 'student' && !email.includes('@')) {
-                    email = `${email}@student.suffah.school`;
-                    console.log(`Converted Student ID to email: ${email}`);
+                if (selectedRole === 'student') {
+                    // Normalize Student ID -> roll_no@student.suffah.school
+                    if (!email.includes('@')) {
+                        email = `${email.toLowerCase()}@student.suffah.school`;
+                    }
+                } else if (selectedRole === 'teacher' || selectedRole === 'accountant') {
+                    // For Teachers and Accountants, check if input is Employee ID
+                    // Teacher format EMP-XXX, Staff/Accountant format STF-XXX
+                    if (!email.includes('@')) {
+                        const domain = selectedRole === 'teacher' ? 'teacher.suffah.school' : 'staff.suffah.school';
+                        email = `${email.toLowerCase()}@${domain}`;
+                    }
                 }
 
-                console.log(`Attempting login for: ${email}`);
+                console.log(`Checking identity for: ${email}`);
 
                 const { data, error } = await window.supabase.auth.signInWithPassword({
                     email,
@@ -397,49 +405,44 @@
                 if (error) throw error;
 
                 if (data.user) {
-                    console.log('Login successful:', data.user);
+                    const userRole = data.user.user_metadata?.role;
+                    console.log('Login successful, verifying role:', userRole);
 
-                    // Role-based authentication check
-                    if (selectedRole === 'student') {
-                        const originalInput = emailInput.value.trim();
+                    // Cross-check table for extra security (except admin)
+                    if (selectedRole !== 'admin') {
+                        let table = '';
+                        let field = 'auth_id';
 
-                        console.log(`Verifying student: Email='${email}' OR RollNo='${originalInput}'`);
+                        if (selectedRole === 'student') table = 'students';
+                        else if (selectedRole === 'teacher') table = 'teachers';
+                        else if (selectedRole === 'accountant') table = 'staff';
 
-                        // Check if student record exists and matches this user
-                        const { data: studentData, error: studentError } = await window.supabase
-                            .from('students')
-                            .select('id, name, roll_no, email')
-                            .or(`email.eq."${email}",roll_no.eq."${originalInput}",id.eq."${data.user.id}"`)
+                        const { data: profile } = await window.supabase
+                            .from(table)
+                            .select('id')
+                            .eq('auth_id', data.user.id)
                             .maybeSingle();
 
-                        if (studentError || !studentData) {
-                            // User authenticated but is not a student
+                        if (!profile) {
+                            // Link might be missing if created before the new link system
+                            // Or role mismatch
+                            console.warn(`Profile link missing for ${selectedRole}. Checking if we can recover...`);
+                            // This is a safety check for the transition period
                             await window.supabase.auth.signOut();
-                            throw new Error('Access denied: Only students can use this portal.');
+                            throw new Error(`Profile match failed. Your account might not be correctly linked as a ${selectedRole}.`);
                         }
-
-                        console.log('Student verified:', studentData);
                     }
 
-                    // Double check session is set before redirecting
-                    const { data: sessionData } = await window.supabase.auth.getSession();
-                    if (sessionData.session) {
-                        // Show Success Animation
-                        successOverlay.classList.remove('hidden');
-                        // Trigger reflow
-                        void successOverlay.offsetWidth;
-                        successOverlay.classList.remove('opacity-0');
+                    // Success animation and redirect
+                    successOverlay.classList.remove('hidden');
+                    void successOverlay.offsetWidth;
+                    successOverlay.classList.remove('opacity-0');
 
-                        // Wait for animation then redirect
-                        setTimeout(() => {
-                            window.location.href = 'dashboard.html';
-                        }, 1500);
-
-                    } else {
-                        throw new Error('Login succeeded but session was not established. Please try again.');
-                    }
+                    setTimeout(() => {
+                        window.location.href = 'dashboard.html';
+                    }, 1500);
                 } else {
-                    throw new Error('Login failed. Please check your credentials.');
+                    throw new Error('Authentication failed');
                 }
 
             } catch (error) {
