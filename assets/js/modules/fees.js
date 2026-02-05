@@ -103,12 +103,10 @@ export async function render(container) {
                         <thead>
                             <tr class="bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-sm uppercase tracking-wider">
                                 <th class="p-4 font-semibold">Student</th>
-                                <th class="p-4 font-semibold">Fee Type</th>
-                                <th class="p-4 font-semibold">Month</th>
                                 <th class="p-4 font-semibold">Total Amount</th>
                                 <th class="p-4 font-semibold">Paid</th>
                                 <th class="p-4 font-semibold">Balance</th>
-                                <th class="p-4 font-semibold">Status</th>
+                                <th class="p-4 font-semibold text-center">Status</th>
                                 <th class="p-4 font-semibold text-right">Actions</th>
                             </tr>
                         </thead>
@@ -240,6 +238,7 @@ export async function render(container) {
                                     <th class="pb-3 font-semibold">Paid</th>
                                     <th class="pb-3 font-semibold">Balance</th>
                                     <th class="pb-3 font-semibold">Status</th>
+                                    <th class="pb-3 font-semibold text-right">Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="historyTableBody" class="text-gray-700 dark:text-gray-300 text-sm">
@@ -360,41 +359,68 @@ async function fetchFees() {
         return;
     }
 
-    tbody.innerHTML = filteredData.map(fee => {
-        const finalAmount = Number(fee.final_amount || 0);
-        const paidAmount = Number(fee.paid_amount || 0);
-        const balance = finalAmount - paidAmount;
+    // Group by Student
+    const studentGroups = new Map();
+
+    filteredData.forEach(fee => {
+        const studentId = fee.student_id;
+        if (!studentGroups.has(studentId)) {
+            studentGroups.set(studentId, {
+                student: fee.students,
+                total: 0,
+                paid: 0,
+                count: 0
+            });
+        }
+        const group = studentGroups.get(studentId);
+        group.total += Number(fee.final_amount || 0);
+        group.paid += Number(fee.paid_amount || 0);
+        group.count++;
+    });
+
+    if (studentGroups.size === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-gray-400">No matching students found.</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = Array.from(studentGroups.values()).map(group => {
+        const balance = group.total - group.paid;
+        const student = group.student;
 
         return `
             <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                 <td class="p-4">
-                    <div class="font-medium text-gray-900 dark:text-white">${fee.students?.name || 'Unknown'}</div>
-                    <div class="text-xs text-gray-500">Roll: ${fee.students?.roll_no || '-'} | Class: ${fee.students?.class || '-'}</div>
+                    <div class="font-medium text-gray-900 dark:text-white">${student?.name || 'Unknown'}</div>
+                    <div class="text-xs text-gray-500">Roll: ${student?.roll_no || '-'} | Class: ${student?.class || '-'}</div>
                 </td>
-                <td class="p-4 text-gray-600 dark:text-gray-300">${fee.fee_type}</td>
-                <td class="p-4 text-gray-600 dark:text-gray-300">${fee.month}</td>
-                <td class="p-4 font-medium text-gray-800 dark:text-gray-200">${window.formatCurrency(finalAmount)}</td>
-                <td class="p-4 font-medium text-green-600 dark:text-green-400">${window.formatCurrency(paidAmount)}</td>
+                <td class="p-4 font-medium text-gray-800 dark:text-gray-200">${window.formatCurrency(group.total)}</td>
+                <td class="p-4 font-medium text-green-600 dark:text-green-400">${window.formatCurrency(group.paid)}</td>
                 <td class="p-4 font-medium ${balance > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-600 dark:text-gray-300'}">${window.formatCurrency(balance)}</td>
-                <td class="p-4">
-                    <span class="px-2 py-1 text-xs font-semibold rounded-full ${fee.status === 'paid' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
-                fee.status === 'partial' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
+                <td class="p-4 text-center">
+                    <span class="px-2 py-1 text-xs font-semibold rounded-full ${balance <= 0 ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                group.paid > 0 ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
                     'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
             }">
-                        ${fee.status.toUpperCase()}
+                        ${balance <= 0 ? 'PAID' : (group.paid > 0 ? 'PARTIAL' : 'UNPAID')}
                     </span>
                 </td>
                 <td class="p-4 text-right flex items-center justify-end space-x-3">
-                    <button onclick="window.viewFeeHistory('${fee.students?.id}', '${fee.students?.name}')" 
-                        class="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 font-medium text-sm">
+                    <button onclick="window.viewFeeHistory('${student?.id}', '${student?.name?.replace(/'/g, "\\'")}')" 
+                        class="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 font-medium text-sm flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
                         History
                     </button>
                     ${balance > 0 ? `
-                        <button onclick="window.openPayment('${fee.id}', '${fee.students?.id}', '${fee.students?.name}', '${fee.fee_type}', ${finalAmount}, ${paidAmount})" 
-                            class="text-indigo-600 hover:text-indigo-900 dark:hover:text-indigo-400 font-medium text-sm">
+                        <button onclick="window.viewFeeHistory('${student?.id}', '${student?.name?.replace(/'/g, "\\'")}')" 
+                            class="text-indigo-600 hover:text-indigo-900 dark:hover:text-indigo-400 font-medium text-sm flex items-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm-5-1a2 2 0 11-4 0 2 2 0 014 0z" />
+                            </svg>
                             Collect
                         </button>
-                    ` : '<span class="text-green-500 text-sm">Paid</span>'}
+                    ` : ''}
                 </td>
             </tr>
         `;
@@ -479,6 +505,14 @@ window.viewFeeHistory = async (studentId, studentName) => {
                         'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}">
                             ${status.toUpperCase()}
                         </span>
+                    </td>
+                    <td class="py-4 text-right">
+                        ${balance > 0 ? `
+                            <button onclick="window.openPayment('${fee.id}', '${studentId}', '${studentName?.replace(/'/g, "\\'")}', '${fee.fee_type}', ${final}, ${paid})" 
+                                class="text-indigo-600 hover:text-indigo-900 dark:hover:text-indigo-400 font-medium text-xs">
+                                Pay
+                            </button>
+                        ` : '<span class="text-green-500 text-xs font-medium">Clear</span>'}
                     </td>
                 </tr>
             `;
@@ -572,6 +606,14 @@ async function handlePayment() {
         closePaymentModal();
         await fetchStats();
         await fetchFees();
+
+        // Refresh history if open
+        const historyModal = document.getElementById('historyModal');
+        if (historyModal && !historyModal.classList.contains('hidden')) {
+            const studentId = document.getElementById('paymentStudentId').value;
+            const studentName = document.getElementById('historyStudentName').textContent;
+            await window.viewFeeHistory(studentId, studentName);
+        }
 
     } catch (error) {
         console.error('Error recording payment:', error);
