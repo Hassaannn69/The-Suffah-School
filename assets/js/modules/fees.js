@@ -238,24 +238,55 @@ export async function render(container) {
                         </button>
                     </div>
                 </div>
-                <div class="p-6 overflow-y-auto flex-1">
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left border-collapse">
-                            <thead>
-                                <tr class="text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wider border-b border-gray-100 dark:border-gray-700">
-                                    <th class="pb-3 font-semibold">Month/Date</th>
-                                    <th class="pb-3 font-semibold">Type</th>
-                                    <th class="pb-3 font-semibold">Amount</th>
-                                    <th class="pb-3 font-semibold">Paid</th>
-                                    <th class="pb-3 font-semibold">Balance</th>
-                                    <th class="pb-3 font-semibold">Status</th>
-                                    <th class="pb-3 font-semibold text-right">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="historyTableBody" class="text-gray-700 dark:text-gray-300 text-sm">
-                                <!-- Populated dynamically -->
-                            </tbody>
-                        </table>
+                <div class="p-6 overflow-y-auto flex-1 space-y-8">
+                    <!-- Billing History -->
+                    <div>
+                        <h4 class="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-4 flex items-center">
+                            <span class="w-1 h-3 bg-indigo-500 mr-2 rounded-full"></span>
+                            Billing History (Fees)
+                        </h4>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wider border-b border-gray-100 dark:border-gray-700">
+                                        <th class="pb-3 font-semibold">Month/Date</th>
+                                        <th class="pb-3 font-semibold">Type</th>
+                                        <th class="pb-3 font-semibold">Amount</th>
+                                        <th class="pb-3 font-semibold">Paid</th>
+                                        <th class="pb-3 font-semibold">Balance</th>
+                                        <th class="pb-3 font-semibold">Status</th>
+                                        <th class="pb-3 font-semibold text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="historyTableBody" class="text-gray-700 dark:text-gray-300 text-sm">
+                                    <!-- Populated dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Payment Transaction History -->
+                    <div>
+                        <h4 class="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-4 flex items-center">
+                            <span class="w-1 h-3 bg-green-500 mr-2 rounded-full"></span>
+                            Payment Transactions (Receipts)
+                        </h4>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse text-sm">
+                                <thead>
+                                    <tr class="text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wider border-b border-gray-100 dark:border-gray-700">
+                                        <th class="pb-3 font-semibold">Date</th>
+                                        <th class="pb-3 font-semibold">Receipt #</th>
+                                        <th class="pb-3 font-semibold">Method</th>
+                                        <th class="pb-3 font-semibold">Amount</th>
+                                        <th class="pb-3 font-semibold text-right">Fee Type/Month</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="paymentHistoryTableBody" class="text-gray-700 dark:text-gray-300">
+                                    <tr><td colspan="5" class="py-8 text-center text-gray-500">No transactions found.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
                 <div class="p-4 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 flex justify-end">
@@ -503,54 +534,81 @@ window.viewFeeHistory = async (studentId, studentName) => {
     modal.classList.add('flex');
 
     try {
-        const { data, error } = await supabase
+        // Fetch Fees (Billing History)
+        const { data: feesData, error: feesError } = await supabase
             .from('fees')
             .select('*')
             .eq('student_id', studentId)
             .order('month', { ascending: false });
 
-        if (error) throw error;
+        if (feesError) throw feesError;
 
-        if (!data || data.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" class="py-8 text-center text-gray-500">No fee history found.</td></tr>';
-            return;
+        if (!feesData || feesData.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="py-8 text-center text-gray-500">No fee history found.</td></tr>';
+        } else {
+            tbody.innerHTML = feesData.map(fee => {
+                const final = Number(fee.final_amount || 0);
+                const paid = Number(fee.paid_amount || 0);
+                const balance = final - paid;
+                const status = fee.status || 'unpaid';
+
+                return `
+                    <tr class="border-b border-gray-50 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+                        <td class="py-4 font-medium text-gray-900 dark:text-white">${fee.month}</td>
+                        <td class="py-4">${fee.fee_type}</td>
+                        <td class="py-4">${window.formatCurrency(final)}</td>
+                        <td class="py-4 text-green-600 dark:text-green-400">${window.formatCurrency(paid)}</td>
+                        <td class="py-4 font-medium ${balance > 0 ? 'text-red-500' : 'text-gray-500'}">${window.formatCurrency(balance)}</td>
+                        <td class="py-4">
+                            <span class="px-2 py-0.5 text-[10px] font-bold rounded-full ${status === 'paid' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
+                        status === 'partial' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                            'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}">
+                                ${status.toUpperCase()}
+                            </span>
+                        </td>
+                        <td class="py-4 text-right">
+                            ${balance > 0 ? `
+                                <button onclick="window.openPayment('${fee.id}', '${studentId}', '${studentName?.replace(/'/g, "\\'")}', '${fee.fee_type}', ${final}, ${paid})" 
+                                    class="text-indigo-600 hover:text-indigo-900 dark:hover:text-indigo-400 font-medium text-xs">
+                                    Pay
+                                </button>
+                            ` : '<span class="text-green-500 text-xs font-medium">Clear</span>'}
+                        </td>
+                    </tr>
+                `;
+            }).join('');
         }
 
-        tbody.innerHTML = data.map(fee => {
-            const final = Number(fee.final_amount || 0);
-            const paid = Number(fee.paid_amount || 0);
-            const balance = final - paid;
-            const status = fee.status || 'unpaid';
+        // Fetch Payments (Transaction History)
+        const paymentTbody = document.getElementById('paymentHistoryTableBody');
+        const { data: paymentsData, error: paymentsError } = await supabase
+            .from('fee_payments')
+            .select('*, fees(fee_type, month)')
+            .eq('student_id', studentId)
+            .order('payment_date', { ascending: false });
 
-            return `
+        if (paymentsError) throw paymentsError;
+
+        if (!paymentsData || paymentsData.length === 0) {
+            paymentTbody.innerHTML = '<tr><td colspan="5" class="py-8 text-center text-gray-500">No payment transactions found.</td></tr>';
+        } else {
+            paymentTbody.innerHTML = paymentsData.map(payment => `
                 <tr class="border-b border-gray-50 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
-                    <td class="py-4 font-medium text-gray-900 dark:text-white">${fee.month}</td>
-                    <td class="py-4">${fee.fee_type}</td>
-                    <td class="py-4">${window.formatCurrency(final)}</td>
-                    <td class="py-4 text-green-600 dark:text-green-400">${window.formatCurrency(paid)}</td>
-                    <td class="py-4 font-medium ${balance > 0 ? 'text-red-500' : 'text-gray-500'}">${window.formatCurrency(balance)}</td>
-                    <td class="py-4">
-                        <span class="px-2 py-0.5 text-[10px] font-bold rounded-full ${status === 'paid' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
-                    status === 'partial' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
-                        'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}">
-                            ${status.toUpperCase()}
-                        </span>
-                    </td>
-                    <td class="py-4 text-right">
-                        ${balance > 0 ? `
-                            <button onclick="window.openPayment('${fee.id}', '${studentId}', '${studentName?.replace(/'/g, "\\'")}', '${fee.fee_type}', ${final}, ${paid})" 
-                                class="text-indigo-600 hover:text-indigo-900 dark:hover:text-indigo-400 font-medium text-xs">
-                                Pay
-                            </button>
-                        ` : '<span class="text-green-500 text-xs font-medium">Clear</span>'}
+                    <td class="py-3">${new Date(payment.payment_date).toLocaleDateString('en-GB')}</td>
+                    <td class="py-3 text-xs font-mono text-gray-500">${payment.receipt_no || 'REC-' + payment.id.toString().slice(-6).toUpperCase()}</td>
+                    <td class="py-3">${payment.payment_method}</td>
+                    <td class="py-3 font-bold text-green-600 dark:text-green-400">${window.formatCurrency(payment.amount_paid)}</td>
+                    <td class="py-3 text-right">
+                        <div class="text-xs text-gray-800 dark:text-gray-200">${payment.fees?.fee_type || 'General'}</div>
+                        <div class="text-[10px] text-gray-400">${payment.fees?.month || '-'}</div>
                     </td>
                 </tr>
-            `;
-        }).join('');
+            `).join('');
+        }
 
     } catch (err) {
         console.error('Error loading history:', err);
-        tbody.innerHTML = '<tr><td colspan="6" class="py-8 text-center text-red-500">Error loading record.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" class="py-8 text-center text-red-500">Error loading record.</td></tr>';
     }
 };
 

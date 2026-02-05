@@ -280,9 +280,14 @@ function buildLedgerRows(students, payments) {
         const data = monthsMap[month];
         const monthBalance = data.total - data.paid;
 
-        const monthPayment = payments.find(p => p.payment_date.startsWith(month));
-        const recNo = monthPayment ? monthPayment.id.toString().slice(-4) : '-';
-        const entryDate = monthPayment ? new Date(monthPayment.payment_date).toLocaleDateString('en-GB') : '-';
+        // Find all payments for this month
+        const monthPayments = payments.filter(p => p.payment_date.startsWith(month));
+        const recNo = monthPayments.length > 0
+            ? monthPayments.map(p => p.receipt_no || p.id.toString().slice(-4).toUpperCase()).join(', ')
+            : '-';
+        const entryDate = monthPayments.length > 0
+            ? new Date(monthPayments[monthPayments.length - 1].payment_date).toLocaleDateString('en-GB')
+            : '-';
 
         processedRows.push({
             month,
@@ -307,7 +312,7 @@ function buildLedgerRows(students, payments) {
 
     let html = displayRows.map(row => `
         <tr>
-            <td>${row.month}</td>
+            <td style="font-size: 8px;">${row.month}</td>
             <td>${row.arrear.toFixed(0)}</td>
             <td>${row.actual.toFixed(0)}</td>
             <td>${row.disc.toFixed(0)}</td>
@@ -315,8 +320,8 @@ function buildLedgerRows(students, payments) {
             <td>${row.others.toFixed(0)}</td>
             <td>${row.total.toFixed(0)}</td>
             <td>${row.paid.toFixed(0)}</td>
-            <td>${row.balance.toFixed(0)}</td>
-            <td>${row.recNo}</td>
+            <td font-weight="bold">${row.balance.toFixed(0)}</td>
+            <td style="font-size: 7px; max-width: 60px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${row.recNo}</td>
             <td>${row.entryDate}</td>
         </tr>
     `).join('');
