@@ -245,6 +245,21 @@ window.confirmDialog = confirmDialog;
 window.loadingOverlay = loadingOverlay;
 window.PageTransition = PageTransition;
 
+// Helper to load external scripts dynamically
+window.loadScript = function (url) {
+    return new Promise((resolve, reject) => {
+        if (Array.from(document.querySelectorAll('script')).some(s => s.src === url)) {
+            resolve();
+            return;
+        }
+        const script = document.createElement('script');
+        script.src = url;
+        script.onload = resolve;
+        script.onerror = reject;
+        document.head.appendChild(script);
+    });
+};
+
 // Override default alert and confirm
 window.alert = (message) => {
     toast.info(message, 4000);

@@ -826,55 +826,68 @@ function closeBulkTeacherModal() {
     }, 300);
 }
 
-function downloadTeacherTemplate() {
-    const wb = XLSX.utils.book_new();
-    const templateData = [
-        ['Name', 'Email', 'Phone', 'Address', 'Qualification', 'Subjects', 'Date of Joining'],
-        ['John Doe', 'john@school.com', '1234567890', '123 Main St', 'M.Ed', 'Mathematics, Physics', '2024-01-15']
-    ];
+// Download Excel Template
+async function downloadTeacherTemplate() {
+    try {
+        await window.loadScript('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
+        const wb = XLSX.utils.book_new();
+        const templateData = [
+            ['Name', 'Email', 'Phone', 'Address', 'Qualification', 'Subjects', 'Date of Joining'],
+            ['John Doe', 'john@school.com', '1234567890', '123 Main St', 'M.Ed', 'Mathematics, Physics', '2024-01-15']
+        ];
 
-    const ws = XLSX.utils.aoa_to_sheet(templateData);
-    ws['!cols'] = [
-        { wch: 20 }, { wch: 25 }, { wch: 15 },
-        { wch: 30 }, { wch: 15 }, { wch: 25 }, { wch: 15 }
-    ];
+        const ws = XLSX.utils.aoa_to_sheet(templateData);
+        ws['!cols'] = [
+            { wch: 20 }, { wch: 25 }, { wch: 15 },
+            { wch: 30 }, { wch: 15 }, { wch: 25 }, { wch: 15 }
+        ];
 
-    XLSX.utils.book_append_sheet(wb, ws, 'Teachers');
-    XLSX.writeFile(wb, 'Teacher_Bulk_Upload_Template.xlsx');
+        XLSX.utils.book_append_sheet(wb, ws, 'Teachers');
+        XLSX.writeFile(wb, 'Teacher_Bulk_Upload_Template.xlsx');
+    } catch (err) {
+        alert('Failed to load Excel library. Please check your connection.');
+    }
 }
 
-function handleTeacherFileSelect(e) {
+// Handle File Selection
+async function handleTeacherFileSelect(e) {
     const file = e.target.files[0];
     if (!file) return;
 
-    document.getElementById('selectedTeacherFileName').textContent = `Selected: ${file.name}`;
+    try {
+        await window.loadScript('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
 
-    const reader = new FileReader();
-    reader.onload = function (event) {
-        try {
-            const data = new Uint8Array(event.target.result);
-            const workbook = XLSX.read(data, { type: 'array' });
-            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-            const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+        document.getElementById('selectedTeacherFileName').textContent = `Selected: ${file.name}`;
 
-            const { valid, teachers, errors } = validateTeacherExcelData(jsonData);
+        const reader = new FileReader();
+        reader.onload = function (event) {
+            try {
+                const data = new Uint8Array(event.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                const jsonData = XLSX.utils.sheet_to_json(firstSheet);
 
-            if (valid) {
-                parsedTeachers = teachers;
-                document.getElementById('uploadTeachersBtn').disabled = false;
-                showTeacherUploadSummary(teachers, errors);
-            } else {
-                parsedTeachers = [];
-                document.getElementById('uploadTeachersBtn').disabled = true;
-                showTeacherUploadSummary([], errors);
+                const { valid, teachers, errors } = validateTeacherExcelData(jsonData);
+
+                if (valid) {
+                    parsedTeachers = teachers;
+                    document.getElementById('uploadTeachersBtn').disabled = false;
+                    showTeacherUploadSummary(teachers, errors);
+                } else {
+                    parsedTeachers = [];
+                    document.getElementById('uploadTeachersBtn').disabled = true;
+                    showTeacherUploadSummary([], errors);
+                }
+
+            } catch (error) {
+                alert('Error reading Excel file: ' + error.message);
             }
+        };
 
-        } catch (error) {
-            alert('Error reading Excel file: ' + error.message);
-        }
-    };
-
-    reader.readAsArrayBuffer(file);
+        reader.readAsArrayBuffer(file);
+    } catch (err) {
+        alert('Failed to load Excel library. Please check your connection.');
+    }
 }
 
 function validateTeacherExcelData(jsonData) {

@@ -2048,73 +2048,87 @@ function closeBulkModal() {
 }
 
 // Download Excel Template
-function downloadTemplate() {
-    const wb = XLSX.utils.book_new();
+async function downloadTemplate() {
+    try {
+        await window.loadScript('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
+        const wb = XLSX.utils.book_new();
+        // ... rest of the function ...
+        // Note: I'll include the rest in the next block if needed, but I can target the whole block.
+        // Actually, I'll replace the whole blocks to be safe.
 
-    // Template data with headers and sample row (Roll No will be auto-generated)
-    const templateData = [
-        ['Name', 'Father Name', 'Father CNIC', 'Contact Number', 'Date of Birth', 'Class', 'Section', 'Gender', 'From Which School', 'Admission Date', 'Family Code', 'Gmail'],
-        ['John Doe', 'Mr. John Sr.', '12345-1234567-1', '03001234567', '2010-08-15', 'Class 10', 'A', 'Male', 'ABC School', '2025-01-01', 'FAM001', 'john@gmail.com']
-    ];
+        // Template data with headers and sample row (Roll No will be auto-generated)
+        const templateData = [
+            ['Name', 'Father Name', 'Father CNIC', 'Contact Number', 'Date of Birth', 'Class', 'Section', 'Gender', 'From Which School', 'Admission Date', 'Family Code', 'Gmail'],
+            ['John Doe', 'Mr. John Sr.', '12345-1234567-1', '03001234567', '2010-08-15', 'Class 10', 'A', 'Male', 'ABC School', '2025-01-01', 'FAM001', 'john@gmail.com']
+        ];
 
-    const ws = XLSX.utils.aoa_to_sheet(templateData);
+        const ws = XLSX.utils.aoa_to_sheet(templateData);
 
-    // Set column widths
-    ws['!cols'] = [
-        { wch: 20 }, // Name
-        { wch: 20 }, // Father Name
-        { wch: 18 }, // Father CNIC
-        { wch: 15 }, // Contact Number
-        { wch: 15 }, // Date of Birth
-        { wch: 12 }, // Class
-        { wch: 10 }, // Section
-        { wch: 10 }, // Gender
-        { wch: 20 }, // From Which School
-        { wch: 15 }, // Admission Date
-        { wch: 12 }, // Family Code
-        { wch: 25 }  // Gmail
-    ];
+        // Set column widths
+        ws['!cols'] = [
+            { wch: 20 }, // Name
+            { wch: 20 }, // Father Name
+            { wch: 18 }, // Father CNIC
+            { wch: 15 }, // Contact Number
+            { wch: 15 }, // Date of Birth
+            { wch: 12 }, // Class
+            { wch: 10 }, // Section
+            { wch: 10 }, // Gender
+            { wch: 20 }, // From Which School
+            { wch: 15 }, // Admission Date
+            { wch: 12 }, // Family Code
+            { wch: 25 }  // Gmail
+        ];
 
-    XLSX.utils.book_append_sheet(wb, ws, 'Students');
-    XLSX.writeFile(wb, 'Student_Bulk_Upload_Template.xlsx');
+        XLSX.utils.book_append_sheet(wb, ws, 'Students');
+        XLSX.writeFile(wb, 'Student_Bulk_Upload_Template.xlsx');
+    } catch (err) {
+        alert('Failed to load Excel library. Please check your connection.');
+    }
 }
 
 // Handle File Selection
-function handleFileSelect(e) {
+async function handleFileSelect(e) {
     const file = e.target.files[0];
     if (!file) return;
 
-    document.getElementById('selectedFileName').textContent = `Selected: ${file.name}`;
+    try {
+        await window.loadScript('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
 
-    const reader = new FileReader();
-    reader.onload = function (event) {
-        try {
-            const data = new Uint8Array(event.target.result);
-            const workbook = XLSX.read(data, { type: 'array' });
+        document.getElementById('selectedFileName').textContent = `Selected: ${file.name}`;
 
-            // Get first sheet
-            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-            const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+        const reader = new FileReader();
+        reader.onload = function (event) {
+            try {
+                const data = new Uint8Array(event.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
 
-            // Validate and parse
-            const { valid, students, errors } = validateExcelData(jsonData);
+                // Get first sheet
+                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                const jsonData = XLSX.utils.sheet_to_json(firstSheet);
 
-            if (valid) {
-                parsedStudents = students;
-                document.getElementById('uploadStudentsBtn').disabled = false;
-                showUploadSummary(students, errors);
-            } else {
-                parsedStudents = [];
-                document.getElementById('uploadStudentsBtn').disabled = true;
-                showUploadSummary([], errors);
+                // Validate and parse
+                const { valid, students, errors } = validateExcelData(jsonData);
+
+                if (valid) {
+                    parsedStudents = students;
+                    document.getElementById('uploadStudentsBtn').disabled = false;
+                    showUploadSummary(students, errors);
+                } else {
+                    parsedStudents = [];
+                    document.getElementById('uploadStudentsBtn').disabled = true;
+                    showUploadSummary([], errors);
+                }
+
+            } catch (error) {
+                alert('Error reading Excel file: ' + error.message);
             }
+        };
 
-        } catch (error) {
-            alert('Error reading Excel file: ' + error.message);
-        }
-    };
-
-    reader.readAsArrayBuffer(file);
+        reader.readAsArrayBuffer(file);
+    } catch (err) {
+        alert('Failed to load Excel library. Please check your connection.');
+    }
 }
 
 // Validate Excel Data (Roll No will be auto-generated, not required in file)
