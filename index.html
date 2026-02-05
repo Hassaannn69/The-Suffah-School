@@ -47,10 +47,10 @@
         <div id="roleSelection" class="space-y-4 transition-all duration-500 ease-in-out">
             <div class="grid grid-cols-2 gap-4">
                 <!-- Admin Role -->
-                <button onclick="selectRole('admin')"
+                <button id="btn-admin" onclick="selectRole('admin')"
                     class="role-card group p-4 rounded-xl border border-gray-700 hover:border-primary-500 hover:shadow-lg hover:shadow-primary-500/10 bg-gray-800/50 hover:bg-gray-800 transition-all duration-300 text-left relative overflow-hidden">
                     <div
-                        class="absolute inset-0 bg-gradient-to-r from-primary-500/0 via-primary-500/0 to-primary-500/0 group-hover:from-primary-500/5 group-hover:via-primary-500/10 group-hover:to-primary-500/5 transition-all duration-500">
+                        class="absolute inset-0 bg-gradient-to-r from-primary-500/0 via-primary-500/0 to-primary-500/0 group-hover:from-primary-500/5 group-hover:via-primary-500/10 group-hover:to-primary-500/5 transition-all duration-500 pointer-events-none">
                     </div>
                     <div
                         class="w-10 h-10 rounded-lg bg-primary-900/50 text-primary-400 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300 border border-primary-500/20">
@@ -65,10 +65,10 @@
                 </button>
 
                 <!-- Teacher Role -->
-                <button onclick="selectRole('teacher')"
+                <button id="btn-teacher" onclick="selectRole('teacher')"
                     class="role-card group p-4 rounded-xl border border-gray-700 hover:border-green-500 hover:shadow-lg hover:shadow-green-500/10 bg-gray-800/50 hover:bg-gray-800 transition-all duration-300 text-left relative overflow-hidden">
                     <div
-                        class="absolute inset-0 bg-gradient-to-r from-green-500/0 via-green-500/0 to-green-500/0 group-hover:from-green-500/5 group-hover:via-green-500/10 group-hover:to-green-500/5 transition-all duration-500">
+                        class="absolute inset-0 bg-gradient-to-r from-green-500/0 via-green-500/0 to-green-500/0 group-hover:from-green-500/5 group-hover:via-green-500/10 group-hover:to-green-500/5 transition-all duration-500 pointer-events-none">
                     </div>
                     <div
                         class="w-10 h-10 rounded-lg bg-green-900/50 text-green-400 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300 border border-green-500/20">
@@ -84,10 +84,10 @@
                 </button>
 
                 <!-- Accountant Role -->
-                <button onclick="selectRole('accountant')"
+                <button id="btn-accountant" onclick="selectRole('accountant')"
                     class="role-card group p-4 rounded-xl border border-gray-700 hover:border-blue-500 hover:shadow-lg hover:shadow-blue-500/10 bg-gray-800/50 hover:bg-gray-800 transition-all duration-300 text-left relative overflow-hidden">
                     <div
-                        class="absolute inset-0 bg-gradient-to-r from-blue-500/0 via-blue-500/0 to-blue-500/0 group-hover:from-blue-500/5 group-hover:via-blue-500/10 group-hover:to-blue-500/5 transition-all duration-500">
+                        class="absolute inset-0 bg-gradient-to-r from-blue-500/0 via-blue-500/0 to-blue-500/0 group-hover:from-blue-500/5 group-hover:via-blue-500/10 group-hover:to-blue-500/5 transition-all duration-500 pointer-events-none">
                     </div>
                     <div
                         class="w-10 h-10 rounded-lg bg-blue-900/50 text-blue-400 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300 border border-blue-500/20">
@@ -102,10 +102,10 @@
                 </button>
 
                 <!-- Student Role -->
-                <button onclick="selectRole('student')"
+                <button id="btn-student" onclick="selectRole('student')"
                     class="role-card group p-4 rounded-xl border border-gray-700 hover:border-purple-500 hover:shadow-lg hover:shadow-purple-500/10 bg-gray-800/50 hover:bg-gray-800 transition-all duration-300 text-left relative overflow-hidden">
                     <div
-                        class="absolute inset-0 bg-gradient-to-r from-purple-500/0 via-purple-500/0 to-purple-500/0 group-hover:from-purple-500/5 group-hover:via-purple-500/10 group-hover:to-purple-500/5 transition-all duration-500">
+                        class="absolute inset-0 bg-gradient-to-r from-purple-500/0 via-purple-500/0 to-purple-500/0 group-hover:from-purple-500/5 group-hover:via-purple-500/10 group-hover:to-purple-500/5 transition-all duration-500 pointer-events-none">
                     </div>
                     <div
                         class="w-10 h-10 rounded-lg bg-purple-900/50 text-purple-400 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300 border border-purple-500/20">
@@ -235,17 +235,18 @@
 
     <!-- Inline JavaScript without modules -->
     <script>
+        console.log('🔵 Script started loading...');
+
         // Initialize Supabase client
         // Uses the client initialized in supabase-init.js
-        const supabase = window.supabase;
-
-        if (!supabase) {
+        // Don't redeclare - just use window.supabase directly
+        if (!window.supabase) {
             console.error('Supabase client not initialized. Check supabase-init.js');
             document.getElementById('errorText').textContent = 'System Error: Database connection failed.';
             document.getElementById('errorMessage').classList.remove('hidden');
         }
 
-        console.log('Supabase client initialized:', window.SUPABASE_URL);
+        console.log('✅ Supabase client initialized:', window.SUPABASE_URL);
 
         // UI Elements
         const mainCard = document.getElementById('mainCard');
@@ -262,8 +263,9 @@
 
         let selectedRole = null;
 
-        // Role Selection Logic
-        function selectRole(role) {
+        // Role Selection Logic - Make functions globally accessible
+        window.selectRole = function (role) {
+            console.log('🟢 selectRole CALLED with role:', role);
             selectedRole = role;
 
             // Animate out role selection
@@ -299,9 +301,9 @@
                 // Focus email
                 emailInput.focus();
             }, 300);
-        }
+        };
 
-        function backToRoles() {
+        window.backToRoles = function () {
             // Animate out login form
             loginContainer.classList.add('opacity-0', 'translate-x-10');
             setTimeout(() => {
@@ -320,7 +322,7 @@
                 loginForm.reset();
                 errorMessage.classList.add('hidden');
             }, 300);
-        }
+        };
 
         // Check if already logged in
         async function checkSession() {
@@ -337,12 +339,12 @@
                 window.history.replaceState({}, document.title, window.location.pathname);
 
                 // Ensure Supabase knows we are out
-                await supabase.auth.signOut();
+                await window.supabase.auth.signOut();
                 return;
             }
 
             try {
-                const { data: { session }, error } = await supabase.auth.getSession();
+                const { data: { session }, error } = await window.supabase.auth.getSession();
 
                 if (error) {
                     console.error('Error checking session:', error);
@@ -387,7 +389,7 @@
 
                 console.log(`Attempting login for: ${email}`);
 
-                const { data, error } = await supabase.auth.signInWithPassword({
+                const { data, error } = await window.supabase.auth.signInWithPassword({
                     email,
                     password
                 });
@@ -407,7 +409,7 @@
                         // Use ilike for roll_no to be case-insensitive
                         console.log(`Verifying student: Email='${email}' OR RollNo (ilike)='${originalInput}'`);
 
-                        const { data: studentData, error: studentError } = await supabase
+                        const { data: studentData, error: studentError } = await window.supabase
                             .from('students')
                             .select('id, name, roll_no, email')
                             .or(`email.eq.${email},roll_no.ilike.${originalInput}`)
@@ -415,7 +417,7 @@
 
                         if (studentError || !studentData) {
                             // User authenticated but is not a student
-                            await supabase.auth.signOut();
+                            await window.supabase.auth.signOut();
                             throw new Error('Access denied: Only students can use this portal.');
                         }
 
@@ -423,7 +425,7 @@
                     }
 
                     // Double check session is set before redirecting
-                    const { data: sessionData } = await supabase.auth.getSession();
+                    const { data: sessionData } = await window.supabase.auth.getSession();
                     if (sessionData.session) {
                         // Show Success Animation
                         successOverlay.classList.remove('hidden');
@@ -467,6 +469,33 @@
                 loginBtn.innerHTML = originalBtnText;
             }
         });
+
+        // DEBUG: Add event listeners as fallback (in case onclick doesn't work)
+        console.log('🔵 Setting up fallback event listeners...');
+
+        document.getElementById('btn-admin')?.addEventListener('click', function (e) {
+            console.log('🟡 Admin button clicked via addEventListener');
+            window.selectRole('admin');
+        });
+        document.getElementById('btn-teacher')?.addEventListener('click', function (e) {
+            console.log('🟡 Teacher button clicked via addEventListener');
+            window.selectRole('teacher');
+        });
+        document.getElementById('btn-accountant')?.addEventListener('click', function (e) {
+            console.log('🟡 Accountant button clicked via addEventListener');
+            window.selectRole('accountant');
+        });
+        document.getElementById('btn-student')?.addEventListener('click', function (e) {
+            console.log('🟡 Student button clicked via addEventListener');
+            window.selectRole('student');
+        });
+
+        console.log('✅ ALL SCRIPTS LOADED SUCCESSFULLY');
+        console.log('✅ selectRole function exists:', typeof window.selectRole);
+
+        // DEBUG: Visual confirmation that JS loaded
+        document.body.insertAdjacentHTML('beforeend', '<div id="js-loaded-indicator" style="position:fixed;bottom:10px;right:10px;background:#22c55e;color:white;padding:8px 16px;border-radius:8px;font-size:12px;z-index:9999;">✅ JS Loaded</div>');
+        setTimeout(() => document.getElementById('js-loaded-indicator')?.remove(), 3000);
     </script>
 </body>
 
