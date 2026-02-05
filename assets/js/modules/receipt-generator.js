@@ -60,9 +60,10 @@ async function buildReceiptHTML({ fatherName, fatherCNIC, fatherPhone, issueDate
 
     students.forEach(student => {
         const currentMonth = new Date().toISOString().slice(0, 7);
-        const unpaidFees = student.fees?.filter(f => f.status !== 'paid') || [];
-        const currentMonthFees = unpaidFees.filter(f => f.month === currentMonth);
-        const arrearsFees = unpaidFees.filter(f => f.month !== currentMonth);
+        // Use ALL fees and calculate remaining balance (same as dashboard)
+        const allFees = student.fees || [];
+        const currentMonthFees = allFees.filter(f => f.month === currentMonth);
+        const arrearsFees = allFees.filter(f => f.month !== currentMonth && (Number(f.final_amount || 0) - Number(f.paid_amount || 0)) > 0);
 
         let studentTotal = 0;
         let feeRows = '';
@@ -72,21 +73,25 @@ async function buildReceiptHTML({ fatherName, fatherCNIC, fatherPhone, issueDate
             const disc = Number(fee.discount || 0);
             const paid = Number(fee.paid_amount || 0);
             const net = Number(fee.final_amount || 0) - paid;
-            studentTotal += net;
 
-            feeRows += `
-                <tr class="fee-row">
-                    <td>${fee.fee_type} ${paid > 0 ? '<small>(Bal)</small>' : ''} (${fee.month})</td>
-                    <td class="text-right">${actual.toFixed(0)}</td>
-                    <td class="text-right">${disc.toFixed(0)}</td>
-                    <td class="text-right">${net.toFixed(0)}</td>
-                </tr>
-            `;
+            // Only add if there's a remaining balance
+            if (net > 0) {
+                studentTotal += net;
+
+                feeRows += `
+                    <tr class="fee-row">
+                        <td>${fee.fee_type} ${paid > 0 ? '<small>(Bal)</small>' : ''} (${fee.month})</td>
+                        <td class="text-right">${actual.toFixed(0)}</td>
+                        <td class="text-right">${disc.toFixed(0)}</td>
+                        <td class="text-right">${net.toFixed(0)}</td>
+                    </tr>
+                `;
+            }
         });
 
         if (arrearsFees.length > 0) {
             const months = [...new Set(arrearsFees.map(f => f.month))].sort().join(', ');
-            const totalArrears = arrearsFees.reduce((sum, f) => sum + (Number(f.final_amount) - Number(f.paid_amount || 0)), 0);
+            const totalArrears = arrearsFees.reduce((sum, f) => sum + Math.max(0, Number(f.final_amount || 0) - Number(f.paid_amount || 0)), 0);
             studentTotal += totalArrears;
 
             feeRows += `
