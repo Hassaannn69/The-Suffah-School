@@ -665,7 +665,7 @@ async function getNextEmployeeId(count = 1) {
     }
 }
 
-function openTeacherModal(teacher = null) {
+async function openTeacherModal(teacher = null) {
     const modal = document.getElementById('teacherModal');
     if (modal.parentElement !== document.body) {
         document.body.appendChild(modal);
@@ -707,11 +707,18 @@ function openTeacherModal(teacher = null) {
         employeeIdInput.readOnly = true;
         employeeIdInput.classList.add('bg-gray-700', 'cursor-not-allowed');
 
-        getNextEmployeeId().then(id => {
+        try {
+            const id = await getNextEmployeeId();
             if (document.getElementById('teacherId').value === '') { // Only if still in add mode
                 employeeIdInput.value = id;
             }
-        });
+        } catch (err) {
+            console.error('ID Generation failed:', err);
+            employeeIdInput.value = '';
+            employeeIdInput.readOnly = false;
+            employeeIdInput.classList.remove('bg-gray-700', 'cursor-not-allowed');
+            employeeIdInput.placeholder = 'Enter ID Manually';
+        }
     }
 }
 
