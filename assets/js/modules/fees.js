@@ -214,6 +214,47 @@ export async function render(container) {
                 </div>
             </div>
         </div>
+
+        <!-- Fee History Modal -->
+        <div id="historyModal" class="modal-overlay fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 backdrop-blur-sm">
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-4xl mx-4 my-4 overflow-hidden max-h-[90vh] flex flex-col">
+                <div class="p-6 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-700">
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-800 dark:text-white">Fee History</h3>
+                        <p id="historyStudentName" class="text-sm text-gray-500 dark:text-gray-400">-</p>
+                    </div>
+                    <button id="closeHistoryModal" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                <div class="p-6 overflow-y-auto flex-1">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wider border-b border-gray-100 dark:border-gray-700">
+                                    <th class="pb-3 font-semibold">Month/Date</th>
+                                    <th class="pb-3 font-semibold">Type</th>
+                                    <th class="pb-3 font-semibold">Amount</th>
+                                    <th class="pb-3 font-semibold">Paid</th>
+                                    <th class="pb-3 font-semibold">Balance</th>
+                                    <th class="pb-3 font-semibold">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="historyTableBody" class="text-gray-700 dark:text-gray-300 text-sm">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="p-4 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 flex justify-end">
+                    <button type="button" onclick="window.closeHistoryModal()" class="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-600 hover:bg-gray-200 dark:hover:bg-gray-500 rounded-lg transition-colors">
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
     `;
 
     // Event Listeners
@@ -224,6 +265,7 @@ export async function render(container) {
     document.getElementById('closePaymentModal').addEventListener('click', closePaymentModal);
     document.getElementById('cancelPaymentBtn').addEventListener('click', closePaymentModal);
     document.getElementById('submitPaymentBtn').addEventListener('click', handlePayment);
+    document.getElementById('closeHistoryModal').addEventListener('click', window.closeHistoryModal);
 
     // Set default date to today
     document.getElementById('paymentDate').valueAsDate = new Date();
@@ -342,13 +384,17 @@ async function fetchFees() {
                         ${fee.status.toUpperCase()}
                     </span>
                 </td>
-                <td class="p-4 text-right">
+                <td class="p-4 text-right flex items-center justify-end space-x-3">
+                    <button onclick="window.viewFeeHistory('${fee.students?.id}', '${fee.students?.name}')" 
+                        class="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 font-medium text-sm">
+                        History
+                    </button>
                     ${balance > 0 ? `
                         <button onclick="window.openPayment('${fee.id}', '${fee.students?.id}', '${fee.students?.name}', '${fee.fee_type}', ${finalAmount}, ${paidAmount})" 
                             class="text-indigo-600 hover:text-indigo-900 dark:hover:text-indigo-400 font-medium text-sm">
                             Collect
                         </button>
-                    ` : '<span class="text-gray-400 text-sm">Paid</span>'}
+                    ` : '<span class="text-green-500 text-sm">Paid</span>'}
                 </td>
             </tr>
         `;
@@ -380,6 +426,74 @@ window.openPayment = async (feeId, studentId, studentName, feeType, totalAmount,
 
     modal.classList.remove('hidden');
     modal.classList.add('flex');
+};
+
+window.viewFeeHistory = async (studentId, studentName) => {
+    if (!studentId) return;
+
+    const modal = document.getElementById('historyModal');
+    const nameEl = document.getElementById('historyStudentName');
+    const tbody = document.getElementById('historyTableBody');
+
+    nameEl.textContent = studentName;
+    tbody.innerHTML = '<tr><td colspan="6" class="py-8 text-center text-gray-500">Loading history...</td></tr>';
+
+    // Move modal to body
+    if (modal.parentElement !== document.body) {
+        document.body.appendChild(modal);
+    }
+
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+
+    try {
+        const { data, error } = await supabase
+            .from('fees')
+            .select('*')
+            .eq('student_id', studentId)
+            .order('month', { ascending: false });
+
+        if (error) throw error;
+
+        if (!data || data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" class="py-8 text-center text-gray-500">No fee history found.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = data.map(fee => {
+            const final = Number(fee.final_amount || 0);
+            const paid = Number(fee.paid_amount || 0);
+            const balance = final - paid;
+            const status = fee.status || 'unpaid';
+
+            return `
+                <tr class="border-b border-gray-50 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+                    <td class="py-4 font-medium text-gray-900 dark:text-white">${fee.month}</td>
+                    <td class="py-4">${fee.fee_type}</td>
+                    <td class="py-4">${window.formatCurrency(final)}</td>
+                    <td class="py-4 text-green-600 dark:text-green-400">${window.formatCurrency(paid)}</td>
+                    <td class="py-4 font-medium ${balance > 0 ? 'text-red-500' : 'text-gray-500'}">${window.formatCurrency(balance)}</td>
+                    <td class="py-4">
+                        <span class="px-2 py-0.5 text-[10px] font-bold rounded-full ${status === 'paid' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
+                    status === 'partial' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                        'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}">
+                            ${status.toUpperCase()}
+                        </span>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+
+    } catch (err) {
+        console.error('Error loading history:', err);
+        tbody.innerHTML = '<tr><td colspan="6" class="py-8 text-center text-red-500">Error loading record.</td></tr>';
+    }
+};
+
+window.closeHistoryModal = () => {
+    const modal = document.getElementById('historyModal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
 };
 
 async function loadPaymentHistory(feeId) {
