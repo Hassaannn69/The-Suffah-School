@@ -70,12 +70,13 @@ async function buildReceiptHTML({ fatherName, fatherCNIC, fatherPhone, issueDate
         currentMonthFees.forEach(fee => {
             const actual = Number(fee.amount || 0);
             const disc = Number(fee.discount || 0);
-            const net = Number(fee.final_amount || 0);
+            const paid = Number(fee.paid_amount || 0);
+            const net = Number(fee.final_amount || 0) - paid;
             studentTotal += net;
 
             feeRows += `
                 <tr class="fee-row">
-                    <td>${fee.fee_type} (${fee.month})</td>
+                    <td>${fee.fee_type} ${paid > 0 ? '<small>(Bal)</small>' : ''} (${fee.month})</td>
                     <td class="text-right">${actual.toFixed(0)}</td>
                     <td class="text-right">${disc.toFixed(0)}</td>
                     <td class="text-right">${net.toFixed(0)}</td>
