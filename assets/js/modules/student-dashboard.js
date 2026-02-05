@@ -57,18 +57,19 @@ export async function render(container) {
         currentStudent = student;
 
         // Fetch all data in parallel
-        const [feesData, familyData, attendanceData, notificationsData, paymentsData] = await Promise.all([
+        const [feesData, familyData, attendanceData, notificationsData, paymentsData, resultsData] = await Promise.all([
             fetchStudentFees(student.id),
             fetchFamilyMembers(student.family_code, student.id),
             fetchAttendance(student.id),
             fetchNotifications(student.class, student.section, student.id),
-            fetchPaymentHistory(student.id, student.family_code)
+            fetchPaymentHistory(student.id, student.family_code),
+            fetchResults(student.id)
         ]);
 
         familyMembers = familyData || [];
 
         // Render the dashboard
-        renderStudentDashboard(container, student, feesData, familyData, attendanceData, notificationsData, paymentsData);
+        renderStudentDashboard(container, student, feesData, familyData, attendanceData, notificationsData, paymentsData, resultsData);
 
     } catch (err) {
         console.error('Student Dashboard Error:', err);
@@ -76,7 +77,7 @@ export async function render(container) {
     }
 }
 
-function renderStudentDashboard(container, student, fees, family, attendance, notifications, payments = []) {
+function renderStudentDashboard(container, student, fees, family, attendance, notifications, payments = [], results = []) {
     const totalFees = fees.reduce((sum, f) => sum + (f.final_amount || f.amount || 0), 0);
     const paidFees = fees.reduce((sum, f) => sum + (f.paid_amount || 0), 0);
     const pendingFees = Math.max(0, totalFees - paidFees);
@@ -245,20 +246,20 @@ function renderStudentDashboard(container, student, fees, family, attendance, no
                         <div class="p-4 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700">
                             <h3 class="font-bold text-gray-900 dark:text-white">Quick Actions</h3>
                         </div>
-                        <div class="p-4 grid grid-cols-2 gap-3">
+                        <div class="p-4 grid grid-cols-3 gap-3">
                             <button onclick="document.getElementById('fees-section')?.scrollIntoView({behavior: 'smooth'})" class="p-3 bg-primary-50 dark:bg-primary-900/20 rounded-lg text-center hover:bg-primary-100 dark:hover:bg-primary-900/40 transition-colors group">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mx-auto text-primary-500 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                 </svg>
                                 <p class="text-xs font-medium text-gray-700 dark:text-gray-300 mt-2">Fees</p>
                             </button>
-                            <button class="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg text-center hover:bg-green-100 dark:hover:bg-green-900/40 transition-colors group">
+                            <button onclick="document.getElementById('attendance-section')?.scrollIntoView({behavior: 'smooth'})" class="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg text-center hover:bg-green-100 dark:hover:bg-green-900/40 transition-colors group">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mx-auto text-green-500 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                                 </svg>
                                 <p class="text-xs font-medium text-gray-700 dark:text-gray-300 mt-2">Attendance</p>
                             </button>
-                            <button class="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-center hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors group">
+                            <button onclick="document.getElementById('results-section')?.scrollIntoView({behavior: 'smooth'})" class="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-center hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors group">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mx-auto text-blue-500 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                                 </svg>
@@ -307,78 +308,14 @@ function renderStudentDashboard(container, student, fees, family, attendance, no
                         </div>
                     </div>
 
-                    <!-- Quick Links (Moved from Right Column) -->
-                    <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
-                        <div class="p-4 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700">
-                            <h3 class="font-bold text-gray-900 dark:text-white">Quick Links</h3>
-                        </div>
-                        <div class="p-4 grid grid-cols-2 gap-3">
-                            <button class="p-3 bg-primary-50 dark:bg-primary-900/20 rounded-lg text-center hover:bg-primary-100 dark:hover:bg-primary-900/40 transition-colors group">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mx-auto text-primary-500 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                </svg>
-                                <p class="text-xs font-medium text-gray-700 dark:text-gray-300 mt-2">Fee History</p>
-                            </button>
-                            <button class="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg text-center hover:bg-green-100 dark:hover:bg-green-900/40 transition-colors group">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mx-auto text-green-500 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                <p class="text-xs font-medium text-gray-700 dark:text-gray-300 mt-2">Attendance</p>
-                            </button>
-                            <button class="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-center hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors group">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mx-auto text-blue-500 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                                </svg>
-                                <p class="text-xs font-medium text-gray-700 dark:text-gray-300 mt-2">Results</p>
-                            </button>
-                        </div>
-                    </div>
 
-                    <!-- Notifications (Moved from Right Column) -->
-                    <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
-                        <div class="p-4 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700">
-                            <h3 class="font-bold text-gray-900 dark:text-white flex items-center">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                                </svg>
-                                Notifications
-                            </h3>
-                        </div>
-                        <div class="divide-y divide-gray-100 dark:divide-gray-800 max-h-64 overflow-y-auto">
-                            ${notifications.length > 0 ? notifications.map(n => `
-                            <div class="p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                                <div class="flex items-start space-x-3">
-                                    <div class="w-8 h-8 rounded-full flex items-center justify-center ${n.type === 'fee_reminder' ? 'bg-red-100 text-red-500' :
-                    n.type === 'exam' ? 'bg-purple-100 text-purple-500' :
-                        n.type === 'assignment' ? 'bg-blue-100 text-blue-500' :
-                            'bg-gray-100 text-gray-500'
-                }">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                        </svg>
-                                    </div>
-                                    <div class="flex-1 min-w-0">
-                                        <p class="text-sm font-medium text-gray-900 dark:text-white">${n.title}</p>
-                                        <p class="text-xs text-gray-500 mt-1 truncate">${n.message}</p>
-                                    </div>
-                                </div>
-                            </div>
-                            `).join('') : `
-                            <div class="p-8 text-center text-gray-500">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-gray-300 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-                                </svg>
-                                <p class="text-sm">No notifications</p>
-                            </div>
-                            `}
-                        </div>
-                    </div>
+
                 </div>
 
                 <!-- Middle Column: Fees Module -->
                 <div class="lg:col-span-2 space-y-6">
                     <!-- Professional Fees Module -->
-                    <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
+                    <div id="fees-section" class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
                         <div class="p-4 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
                             <h3 class="font-bold text-gray-900 dark:text-white flex items-center">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -427,14 +364,14 @@ function renderStudentDashboard(container, student, fees, family, attendance, no
                                     </h4>
                                     <div class="space-y-2 max-h-60 overflow-y-auto pr-1">
                                         ${fees.length > 0 ? fees.map(fee => {
-                    const isPaid = fee.status === 'paid';
-                    return `
+                const isPaid = fee.status === 'paid';
+                return `
                                             <div class="flex items-center justify-between p-3 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-lg group hover:border-primary-200 transition-colors">
                                                 <div class="flex-1">
                                                     <div class="flex items-center gap-2">
                                                         <p class="font-bold text-gray-800 dark:text-gray-200 text-sm">${fee.fee_type}</p>
                                                         <span class="text-[9px] px-1.5 py-0.5 rounded-full ${isPaid ? 'bg-green-100 text-green-700' :
-                            fee.status === 'partial' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-50 text-red-600'}">
+                        fee.status === 'partial' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-50 text-red-600'}">
                                                             ${fee.status.toUpperCase()}
                                                         </span>
                                                     </div>
@@ -451,7 +388,7 @@ function renderStudentDashboard(container, student, fees, family, attendance, no
                                                 </div>
                                             </div>
                                             `;
-                }).join('') : '<div class="text-center py-4 bg-gray-50 dark:bg-gray-800/20 rounded-lg text-xs text-gray-500">No fee records found.</div>'}
+            }).join('') : '<div class="text-center py-4 bg-gray-50 dark:bg-gray-800/20 rounded-lg text-xs text-gray-500">No fee records found.</div>'}
                                     </div>
                                 </div>
 
@@ -501,7 +438,7 @@ function renderStudentDashboard(container, student, fees, family, attendance, no
                     </div>
 
                     <!-- Attendance Details -->
-                    <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
+                    <div id="attendance-section" class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
                         <div class="p-4 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700">
                             <h3 class="font-bold text-gray-900 dark:text-white flex items-center">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -539,77 +476,55 @@ function renderStudentDashboard(container, student, fees, family, attendance, no
                             </div>
                         </div>
                     </div>
-                </div>
 
-                <!-- Right Column: Notifications & Quick Links -->
-                <div class="space-y-6">
-                    <!-- Quick Links -->
-                    <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
-                        <div class="p-4 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700">
-                            <h3 class="font-bold text-gray-900 dark:text-white">Quick Actions</h3>
-                        </div>
-                        <div class="p-4 grid grid-cols-2 gap-3">
-                            <button class="p-3 bg-primary-50 dark:bg-primary-900/20 rounded-lg text-center hover:bg-primary-100 dark:hover:bg-primary-900/40 transition-colors group">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mx-auto text-primary-500 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                </svg>
-                                <p class="text-xs font-medium text-gray-700 dark:text-gray-300 mt-2">Fee History</p>
-                            </button>
-                            <button class="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg text-center hover:bg-green-100 dark:hover:bg-green-900/40 transition-colors group">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mx-auto text-green-500 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                <p class="text-xs font-medium text-gray-700 dark:text-gray-300 mt-2">Attendance</p>
-                            </button>
-                            <button class="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-center hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors group">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mx-auto text-blue-500 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                                </svg>
-                                <p class="text-xs font-medium text-gray-700 dark:text-gray-300 mt-2">Results</p>
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Notifications -->
-                    <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
-                        <div class="p-4 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700">
+                    <!-- Exam Results (New Module) -->
+                    <div id="results-section" class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
+                        <div class="p-4 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
                             <h3 class="font-bold text-gray-900 dark:text-white flex items-center">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                                 </svg>
-                                Notifications
+                                Exam Results
                             </h3>
+                            <button onclick="window.fetchResults ? window.location.reload() : null" class="text-xs text-primary-500 hover:text-primary-600 font-medium">
+                                Refresh
+                            </button>
                         </div>
-                        <div class="divide-y divide-gray-100 dark:divide-gray-800 max-h-64 overflow-y-auto">
-                            ${notifications.length > 0 ? notifications.map(n => `
-                            <div class="p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                                <div class="flex items-start space-x-3">
-                                    <div class="w-8 h-8 rounded-full flex items-center justify-center ${n.type === 'fee_reminder' ? 'bg-red-100 text-red-500' :
-                        n.type === 'exam' ? 'bg-purple-100 text-purple-500' :
-                            n.type === 'assignment' ? 'bg-blue-100 text-blue-500' :
-                                'bg-gray-100 text-gray-500'
-                    }">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        <div class="p-4">
+                            ${results.length > 0 ? `
+                                <div class="space-y-3">
+                                    ${results.map(r => `
+                                    <div class="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg flex items-center justify-between group hover:shadow-md transition-all">
+                                        <div>
+                                            <p class="font-bold text-gray-900 dark:text-white">${r.exam_name || 'Exam'}</p>
+                                            <p class="text-xs text-gray-500">${r.date || new Date().toLocaleDateString()}</p>
+                                        </div>
+                                        <div class="text-right">
+                                            <div class="text-lg font-bold ${r.percentage >= 50 ? 'text-green-500' : 'text-red-500'}">
+                                                ${r.obtained_marks}/${r.total_marks}
+                                            </div>
+                                            <p class="text-[10px] text-gray-400 font-medium rounded px-1.5 py-0.5 ${r.percentage >= 50 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'} inline-block">
+                                                ${r.grade || (r.percentage >= 50 ? 'PASS' : 'FAIL')}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    `).join('')}
+                                </div>
+                            ` : `
+                                <div class="text-center py-8">
+                                    <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 mb-3">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                         </svg>
                                     </div>
-                                    <div class="flex-1 min-w-0">
-                                        <p class="text-sm font-medium text-gray-900 dark:text-white">${n.title}</p>
-                                        <p class="text-xs text-gray-500 mt-1 truncate">${n.message}</p>
-                                    </div>
+                                    <p class="text-sm text-gray-500 dark:text-gray-400">No exam results declared yet.</p>
                                 </div>
-                            </div>
-                            `).join('') : `
-                            <div class="p-8 text-center text-gray-500">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-gray-300 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-                                </svg>
-                                <p class="text-sm">No notifications</p>
-                            </div>
                             `}
                         </div>
                     </div>
                 </div>
+
+
             </div>
         </div>
     `;
@@ -745,16 +660,12 @@ async function fetchPaymentHistory(studentId, familyCode) {
 async function fetchAttendance(studentId) {
     try {
         // Get current month attendance
-        const startOfMonth = new Date();
-        startOfMonth.setDate(1);
-        startOfMonth.setHours(0, 0, 0, 0);
-
         const { data, error } = await supabase
             .from('attendance')
             .select('*')
             .eq('student_id', studentId)
-            .gte('date', startOfMonth.toISOString().split('T')[0])
-            .order('date', { ascending: false });
+            .order('date', { ascending: false })
+            .limit(30);
 
         if (error) throw error;
         return data || [];
@@ -778,6 +689,26 @@ async function fetchNotifications(className, section, studentId) {
         return data || [];
     } catch (err) {
         console.error('Error fetching notifications:', err);
+        return [];
+    }
+}
+
+async function fetchResults(studentId) {
+    try {
+        const { data, error } = await supabase
+            .from('exam_results')
+            .select('*')
+            .eq('student_id', studentId)
+            .order('date', { ascending: false });
+
+        if (error) {
+            // Table mismatch or missing, return mock empty or log query error but don't crash
+            console.warn('Results fetch error (table might be missing):', error.message);
+            return [];
+        }
+        return data || [];
+    } catch (err) {
+        console.error('Error fetching results:', err);
         return [];
     }
 }
