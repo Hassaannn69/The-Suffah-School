@@ -28,16 +28,16 @@
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
 
-# Cache JS and CSS for 1 hour (safer for manual updates)
+# Force browsers to revalidate JS files every time
 [[headers]]
   for = "/assets/js/*"
   [headers.values]
-    Cache-Control = "public, max-age=3600"
+    Cache-Control = "no-cache, no-store, must-revalidate"
 
 [[headers]]
   for = "/assets/css/*"
   [headers.values]
-    Cache-Control = "public, max-age=3600"
+    Cache-Control = "no-cache, no-store, must-revalidate"
 
 # Ensure HTML files are always fresh but can be validated
 [[headers]]
