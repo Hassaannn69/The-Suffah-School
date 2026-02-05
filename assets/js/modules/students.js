@@ -1823,8 +1823,26 @@ async function handleFormSubmit(e) {
     try {
         let generatedCreds = null;
 
-        // If new student (no ID), handle credential generation
+        // If new student (no ID), handle duplication check and credential generation
         if (!id) {
+            // Check for duplicate student (Name + Father Name + CNIC)
+            const { data: existingStudent, error: checkError } = await supabase
+                .from('students')
+                .select('id')
+                .eq('name', name)
+                .eq('father_name', fatherName)
+                .eq('father_cnic', fatherCNIC)
+                .maybeSingle();
+
+            if (checkError) {
+                console.error('Error checking for duplicate:', checkError);
+            }
+
+            if (existingStudent) {
+                alert('Duplicate Entry Detected: A student with this Name, Father Name, and CNIC already exists in the system.');
+                return;
+            }
+
             // 1. Generate email from roll number if not provided
             if (!email) {
                 // Use roll number as email (e.g., SUF2501001@student.suffah.school)
@@ -1934,8 +1952,10 @@ async function createAuthUser(email, password, name) {
 
     } catch (err) {
         console.error('Error creating auth user:', err);
-        // We don't block student creation if auth fails (maybe they already exist), 
-        // but we should warn the admin.
+        if (err.message.includes('already registered')) {
+            console.log('Auth user already exists, skipping creation.');
+            return { id: 'existing' }; // Return a dummy object to indicate success (no new user created but exists)
+        }
         alert('Warning: Could not create login account. ' + err.message);
         return null;
     }
