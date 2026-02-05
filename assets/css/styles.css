@@ -138,3 +138,23 @@ textarea:focus {
   scrollbar-width: none;
   /* Firefox */
 }
+
+/* Autofill Overrides for Dark Theme */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 30px #1f2937 inset !important;
+  /* Matches bg-gray-800 */
+  -webkit-text-fill-color: white !important;
+  caret-color: white;
+}
+
+.dark input:-webkit-autofill,
+.dark input:-webkit-autofill:hover,
+.dark input:-webkit-autofill:focus,
+.dark input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 30px #1f2937 inset !important;
+  -webkit-text-fill-color: white !important;
+  caret-color: white;
+}
