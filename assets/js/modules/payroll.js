@@ -1,12 +1,14 @@
 // Use global Supabase client for production compatibility
+// Last Updated: Smart Payroll System
 const supabase = window.supabase || (() => {
     console.error('Supabase client not found on window object');
     throw new Error('Supabase client not initialized');
 })();
 
-let availableTeachers = [];
-let currentSalaries = [];
-let payrollRecords = [];
+let teachers = [];
+let salaries = [];
+let payrollData = [];
+let attendanceData = []; // Cache or fetch on demand
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
@@ -17,354 +19,750 @@ export async function render(container) {
     container.innerHTML = `
         <div class="space-y-6">
             <!-- Header -->
-            <div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-6 transition-colors duration-200">
-                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div>
-                        <h2 class="text-xl font-bold text-gray-900 dark:text-white">Payroll Management</h2>
-                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Manage teacher salaries and generate payslips</p>
-                    </div>
-                    <div class="flex space-x-3">
-                        <select id="payrollMonth" class="px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 outline-none text-gray-900 dark:text-white">
-                            ${MONTHS.map((m, i) => `<option value="${i + 1}" ${i + 1 === currentMonth ? 'selected' : ''}>${m}</option>`).join('')}
-                        </select>
-                        <select id="payrollYear" class="px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 outline-none text-gray-900 dark:text-white">
-                            ${[currentYear - 1, currentYear, currentYear + 1].map(y => `<option value="${y}" ${y === currentYear ? 'selected' : ''}>${y}</option>`).join('')}
-                        </select>
-                        <button id="generatePayrollBtn" class="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center transition-colors shadow-lg shadow-primary-500/20">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                            </svg>
-                            Generate Payroll
-                        </button>
-                    </div>
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Payroll & Salary Management</h2>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Manage teacher salaries and process monthly payments with automated deductions.</p>
+                </div>
+                
+                <!-- Period Selector -->
+                <div class="flex bg-white dark:bg-gray-800 rounded-lg shadow-sm p-1 border border-gray-200 dark:border-gray-700">
+                    <select id="payrollMonth" class="bg-transparent border-none text-sm font-medium text-gray-700 dark:text-gray-300 focus:ring-0 cursor-pointer">
+                        ${MONTHS.map((m, i) => `<option value="${i + 1}" ${i + 1 === currentMonth ? 'selected' : ''}>${m}</option>`).join('')}
+                    </select>
+                    <div class="w-px bg-gray-200 dark:bg-gray-700 mx-2"></div>
+                    <select id="payrollYear" class="bg-transparent border-none text-sm font-medium text-gray-700 dark:text-gray-300 focus:ring-0 cursor-pointer">
+                        ${[currentYear - 1, currentYear, currentYear + 1].map(y => `<option value="${y}" ${y === currentYear ? 'selected' : ''}>${y}</option>`).join('')}
+                    </select>
                 </div>
             </div>
 
-            <!-- Stats Cards -->
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-4 transition-colors">
-                    <div class="text-sm text-gray-500 dark:text-gray-400">Total Payroll</div>
-                    <div id="totalPayroll" class="text-2xl font-bold text-gray-900 dark:text-white mt-1">Rs 0</div>
+            <!-- Main Content Area -->
+            <div class="bg-white dark:bg-gray-900 rounded-xl shadow-lg border border-gray-200 dark:border-gray-800 overflow-hidden min-h-[600px] flex flex-col">
+                
+                <!-- Custom Tabs -->
+                <div class="flex border-b border-gray-200 dark:border-gray-800">
+                    <button id="tabProcess" class="flex-1 px-6 py-4 text-sm font-medium text-primary-600 border-b-2 border-primary-600 bg-primary-50/50 dark:bg-primary-900/10 dark:text-primary-400 dark:border-primary-400 transition-colors">
+                        <div class="flex items-center justify-center gap-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                            Process Payroll
+                        </div>
+                    </button>
+                    <button id="tabSetup" class="flex-1 px-6 py-4 text-sm font-medium text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-800 transition-colors border-b-2 border-transparent">
+                         <div class="flex items-center justify-center gap-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                            Manage Salary (Setup)
+                        </div>
+                    </button>
                 </div>
-                <div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-green-200 dark:border-green-900 p-4 transition-colors">
-                    <div class="text-sm text-green-600 dark:text-green-400">Paid</div>
-                    <div id="paidCount" class="text-2xl font-bold text-green-600 dark:text-green-400 mt-1">0</div>
-                </div>
-                <div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-yellow-200 dark:border-yellow-900 p-4 transition-colors">
-                    <div class="text-sm text-yellow-600 dark:text-yellow-400">Pending</div>
-                    <div id="pendingCount" class="text-2xl font-bold text-yellow-600 dark:text-yellow-400 mt-1">0</div>
-                </div>
-                <div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-blue-200 dark:border-blue-900 p-4 transition-colors">
-                    <div class="text-sm text-blue-600 dark:text-blue-400">Teachers</div>
-                    <div id="teacherCount" class="text-2xl font-bold text-blue-600 dark:text-blue-400 mt-1">0</div>
-                </div>
-            </div>
 
-            <!-- Payroll Table -->
-            <div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden transition-colors duration-200">
-                <div class="overflow-x-auto">
-                    <table class="w-full">
-                        <thead class="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-                            <tr>
-                                <th class="p-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Teacher</th>
-                                <th class="p-4 text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Base Salary</th>
-                                <th class="p-4 text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Allowances</th>
-                                <th class="p-4 text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Deductions</th>
-                                <th class="p-4 text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Net Salary</th>
-                                <th class="p-4 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
-                                <th class="p-4 text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="payrollTableBody" class="divide-y divide-gray-200 dark:divide-gray-800">
-                            <tr><td colspan="7" class="p-4 text-center text-gray-500 dark:text-gray-400">Loading...</td></tr>
-                        </tbody>
-                    </table>
+                <!-- Views Container -->
+                <div class="p-6 flex-1 bg-gray-50/50 dark:bg-black/20">
+                    
+                    <!-- View 1: Payroll Processing -->
+                    <div id="viewProcess" class="space-y-4">
+                         <!-- Stats Row -->
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                            <div class="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
+                                <div class="text-xs font-semibold text-gray-500 uppercase">Pending Payments</div>
+                                <div id="statPending" class="text-2xl font-bold text-yellow-600 mt-1">0</div>
+                            </div>
+                            <div class="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
+                                <div class="text-xs font-semibold text-gray-500 uppercase">Processed Payments</div>
+                                <div id="statProcessed" class="text-2xl font-bold text-green-600 mt-1">0</div>
+                            </div>
+                            <div class="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
+                                <div class="text-xs font-semibold text-gray-500 uppercase">Total Payout (This Month)</div>
+                                <div id="statTotal" class="text-2xl font-bold text-primary-600 mt-1">Rs 0</div>
+                            </div>
+                        </div>
+
+                        <!-- Processing List -->
+                        <div class="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+                            <table class="w-full text-sm text-left">
+                                <thead class="bg-gray-50 dark:bg-gray-900/50 text-gray-500 dark:text-gray-400 font-medium border-b border-gray-200 dark:border-gray-700">
+                                    <tr>
+                                        <th class="px-6 py-4">Teacher</th>
+                                        <th class="px-6 py-4 text-center">Status</th>
+                                        <th class="px-6 py-4 text-right">Base Salary</th>
+                                        <th class="px-6 py-4 text-right">Net Payout</th>
+                                        <th class="px-6 py-4 text-right">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="processTableBody" class="divide-y divide-gray-200 dark:divide-gray-800">
+                                    <tr><td colspan="5" class="px-6 py-8 text-center text-gray-500">Loading...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- View 2: Salary Setup -->
+                    <div id="viewSetup" class="hidden space-y-4">
+                        <div class="bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-200 p-4 rounded-lg mb-6 text-sm">
+                            <span class="font-bold">Instructions:</span> Set the Base Monthly Salary and expected Working Days for each teacher. This data is required for automated daily rate calculations.
+                        </div>
+                        
+                        <div class="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+                            <table class="w-full text-sm text-left">
+                                <thead class="bg-gray-50 dark:bg-gray-900/50 text-gray-500 dark:text-gray-400 font-medium border-b border-gray-200 dark:border-gray-700">
+                                    <tr>
+                                        <th class="px-6 py-4">Teacher</th>
+                                        <th class="px-6 py-4">Base Salary (Rs)</th>
+                                        <th class="px-6 py-4">Monthly Working Days</th>
+                                        <th class="px-6 py-4 text-right">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="setupTableBody" class="divide-y divide-gray-200 dark:divide-gray-800">
+                                    <!-- Populated via JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
                 </div>
             </div>
         </div>
 
-        <!-- Set Salary Modal -->
-        <div id="salaryModal" class="modal-overlay fixed inset-0 bg-black/80 hidden items-center justify-center z-50 backdrop-blur-sm overflow-y-auto transition-opacity duration-300">
-            <div class="bg-gray-900 rounded-xl shadow-2xl w-full max-w-lg mx-4 my-4 overflow-hidden transform transition-all duration-300 ease-out opacity-0 scale-95 translate-y-4 border border-gray-800">
-                <div class="bg-gradient-to-r from-primary-600 to-indigo-600 p-6 flex justify-between items-center">
-                    <h3 id="salaryModalTitle" class="text-xl font-bold text-white">Set Salary Structure</h3>
-                    <button id="closeSalaryModalBtn" class="text-white hover:text-gray-200 transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
+        <!-- Pay Modal -->
+        <div id="payModal" class="modal-overlay fixed inset-0 bg-black/80 hidden items-center justify-center z-50 backdrop-blur-sm p-4 overflow-y-auto">
+            <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border border-gray-200 dark:border-gray-700 transform transition-all scale-95 opacity-0">
+                
+                <!-- Modal Header -->
+                <div class="p-6 bg-gradient-to-r from-gray-900 to-gray-800 border-b border-gray-700 flex justify-between items-start">
+                    <div>
+                        <h3 class="text-xl font-bold text-white mb-1" id="payModalName">Teacher Name</h3>
+                        <div class="text-gray-400 text-sm font-mono" id="payModalId">EMP-ID</div>
+                    </div>
+                     <button onclick="closePayModal()" class="text-gray-400 hover:text-white transition-colors">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                     </button>
                 </div>
-                <form id="salaryForm" class="p-6 space-y-4">
-                    <input type="hidden" id="salaryTeacherId">
-                    
-                    <div>
-                        <label class="block text-sm font-medium text-gray-300 mb-1">Teacher</label>
-                        <input type="text" id="salaryTeacherName" disabled class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-                    </div>
-                    
-                    <div>
-                        <label class="block text-sm font-medium text-gray-300 mb-1">Base Salary *</label>
-                        <input type="number" id="baseSalary" required class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-primary-500 outline-none">
-                    </div>
-                    
+
+                <div class="p-6 space-y-6">
+                    <!-- Base Info Cards -->
                     <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-300 mb-1">Allowances</label>
-                            <input type="number" id="allowances" value="0" class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-primary-500 outline-none">
+                        <div class="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700">
+                            <div class="text-xs text-gray-500 uppercase font-semibold">Base Salary</div>
+                            <div class="text-lg font-bold text-gray-900 dark:text-white" id="payModalBase">0</div>
                         </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-300 mb-1">Deductions</label>
-                            <input type="number" id="deductions" value="0" class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-primary-500 outline-none">
+                         <div class="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700">
+                            <div class="text-xs text-gray-500 uppercase font-semibold">Daily Rate</div>
+                            <div class="text-lg font-bold text-primary-600" id="payModalRate">0</div>
+                            <div class="text-[10px] text-gray-400">Based on <span id="payModalDays">0</span> working days</div>
                         </div>
                     </div>
 
-                    <div class="flex justify-end space-x-3 pt-4 border-t border-gray-800">
-                        <button type="button" id="cancelSalaryBtn" class="px-4 py-2 text-gray-300 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors border border-gray-700">Cancel</button>
-                        <button type="submit" class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors shadow-lg shadow-primary-500/20">Save Salary</button>
+                    <!-- Auto Calculation Section -->
+                    <div class="bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/30 p-4 rounded-lg">
+                        <div class="flex justify-between items-center mb-2">
+                             <div class="text-sm font-medium text-red-800 dark:text-red-300 flex items-center gap-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                Absence Deduction
+                             </div>
+                             <div class="text-sm font-bold text-red-600 dark:text-red-400" id="payModalAbsentDeduction">- Rs 0</div>
+                        </div>
+                         <div class="text-xs text-gray-500 dark:text-gray-400">
+                            Teacher was absent for <span class="font-bold text-gray-900 dark:text-white" id="payModalAbsentDays">0</span> days this month.
+                        </div>
                     </div>
-                </form>
+
+                    <!-- Manual Adjustments -->
+                    <div class="space-y-4 pt-2">
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Add Allowances (Bonus, etc.)</label>
+                            <div class="relative">
+                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">Rs</span>
+                                <input type="number" id="payInputAllowances" class="w-full pl-8 pr-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none transition-colors text-gray-900 dark:text-white font-medium" placeholder="0">
+                            </div>
+                        </div>
+                         <div>
+                            <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Extra Deductions (Fine, etc.)</label>
+                            <div class="relative">
+                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">Rs</span>
+                                <input type="number" id="payInputDeductions" class="w-full pl-8 pr-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none transition-colors text-gray-900 dark:text-white font-medium" placeholder="0">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Final Total -->
+                    <div class="pt-4 border-t border-gray-200 dark:border-gray-700 flex justify-between items-end">
+                        <div class="text-sm font-medium text-gray-500">Net Salary to Pay</div>
+                        <div class="text-3xl font-extrabold text-gray-900 dark:text-white" id="payModalNet">Rs 0</div>
+                    </div>
+
+                    <button id="confirmPayBtn" class="w-full py-3 bg-primary-600 hover:bg-primary-700 text-white font-bold rounded-xl shadow-lg shadow-primary-500/30 transition-all active:scale-95 flex items-center justify-center gap-2">
+                        Process Payment
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Payslip Modal -->
+        <div id="slipModal" class="modal-overlay fixed inset-0 bg-black/80 hidden items-center justify-center z-50 backdrop-blur-sm p-4 overflow-y-auto">
+            <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden border border-gray-200 dark:border-gray-700 transform transition-all scale-95 opacity-0">
+                 <!-- Modal Header -->
+                <div class="p-4 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center no-print">
+                    <h3 class="font-bold text-gray-700 dark:text-gray-200">Salary Payslip</h3>
+                     <div class="flex items-center gap-3">
+                        <button onclick="window.printSlip()" class="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-1.5 rounded-lg text-sm font-medium transition-all">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                            Print Slip
+                        </button>
+                        <button onclick="window.closeSlipModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-white transition-colors">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Print Content -->
+                <div id="slipPrintArea" class="p-8 bg-white dark:bg-gray-900 text-gray-900 dark:text-white">
+                    <div class="text-center mb-8 border-b-2 border-indigo-600 pb-6">
+                        <h2 class="text-3xl font-black text-indigo-600 tracking-tight uppercase">The Suffah School</h2>
+                        <p class="text-sm font-medium text-gray-500 uppercase tracking-widest mt-1">Nurturing Minds, Building Future</p>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-8 mb-8">
+                        <div class="space-y-1">
+                            <div class="text-[10px] uppercase font-bold text-gray-400">Employee Details</div>
+                            <div class="text-xl font-bold" id="slipTeacherName">-</div>
+                            <div class="text-sm font-mono text-gray-500" id="slipEmployeeID">-</div>
+                        </div>
+                        <div class="text-right space-y-1">
+                            <div class="text-[10px] uppercase font-bold text-gray-400">Pay Period</div>
+                            <div class="text-lg font-bold" id="slipMonthYear">-</div>
+                            <div class="text-sm text-gray-500">Paid on: <span id="slipPayDate">-</span></div>
+                        </div>
+                    </div>
+
+                    <div class="border-y border-gray-100 dark:border-gray-800 py-6 my-6">
+                        <div class="grid grid-cols-2 gap-12">
+                            <!-- Earnings -->
+                            <div>
+                                <h4 class="text-xs font-bold text-gray-400 uppercase mb-4 tracking-wider">Earnings</h4>
+                                <div class="space-y-3">
+                                    <div class="flex justify-between text-sm">
+                                        <span class="text-gray-500">Days Worked (<span id="slipPresentDays">0</span> × Rs <span id="slipDailyRate">0</span>)</span>
+                                        <span class="font-bold">Rs <span id="slipGrossEarned">0</span></span>
+                                    </div>
+                                    <div class="flex justify-between text-sm">
+                                        <span class="text-gray-500">Allowances & Bonuses</span>
+                                        <span class="font-bold text-green-600">+ Rs <span id="slipBonus">0</span></span>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Deductions -->
+                            <div>
+                                <h4 class="text-xs font-bold text-gray-400 uppercase mb-4 tracking-wider">Deductions</h4>
+                                <div class="space-y-3">
+                                    <div class="flex justify-between text-sm">
+                                        <span class="text-gray-500">Extra Deductions / Fines</span>
+                                        <span class="font-bold text-red-600">- Rs <span id="slipDeductions">0</span></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-indigo-50 dark:bg-indigo-900/20 p-6 rounded-xl flex justify-between items-center mt-8">
+                        <div>
+                            <div class="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider mb-1">Net Payable Amount</div>
+                            <div class="text-sm text-gray-500 dark:text-gray-400 italic">This is an electronically generated payslip.</div>
+                        </div>
+                        <div class="text-4xl font-black text-indigo-600 dark:text-indigo-400">
+                             Rs <span id="slipNetTotal">0</span>
+                        </div>
+                    </div>
+
+                    <div class="mt-12 pt-12 border-t border-gray-100 dark:border-gray-800 flex justify-between">
+                         <div class="text-center">
+                            <div class="w-32 h-px bg-gray-300 mx-auto mb-2"></div>
+                            <div class="text-[10px] uppercase font-bold text-gray-400">Employee Signature</div>
+                         </div>
+                         <div class="text-center">
+                            <div class="w-32 h-px bg-gray-300 mx-auto mb-2"></div>
+                            <div class="text-[10px] uppercase font-bold text-gray-400">Authorized Official</div>
+                         </div>
+                    </div>
+                </div>
             </div>
         </div>
     `;
 
-    // Event Listeners
-    document.getElementById('payrollMonth').addEventListener('change', loadPayroll);
-    document.getElementById('payrollYear').addEventListener('change', loadPayroll);
-    document.getElementById('generatePayrollBtn').addEventListener('click', generatePayroll);
-    document.getElementById('closeSalaryModalBtn').addEventListener('click', closeSalaryModal);
-    document.getElementById('cancelSalaryBtn').addEventListener('click', closeSalaryModal);
-    document.getElementById('salaryForm').addEventListener('submit', handleSalarySave);
-
-    await loadTeachers();
-    await loadPayroll();
+    setupTabs();
+    setupEventListeners();
+    await loadData();
 }
 
-async function loadTeachers() {
-    const { data } = await supabase.from('teachers').select('*').eq('is_active', true).order('name');
-    availableTeachers = data || [];
-    document.getElementById('teacherCount').textContent = availableTeachers.length;
+async function loadData() {
+    try {
+        // Load teachers
+        const { data: tData } = await supabase.from('teachers').select('*').eq('is_active', true).order('name');
+        teachers = tData || [];
 
-    // Load salary structures
-    const { data: salaries } = await supabase.from('teacher_salaries').select('*');
-    currentSalaries = salaries || [];
-}
+        // Load salaries
+        const { data: sData } = await supabase.from('teacher_salaries').select('*');
+        salaries = sData || [];
 
-async function loadPayroll() {
-    const month = document.getElementById('payrollMonth').value;
-    const year = document.getElementById('payrollYear').value;
+        // Load payroll for current month
+        const month = document.getElementById('payrollMonth').value;
+        const year = document.getElementById('payrollYear').value;
+        const { data: pData } = await supabase.from('payroll')
+            .select('*')
+            .eq('month', month)
+            .eq('year', year);
+        payrollData = pData || [];
 
-    const { data, error } = await supabase
-        .from('payroll')
-        .select('*, teachers(id, name, employee_id)')
-        .eq('month', month)
-        .eq('year', year);
+        // Ideally load attendance here too, but we'll mock or fetch per teacher for performance
 
-    if (error) {
-        console.error('Error loading payroll:', error);
+        renderProcessView();
+        renderSetupView();
+        updateStats();
+
+    } catch (err) {
+        console.error('Data load error:', err);
     }
-
-    payrollRecords = data || [];
-    renderPayrollTable();
-    updateStats();
 }
 
-function renderPayrollTable() {
-    const tbody = document.getElementById('payrollTableBody');
-
-    if (payrollRecords.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" class="p-8 text-center text-gray-500 dark:text-gray-400">
-            No payroll records for this month. Click "Generate Payroll" to create.
-        </td></tr>`;
+function renderProcessView() {
+    const tbody = document.getElementById('processTableBody');
+    if (!teachers.length) {
+        tbody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-gray-500">No active teachers found.</td></tr>`;
         return;
     }
 
-    tbody.innerHTML = payrollRecords.map(record => `
-        <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-            <td class="p-4">
-                <div class="flex items-center">
-                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-primary-500 to-indigo-600 flex items-center justify-center text-white font-bold text-sm mr-3">
-                        ${record.teachers?.name?.charAt(0).toUpperCase() || 'T'}
+    tbody.innerHTML = teachers.map(t => {
+        const salary = salaries.find(s => s.teacher_id === t.id);
+        const payroll = payrollData.find(p => p.teacher_id === t.id);
+        const isPaid = payroll && payroll.status === 'paid';
+        const isPending = payroll && payroll.status === 'pending'; // In this new logic, we might just have 'paid' or 'not processed'
+
+        // Status Badge
+        let statusHtml = '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300">Not Processed</span>';
+        if (isPaid) statusHtml = '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">Paid</span>';
+        else if (isPending) statusHtml = '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">Draft</span>';
+
+        return `
+            <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors border-b border-gray-100 dark:border-gray-800 last:border-0">
+                <td class="px-6 py-4">
+                    <div class="flex items-center">
+                        <div class="h-10 w-10 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-white font-bold text-sm shadow-sm mr-3">
+                            ${t.name.charAt(0)}
+                        </div>
+                        <div>
+                            <div class="font-medium text-gray-900 dark:text-white">${t.name}</div>
+                            <div class="text-xs text-gray-500 font-mono">${t.employee_id}</div>
+                        </div>
                     </div>
-                    <div>
-                        <div class="font-medium text-gray-900 dark:text-white">${record.teachers?.name || '-'}</div>
-                        <div class="text-xs text-gray-500 dark:text-gray-400">${record.teachers?.employee_id || '-'}</div>
-                    </div>
-                </div>
-            </td>
-            <td class="p-4 text-right text-gray-600 dark:text-gray-300">Rs ${(record.gross_salary || 0).toLocaleString()}</td>
-            <td class="p-4 text-right text-green-600 dark:text-green-400">+Rs ${(record.bonus || 0).toLocaleString()}</td>
-            <td class="p-4 text-right text-red-600 dark:text-red-400">-Rs ${(record.deductions || 0).toLocaleString()}</td>
-            <td class="p-4 text-right font-bold text-gray-900 dark:text-white">Rs ${(record.net_salary || 0).toLocaleString()}</td>
-            <td class="p-4 text-center">
-                ${record.status === 'paid'
-            ? '<span class="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-full text-xs font-medium">Paid</span>'
-            : '<span class="px-2 py-1 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 rounded-full text-xs font-medium">Pending</span>'
-        }
-            </td>
-            <td class="p-4 text-right">
-                <div class="flex justify-end space-x-2">
-                    ${record.status === 'pending' ? `
-                        <button onclick="window.markAsPaid('${record.id}')" class="text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 text-sm font-medium">
-                            Mark Paid
-                        </button>
-                    ` : ''}
-                    <button onclick="window.viewPayslip('${record.id}')" class="text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 text-sm font-medium">
-                        View Slip
-                    </button>
-                </div>
-            </td>
-        </tr>
-    `).join('');
+                </td>
+                <td class="px-6 py-4 text-center">${statusHtml}</td>
+                <td class="px-6 py-4 text-right font-mono text-gray-600 dark:text-gray-400">
+                    ${salary ? `Rs ${salary.base_salary.toLocaleString()}` : '<span class="text-red-400 text-xs">Salary Not Set</span>'}
+                </td>
+                <td class="px-6 py-4 text-right font-bold text-gray-900 dark:text-white">
+                    ${isPaid || isPending ? `Rs ${payroll.net_salary.toLocaleString()}` : '-'}
+                </td>
+                <td class="px-6 py-4 text-right">
+                    ${isPaid
+                ? `<button onclick="window.viewSlip('${t.id}')" class="text-indigo-600 hover:text-indigo-700 font-medium text-sm flex items-center justify-end gap-1 ml-auto">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                            View Slip
+                           </button>`
+                : `<button onclick="window.payTeacher('${t.id}')" class="text-white bg-indigo-600 hover:bg-indigo-700 px-3 py-1.5 rounded-lg text-xs font-medium shadow-lg shadow-indigo-500/20 transition-all active:scale-95 ${!salary ? 'opacity-50 cursor-not-allowed' : ''}" ${!salary ? 'disabled' : ''}>Pay Now</button>`
+            }
+                </td>
+            </tr>
+        `;
+    }).join('');
 }
 
-function updateStats() {
-    const total = payrollRecords.reduce((sum, r) => sum + (r.net_salary || 0), 0);
-    const paid = payrollRecords.filter(r => r.status === 'paid').length;
-    const pending = payrollRecords.filter(r => r.status === 'pending').length;
+/**
+ * NEW: Implementation of Payslip View
+ */
+window.viewSlip = (teacherId) => {
+    const teacher = teachers.find(t => t.id === teacherId);
+    const payroll = payrollData.find(p => p.teacher_id === teacherId);
+    const salaryConfig = salaries.find(s => s.teacher_id === teacherId);
 
-    document.getElementById('totalPayroll').textContent = `Rs ${total.toLocaleString()}`;
-    document.getElementById('paidCount').textContent = paid;
-    document.getElementById('pendingCount').textContent = pending;
-}
+    if (!payroll) return alert('No payroll record found.');
 
-async function generatePayroll() {
-    const month = parseInt(document.getElementById('payrollMonth').value);
-    const year = parseInt(document.getElementById('payrollYear').value);
+    const modal = document.getElementById('slipModal');
+    if (modal.parentElement !== document.body) document.body.appendChild(modal);
 
-    if (!confirm(`Generate payroll for ${MONTHS[month - 1]} ${year}? This will create records for all teachers with salary structures.`)) {
-        return;
-    }
+    // Populate Slip Header
+    document.getElementById('slipTeacherName').textContent = teacher.name;
+    document.getElementById('slipEmployeeID').textContent = teacher.employee_id;
+    document.getElementById('slipMonthYear').textContent = `${MONTHS[payroll.month - 1]} ${payroll.year}`;
+    document.getElementById('slipPayDate').textContent = new Date(payroll.paid_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 
-    const newRecords = [];
+    // Populate Earnings/Deductions
+    const dailyRate = Math.round((salaryConfig ? salaryConfig.base_salary : payroll.gross_salary) / (salaryConfig ? salaryConfig.monthly_working_days : 30));
+    const presentDays = Math.round(payroll.gross_salary / dailyRate);
 
-    for (const teacher of availableTeachers) {
-        // Check if record already exists
-        const exists = payrollRecords.find(r => r.teacher_id === teacher.id);
-        if (exists) continue;
+    document.getElementById('slipPresentDays').textContent = presentDays;
+    document.getElementById('slipDailyRate').textContent = dailyRate.toLocaleString();
+    document.getElementById('slipGrossEarned').textContent = payroll.gross_salary.toLocaleString();
+    document.getElementById('slipBonus').textContent = (payroll.bonus || 0).toLocaleString();
+    document.getElementById('slipDeductions').textContent = (payroll.deductions || 0).toLocaleString();
+    document.getElementById('slipNetTotal').textContent = payroll.net_salary.toLocaleString();
 
-        // Find salary structure
-        const salary = currentSalaries.find(s => s.teacher_id === teacher.id);
-        if (!salary) continue;
-
-        const grossSalary = parseFloat(salary.base_salary) || 0;
-        const allowances = parseFloat(salary.allowances) || 0;
-        const deductions = parseFloat(salary.deductions) || 0;
-        const bonus = parseFloat(salary.bonus) || 0;
-        const netSalary = grossSalary + allowances + bonus - deductions;
-
-        newRecords.push({
-            teacher_id: teacher.id,
-            month,
-            year,
-            gross_salary: grossSalary,
-            deductions,
-            bonus: allowances + bonus,
-            net_salary: netSalary,
-            status: 'pending'
-        });
-    }
-
-    if (newRecords.length === 0) {
-        alert('No new payroll records to generate. Either all teachers already have records or no salary structures are defined.');
-        return;
-    }
-
-    const { error } = await supabase.from('payroll').insert(newRecords);
-
-    if (error) {
-        alert('Error generating payroll: ' + error.message);
-    } else {
-        alert(`Generated ${newRecords.length} payroll record(s).`);
-        await loadPayroll();
-    }
-}
-
-window.markAsPaid = async (id) => {
-    const { error } = await supabase.from('payroll').update({ status: 'paid', paid_at: new Date().toISOString() }).eq('id', id);
-    if (error) {
-        alert('Error updating status: ' + error.message);
-    } else {
-        await loadPayroll();
-    }
-};
-
-window.viewPayslip = (id) => {
-    const record = payrollRecords.find(r => r.id === id);
-    if (!record) return;
-
-    const month = document.getElementById('payrollMonth').value;
-    const year = document.getElementById('payrollYear').value;
-
-    alert(`Payslip for ${record.teachers?.name}\n\nMonth: ${MONTHS[month - 1]} ${year}\nGross Salary: Rs ${record.gross_salary?.toLocaleString()}\nBonus/Allowances: Rs ${record.bonus?.toLocaleString()}\nDeductions: Rs ${record.deductions?.toLocaleString()}\n\nNet Salary: Rs ${record.net_salary?.toLocaleString()}\n\nStatus: ${record.status?.toUpperCase()}`);
-};
-
-window.setSalary = (teacherId) => {
-    const teacher = availableTeachers.find(t => t.id === teacherId);
-    if (!teacher) return;
-
-    const salary = currentSalaries.find(s => s.teacher_id === teacherId);
-
-    const modal = document.getElementById('salaryModal');
-    if (modal.parentElement !== document.body) {
-        document.body.appendChild(modal);
-    }
-
-    const content = modal.querySelector('div');
+    // Show Modal
     modal.classList.remove('hidden');
     modal.classList.add('flex');
-
-    void modal.offsetWidth;
-    content.classList.remove('opacity-0', 'scale-95', 'translate-y-4');
-    content.classList.add('opacity-100', 'scale-100', 'translate-y-0');
-
-    document.getElementById('salaryTeacherId').value = teacherId;
-    document.getElementById('salaryTeacherName').value = teacher.name;
-    document.getElementById('baseSalary').value = salary?.base_salary || '';
-    document.getElementById('allowances').value = salary?.allowances || 0;
-    document.getElementById('deductions').value = salary?.deductions || 0;
+    setTimeout(() => {
+        modal.querySelector('div').classList.remove('scale-95', 'opacity-0');
+        modal.querySelector('div').classList.add('scale-100', 'opacity-100');
+    }, 10);
 };
 
-function closeSalaryModal() {
-    const modal = document.getElementById('salaryModal');
-    const content = modal.querySelector('div');
-
-    content.classList.remove('opacity-100', 'scale-100', 'translate-y-0');
-    content.classList.add('opacity-0', 'scale-95', 'translate-y-4');
-
+window.closeSlipModal = () => {
+    const modal = document.getElementById('slipModal');
+    modal.querySelector('div').classList.add('scale-95', 'opacity-0');
     setTimeout(() => {
         modal.classList.add('hidden');
         modal.classList.remove('flex');
-    }, 300);
+    }, 200);
+};
+
+window.printSlip = () => {
+    const slipContent = document.getElementById('slipPrintArea').innerHTML;
+    const printWindow = window.open('', '', 'height=800,width=800');
+
+    printWindow.document.write(`
+        <html>
+            <head>
+                <title>Salary Slip - The Suffah School</title>
+                <script src="https://cdn.tailwindcss.com"></script>
+                <style>
+                    body { font-family: sans-serif; padding: 40px; }
+                    @media print {
+                        .no-print { display: none; }
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="max-w-2xl mx-auto border-2 border-gray-100 p-8 rounded-xl shadow-sm">
+                    ${slipContent}
+                </div>
+            </body>
+        </html>
+    `);
+
+    printWindow.document.close();
+    setTimeout(() => {
+        printWindow.focus();
+        printWindow.print();
+        printWindow.close();
+    }, 500);
+};
+
+function renderSetupView() {
+    const tbody = document.getElementById('setupTableBody');
+    tbody.innerHTML = teachers.map(t => {
+        const salary = salaries.find(s => s.teacher_id === t.id);
+        const base = salary ? salary.base_salary : '';
+        const days = salary ? (salary.monthly_working_days || 30) : 30; // Default 30
+
+        return `
+            <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors border-b border-gray-100 dark:border-gray-800 last:border-0" id="setupRow-${t.id}">
+                <td class="px-6 py-4">
+                    <div class="font-medium text-gray-900 dark:text-white">${t.name}</div>
+                    <div class="text-xs text-gray-500">${t.employee_id}</div>
+                </td>
+                <td class="px-6 py-4">
+                    <input type="number" class="salary-input bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-sm w-32 focus:ring-2 focus:ring-primary-500 outline-none text-gray-900 dark:text-white placeholder-gray-400" 
+                        value="${base}" placeholder="0" id="inputBase-${t.id}">
+                </td>
+                <td class="px-6 py-4">
+                    <input type="number" class="days-input bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-sm w-24 focus:ring-2 focus:ring-primary-500 outline-none text-gray-900 dark:text-white placeholder-gray-400" 
+                        value="${days}" placeholder="30" id="inputDays-${t.id}">
+                </td>
+                <td class="px-6 py-4 text-right">
+                    <button onclick="window.saveSalarySetup('${t.id}')" class="text-primary-600 hover:text-primary-700 font-medium text-sm hover:underline">Save</button>
+                </td>
+            </tr>
+        `;
+    }).join('');
 }
 
-async function handleSalarySave(e) {
-    e.preventDefault();
+// Global window functions for inline events
+window.saveSalarySetup = async (teacherId) => {
+    const base = parseFloat(document.getElementById(`inputBase-${teacherId}`).value) || 0;
+    const days = parseFloat(document.getElementById(`inputDays-${teacherId}`).value) || 30;
 
-    const teacherId = document.getElementById('salaryTeacherId').value;
-    const salaryData = {
+    const row = document.getElementById(`setupRow-${teacherId}`);
+    const btn = row.querySelector('button');
+    const originalText = btn.textContent;
+    btn.textContent = 'Saving...';
+    btn.disabled = true;
+
+    // Check if exists
+    const existing = salaries.find(s => s.teacher_id === teacherId);
+
+    // We assume the DB has 'monthly_working_days' column. If not, this might fail or ignore it.
+    // Ideally we'd use a meta-data column or similar if schema was strict and unchangeable.
+    const payload = {
         teacher_id: teacherId,
-        base_salary: parseFloat(document.getElementById('baseSalary').value) || 0,
-        allowances: parseFloat(document.getElementById('allowances').value) || 0,
-        deductions: parseFloat(document.getElementById('deductions').value) || 0,
-        effective_from: new Date().toISOString().split('T')[0]
+        base_salary: base,
+        monthly_working_days: days
     };
-
-    const existing = currentSalaries.find(s => s.teacher_id === teacherId);
 
     let error;
     if (existing) {
-        const res = await supabase.from('teacher_salaries').update(salaryData).eq('id', existing.id);
+        const res = await supabase.from('teacher_salaries').update(payload).eq('id', existing.id);
         error = res.error;
     } else {
-        const res = await supabase.from('teacher_salaries').insert([salaryData]);
+        const res = await supabase.from('teacher_salaries').insert([payload]);
         error = res.error;
     }
 
     if (error) {
-        alert('Error saving salary: ' + error.message);
+        alert('Error saving: ' + error.message);
     } else {
-        closeSalaryModal();
-        await loadTeachers();
-        await loadPayroll();
+        // Update local state
+        await loadData();
+        btn.textContent = 'Saved!';
+        setTimeout(() => { btn.textContent = 'Save'; btn.disabled = false; }, 2000);
     }
+};
+
+window.payTeacher = async (teacherId) => {
+    const teacher = teachers.find(t => t.id === teacherId);
+    const salary = salaries.find(s => s.teacher_id === teacherId);
+
+    if (!salary) return alert('Please set up salary first.');
+
+    // 1. Open Modal
+    const modal = document.getElementById('payModal');
+    if (modal.parentElement !== document.body) document.body.appendChild(modal);
+
+    // 2. Fetch Real Attendance
+    const month = parseInt(document.getElementById('payrollMonth').value);
+    const year = parseInt(document.getElementById('payrollYear').value);
+
+    // Construct Date Range
+    const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+    const lastDay = new Date(year, month, 0).getDate();
+    const endDate = `${year}-${String(month).padStart(2, '0')}-${lastDay}`;
+
+    // Show loading state
+    document.getElementById('payModalName').textContent = "Loading data...";
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+
+    console.log(`Fetching attendance for Teacher ${teacherId} from ${startDate} to ${endDate}`);
+
+    const { data: attendanceData, error } = await supabase
+        .from('teacher_attendance')
+        .select('*') // Select all fields to be safe
+        .eq('teacher_id', teacherId)
+        .gte('date', startDate)
+        .lte('date', endDate);
+
+    if (error) {
+        console.error('Error fetching attendance:', error);
+        alert('Failed to fetch attendance data.');
+        modal.classList.add('hidden');
+        return;
+    }
+
+    // Filter strictly by status string
+    const presentRecords = attendanceData.filter(a => a.status === 'present');
+    const absentRecords = attendanceData.filter(a => a.status === 'absent');
+    const leaveRecords = attendanceData.filter(a => a.status === 'leave');
+
+    const presentDays = presentRecords.length;
+    const absentDays = absentRecords.length;
+    const leaveDays = leaveRecords.length;
+
+    console.log(`Attendance Stats - Present: ${presentDays}, Absent: ${absentDays}, Leave: ${leaveDays}`);
+
+    const totalWorkingDays = salary.monthly_working_days || 30; // Prevent divide by zero if needed in future
+
+    // 3. Populate Data
+    document.getElementById('payModalName').textContent = teacher.name;
+    document.getElementById('payModalId').textContent = teacher.employee_id;
+
+    document.getElementById('payModalBase').textContent = `Rs ${salary.base_salary.toLocaleString()}`;
+
+    // Calculate Rates
+    const dailyRate = Math.round(salary.base_salary / totalWorkingDays);
+
+    document.getElementById('payModalRate').textContent = `Rs ${dailyRate}`;
+    document.getElementById('payModalDays').textContent = totalWorkingDays;
+
+    // Calculate Base earned from attendance
+    const earnedBase = presentDays * dailyRate;
+
+    // Update Modal UI for Present Days Concept
+    const deductionSection = modal.querySelector('.bg-blue-50') || modal.querySelector('.bg-red-50');
+    // Fallback in case class name changed in previous steps
+
+    if (deductionSection) {
+        // Ensure consistent blue styling
+        deductionSection.className = "bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 p-4 rounded-lg";
+        deductionSection.innerHTML = `
+            <div class="flex justify-between items-center mb-2">
+                 <div class="text-sm font-medium text-blue-800 dark:text-blue-300 flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                    Days Worked Calculation
+                 </div>
+                 <div class="text-sm font-bold text-blue-600 dark:text-blue-400" id="payModalConfirmedBase">Rs ${earnedBase.toLocaleString()}</div>
+            </div>
+             <div class="text-xs text-gray-500 dark:text-gray-400 flex justify-between items-center">
+                <span>Present Days: <strong class="text-gray-900 dark:text-white">${presentDays}</strong> / ${totalWorkingDays}</span>
+                <span class="text-gray-400">(Absent: ${absentDays}, Leave: ${leaveDays})</span>
+            </div>
+        `;
+    }
+
+    // Reset Inputs
+    const inpAllow = document.getElementById('payInputAllowances');
+    const inpDeduct = document.getElementById('payInputDeductions');
+    inpAllow.value = '';
+    inpDeduct.value = '';
+
+    // Store state for calculation
+    currentPayState = {
+        teacherId,
+        dailyRate: dailyRate,
+        presentDays: presentDays,
+        allowances: 0,
+        manualDeductions: 0
+    };
+
+    // Initial Calc (updates the Net Salary total at bottom)
+    updateNetSalaryDisplay();
+
+    // Show Modal Animation
+    setTimeout(() => {
+        modal.querySelector('div').classList.remove('scale-95', 'opacity-0');
+        modal.querySelector('div').classList.add('scale-100', 'opacity-100');
+    }, 10);
+};
+
+let currentPayState = {};
+
+function updateNetSalaryDisplay() {
+    // Formula: (Days Worked * Daily Rate) + Allowances - Deductions
+    const workPay = currentPayState.presentDays * currentPayState.dailyRate;
+    const net = workPay + currentPayState.allowances - currentPayState.manualDeductions;
+
+    document.getElementById('payModalNet').textContent = `Rs ${net.toLocaleString()}`;
+}
+
+window.closePayModal = () => {
+    const modal = document.getElementById('payModal');
+    modal.querySelector('div').classList.add('scale-95', 'opacity-0');
+    setTimeout(() => {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }, 200);
+};
+
+function setupTabs() {
+    const tabProcess = document.getElementById('tabProcess');
+    const tabSetup = document.getElementById('tabSetup');
+    const viewProcess = document.getElementById('viewProcess');
+    const viewSetup = document.getElementById('viewSetup');
+
+    tabProcess.addEventListener('click', () => {
+        // UI
+        tabProcess.className = "flex-1 px-6 py-4 text-sm font-medium text-primary-600 border-b-2 border-primary-600 bg-primary-50/50 dark:bg-primary-900/10 dark:text-primary-400 dark:border-primary-400 transition-colors";
+        tabSetup.className = "flex-1 px-6 py-4 text-sm font-medium text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-800 transition-colors border-b-2 border-transparent";
+        // View
+        viewProcess.classList.remove('hidden');
+        viewSetup.classList.add('hidden');
+    });
+
+    tabSetup.addEventListener('click', () => {
+        // UI
+        tabSetup.className = "flex-1 px-6 py-4 text-sm font-medium text-primary-600 border-b-2 border-primary-600 bg-primary-50/50 dark:bg-primary-900/10 dark:text-primary-400 dark:border-primary-400 transition-colors";
+        tabProcess.className = "flex-1 px-6 py-4 text-sm font-medium text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-800 transition-colors border-b-2 border-transparent";
+        // View
+        viewSetup.classList.remove('hidden');
+        viewProcess.classList.add('hidden');
+    });
+}
+
+function setupEventListeners() {
+    // Period selectors
+    document.getElementById('payrollMonth').addEventListener('change', loadData);
+    document.getElementById('payrollYear').addEventListener('change', loadData);
+
+    // Modal Inputs Re-calc
+    const inpAllow = document.getElementById('payInputAllowances');
+    const inpDeduct = document.getElementById('payInputDeductions');
+
+    inpAllow.addEventListener('input', (e) => {
+        currentPayState.allowances = parseFloat(e.target.value) || 0;
+        updateNetSalaryDisplay();
+    });
+
+    inpDeduct.addEventListener('input', (e) => {
+        currentPayState.manualDeductions = parseFloat(e.target.value) || 0;
+        updateNetSalaryDisplay();
+    });
+
+    // Confirm Pay
+    document.getElementById('confirmPayBtn').addEventListener('click', processPayment);
+}
+
+async function processPayment() {
+    const btn = document.getElementById('confirmPayBtn');
+    btn.disabled = true;
+    btn.innerHTML = `<svg class="animate-spin h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Processing...`;
+
+    // Formula: (Days Worked * Daily Rate) + Allowances - Manual Deductions
+    const earnedBase = currentPayState.presentDays * currentPayState.dailyRate;
+    const net = earnedBase + currentPayState.allowances - currentPayState.manualDeductions;
+
+    const month = parseInt(document.getElementById('payrollMonth').value);
+    const year = parseInt(document.getElementById('payrollYear').value);
+
+    // Payload Construction
+    // gross_salary = The amount earned from working (Present Days * Rate)
+    // bonus = Allowances
+    // deductions = Manual Deductions
+
+    const payload = {
+        teacher_id: currentPayState.teacherId,
+        month,
+        year,
+        gross_salary: earnedBase,
+        bonus: currentPayState.allowances,
+        deductions: currentPayState.manualDeductions,
+        net_salary: net,
+        status: 'paid',
+        paid_at: new Date().toISOString()
+    };
+
+    console.log('Final Payroll Payload:', payload);
+
+    try {
+        // Use upsert to handle updates or new inserts based on the unique constraint
+        const { error } = await supabase.from('payroll').upsert([payload], {
+            onConflict: 'teacher_id, month, year'
+        });
+
+        if (error) throw error;
+
+        alert(`Payment Success! Rs ${net.toLocaleString()} recorded/updated.`);
+        closePayModal();
+        await loadData(); // refresh list to show 'Paid'
+    } catch (err) {
+        alert('Payment failed: ' + err.message);
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Process Payment';
+    }
+}
+
+function updateStats() {
+    const paid = payrollData.filter(p => p.status === 'paid');
+    const totalPaid = paid.reduce((acc, curr) => acc + (curr.net_salary || 0), 0);
+    const pendingCount = teachers.length - paid.length;
+
+    document.getElementById('statPending').textContent = pendingCount;
+    document.getElementById('statProcessed').textContent = paid.length;
+    document.getElementById('statTotal').textContent = `Rs ${totalPaid.toLocaleString()}`;
 }

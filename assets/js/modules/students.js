@@ -9,6 +9,15 @@ let availableClasses = []; // Store classes and their sections
 let parsedStudents = []; // Store parsed students from Excel file for bulk upload
 
 export async function render(container) {
+    // Clean up any existing modals in body to prevent duplicates
+    const existingModals = ['profileModal', 'studentModal', 'bulkUploadModal', 'credentialsModal', 'changePasswordModal'];
+    existingModals.forEach(id => {
+        const old = document.getElementById(id);
+        if (old && old.parentElement === document.body) {
+            old.remove();
+        }
+    });
+
     container.innerHTML = `
         <div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden transition-colors duration-200">
             <div class="p-6 border-b border-gray-200 dark:border-gray-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -970,82 +979,101 @@ window.viewProfile = async (id) => {
 
     // Show modal immediately with basic info
     const modal = document.getElementById('profileModal');
-
-    // Move modal to body to break out of dashboard layout
-    if (modal.parentElement !== document.body) {
-        document.body.appendChild(modal);
+    if (!modal) {
+        console.error('Profile modal not found');
+        return;
     }
 
-    const content = modal.querySelector('div');
+    const content = modal.querySelector('.max-w-4xl') || modal.querySelector('div');
 
     modal.classList.remove('hidden');
     modal.classList.add('flex');
 
     // Animate In
     void modal.offsetWidth; // Trigger reflow
-    content.classList.remove('opacity-0', 'scale-95', 'translate-y-4');
-    content.classList.add('opacity-100', 'scale-100', 'translate-y-0');
-
-    // Reset Tabs to Personal Info
-    const tabBtns = document.querySelectorAll('.tab-btn');
-    tabBtns.forEach(b => {
-        b.classList.remove('active-tab', 'border-indigo-500', 'text-indigo-600');
-        b.classList.add('border-transparent', 'text-gray-500');
-    });
-    const personalTabBtn = document.querySelector('.tab-btn[data-tab="personal"]');
-    if (personalTabBtn) {
-        personalTabBtn.classList.add('active-tab', 'border-indigo-500', 'text-indigo-600');
-        personalTabBtn.classList.remove('border-transparent', 'text-gray-500');
+    if (content) {
+        content.classList.remove('opacity-0', 'scale-95', 'translate-y-4');
+        content.classList.add('opacity-100', 'scale-100', 'translate-y-0');
     }
 
-    document.querySelectorAll('.tab-content').forEach(c => {
+    // Reset Tabs to Personal Info
+    const tabBtns = modal.querySelectorAll('.tab-btn');
+    tabBtns.forEach(b => {
+        b.classList.remove('active-tab', 'border-primary-500', 'text-primary-400', 'border-indigo-500', 'text-indigo-600');
+        b.classList.add('border-transparent', 'text-gray-400');
+    });
+
+    const personalTabBtn = modal.querySelector('.tab-btn[data-tab="personal"]');
+    if (personalTabBtn) {
+        personalTabBtn.classList.add('active-tab', 'border-primary-500', 'text-primary-400');
+        personalTabBtn.classList.remove('border-transparent', 'text-gray-400');
+    }
+
+    modal.querySelectorAll('.tab-content').forEach(c => {
         c.classList.add('hidden');
         c.classList.remove('block');
     });
-    const personalTab = document.getElementById('tab-personal');
+    const personalTab = modal.querySelector('#tab-personal');
     if (personalTab) {
         personalTab.classList.remove('hidden');
         personalTab.classList.add('block');
     }
 
+    // Safe Population Helpers
+    const setContent = (id, text) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = text || '-';
+    };
+
+    const setVal = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.value = val || '';
+    };
+
     // Populate Basic Info
-    document.getElementById('profileStudentId').value = student.id;
-    document.getElementById('profileName').textContent = student.name || 'N/A';
-    document.getElementById('profileClass').textContent = `${student.class || 'N/A'} (${student.section || 'N/A'})`;
-    document.getElementById('profileRollNo').textContent = student.roll_no || 'N/A';
-    document.getElementById('profileGender').textContent = student.gender || '-';
-    document.getElementById('profilePhone').textContent = student.phone || '-';
-    document.getElementById('profileEmail').textContent = student.email || '-';
-    document.getElementById('profileDate').textContent = student.admission_date || (student.created_at ? new Date(student.created_at).toLocaleDateString() : '-');
+    setVal('profileStudentId', student.id);
+    setContent('profileName', student.name);
+    setContent('profileClass', `${student.class || 'N/A'} (${student.section || 'N/A'})`);
+    setContent('profileRollNo', student.roll_no);
+    setContent('profileGender', student.gender);
+    setContent('profilePhone', student.phone);
+    setContent('profileEmail', student.email);
+    setContent('profileDate', student.admission_date || (student.created_at ? new Date(student.created_at).toLocaleDateString() : '-'));
 
-    // Populate new fields
-    document.getElementById('profileDOB').textContent = student.date_of_birth || '-';
-    document.getElementById('profileFatherName').textContent = student.father_name || '-';
-    document.getElementById('profileFatherCNIC').textContent = student.father_cnic || '-';
-    document.getElementById('profileFromSchool').textContent = student.from_which_school || '-';
-    document.getElementById('profileFamilyCode').textContent = student.family_code || '-';
+    // Populate additional fields
+    setContent('profileDOB', student.date_of_birth);
+    setContent('profileFatherName', student.father_name);
+    setContent('profileFatherCNIC', student.father_cnic);
+    setContent('profileFromSchool', student.from_which_school);
+    setContent('profileFamilyCode', student.family_code);
 
-    // Photo
+    // Photo Management
     const photoImg = document.getElementById('profilePhoto');
     const placeholder = document.getElementById('profilePhotoPlaceholder');
 
-    if (student.photo_url) {
-        photoImg.src = student.photo_url;
-        photoImg.classList.remove('hidden');
-        placeholder.classList.add('hidden');
-    } else {
-        photoImg.classList.add('hidden');
-        placeholder.classList.remove('hidden');
-        placeholder.textContent = student.name ? student.name.charAt(0) : '?';
+    if (photoImg && placeholder) {
+        if (student.photo_url) {
+            photoImg.src = student.photo_url;
+            photoImg.classList.remove('hidden');
+            placeholder.classList.add('hidden');
+        } else {
+            photoImg.classList.add('hidden');
+            placeholder.classList.remove('hidden');
+            placeholder.textContent = student.name ? student.name.charAt(0) : '?';
+        }
     }
 
     // Credentials
-    document.getElementById('profileCredEmail').textContent = student.roll_no || 'Not assigned';
+    setContent('profileCredEmail', student.roll_no || 'Not assigned');
     const dobPassword = student.date_of_birth ? student.date_of_birth.split('-').reverse().join('') : 'Not set';
-    document.getElementById('profileCredPass').textContent = dobPassword;
+    setContent('profileCredPass', dobPassword);
 
-    // Fetch Fees
-    await fetchStudentFees(student.id);
+    // Fetch Financial Data
+    try {
+        await fetchStudentFees(student.id);
+    } catch (err) {
+        console.error('Secondary error in fee fetching:', err);
+    }
 };
 
 window.editStudent = async (id) => {
@@ -1101,10 +1129,11 @@ window.deleteStudent = async (id) => {
 
 async function fetchStudentFees(studentId) {
     // Reset to loading
-    document.getElementById('feeTotal').textContent = '...';
-    document.getElementById('feePaid').textContent = '...';
-    document.getElementById('feeRemaining').textContent = '...';
-    document.getElementById('feeLastPayment').textContent = '...';
+    const elements = ['feeTotal', 'feePaid', 'feeRemaining', 'feeLastPayment'];
+    elements.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = '...';
+    });
 
     try {
         const { data: fees, error } = await supabase
@@ -1119,10 +1148,13 @@ async function fetchStudentFees(studentId) {
         let lastPayment = null;
 
         fees.forEach(fee => {
-            const amount = parseFloat(fee.amount) || 0;
-            total += amount;
-            if (fee.status === 'paid') {
-                paid += amount;
+            const feeTotal = parseFloat(fee.final_amount) || parseFloat(fee.amount) || 0;
+            const feePaid = parseFloat(fee.paid_amount) || 0;
+
+            total += feeTotal;
+            paid += feePaid;
+
+            if (feePaid > 0) {
                 const paymentDate = new Date(fee.updated_at || fee.issued_at);
                 if (!lastPayment || paymentDate > lastPayment) {
                     lastPayment = paymentDate;
@@ -1131,15 +1163,22 @@ async function fetchStudentFees(studentId) {
         });
 
         const remaining = total - paid;
+        const format = window.formatCurrency || ((val) => `PKR ${val.toLocaleString()}`);
 
-        document.getElementById('feeTotal').textContent = window.formatCurrency(total);
-        document.getElementById('feePaid').textContent = window.formatCurrency(paid);
-        document.getElementById('feeRemaining').textContent = window.formatCurrency(remaining);
-        document.getElementById('feeLastPayment').textContent = lastPayment ? lastPayment.toLocaleDateString() : 'Never';
+        const setC = (id, text) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = text;
+        };
+
+        setC('feeTotal', format(total));
+        setC('feePaid', format(paid));
+        setC('feeRemaining', format(remaining));
+        setC('feeLastPayment', lastPayment ? lastPayment.toLocaleDateString() : 'Never');
 
     } catch (err) {
         console.error('Error fetching fees:', err);
-        document.getElementById('feeTotal').textContent = 'Error';
+        const el = document.getElementById('feeTotal');
+        if (el) el.textContent = 'Error';
     }
 }
 

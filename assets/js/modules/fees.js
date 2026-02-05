@@ -12,53 +12,88 @@ export async function render(container) {
         <div class="space-y-6">
             <!-- Header with Stats -->
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4">
-                    <div class="flex items-center justify-between">
+                <!-- Total Fees Card -->
+                <div class="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-100 dark:border-gray-700 shadow-sm relative overflow-hidden group">
+                    <div class="absolute top-0 right-0 w-24 h-24 bg-indigo-500/10 rounded-full blur-2xl -mr-10 -mt-10 transition-all group-hover:bg-indigo-500/20"></div>
+                    <div class="flex justify-between items-start relative z-10">
                         <div>
-                            <p class="text-sm text-gray-500 dark:text-gray-400">Total Fees</p>
-                            <p class="text-2xl font-bold text-gray-800 dark:text-white" id="statTotalFees">...</p>
+                            <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Total Fees</p>
+                            <h3 class="text-2xl font-black text-gray-800 dark:text-gray-100 mt-1" id="statTotalFees">...</h3>
+                            <div class="flex items-center mt-2 text-xs">
+                                <span class="flex items-center text-green-500 font-bold bg-green-500/10 px-1.5 py-0.5 rounded">
+                                    <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+                                    12%
+                                </span>
+                                <span class="text-gray-400 ml-2">vs last month</span>
+                            </div>
                         </div>
-                        <div class="p-3 bg-indigo-100 dark:bg-indigo-900 rounded-lg">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-indigo-600 dark:text-indigo-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <div class="p-3 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-xl shadow-lg shadow-indigo-500/20 group-hover:scale-110 transition-transform duration-300">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
                         </div>
                     </div>
                 </div>
-                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4">
-                    <div class="flex items-center justify-between">
+
+                <!-- Collected Card -->
+                <div class="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-100 dark:border-gray-700 shadow-sm relative overflow-hidden group">
+                    <div class="absolute top-0 right-0 w-24 h-24 bg-emerald-500/10 rounded-full blur-2xl -mr-10 -mt-10 transition-all group-hover:bg-emerald-500/20"></div>
+                    <div class="flex justify-between items-start relative z-10">
                         <div>
-                            <p class="text-sm text-gray-500 dark:text-gray-400">Collected</p>
-                            <p class="text-2xl font-bold text-green-600 dark:text-green-400" id="statCollected">...</p>
+                            <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Collected</p>
+                            <h3 class="text-2xl font-black text-gray-800 dark:text-gray-100 mt-1" id="statCollected">...</h3>
+                            <div class="flex items-center mt-2 text-xs">
+                                <span class="flex items-center text-emerald-500 font-bold bg-emerald-500/10 px-1.5 py-0.5 rounded">
+                                    <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                                    Good
+                                </span>
+                                <span class="text-gray-400 ml-2">on track</span>
+                            </div>
                         </div>
-                        <div class="p-3 bg-green-100 dark:bg-green-900 rounded-lg">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-600 dark:text-green-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <div class="p-3 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-xl shadow-lg shadow-emerald-500/20 group-hover:scale-110 transition-transform duration-300">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
                         </div>
                     </div>
                 </div>
-                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4">
-                    <div class="flex items-center justify-between">
+
+                <!-- Pending Card -->
+                <div class="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-100 dark:border-gray-700 shadow-sm relative overflow-hidden group">
+                    <div class="absolute top-0 right-0 w-24 h-24 bg-rose-500/10 rounded-full blur-2xl -mr-10 -mt-10 transition-all group-hover:bg-rose-500/20"></div>
+                    <div class="flex justify-between items-start relative z-10">
                         <div>
-                            <p class="text-sm text-gray-500 dark:text-gray-400">Pending</p>
-                            <p class="text-2xl font-bold text-red-600 dark:text-red-400" id="statPending">...</p>
+                            <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Pending</p>
+                            <h3 class="text-2xl font-black text-gray-800 dark:text-gray-100 mt-1" id="statPending">...</h3>
+                            <div class="flex items-center mt-2 text-xs">
+                                <span class="flex items-center text-rose-500 font-bold bg-rose-500/10 px-1.5 py-0.5 rounded">
+                                    <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                                    Action
+                                </span>
+                                <span class="text-gray-400 ml-2">needs follow-up</span>
+                            </div>
                         </div>
-                        <div class="p-3 bg-red-100 dark:bg-red-900 rounded-lg">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-red-600 dark:text-red-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <div class="p-3 bg-rose-500/10 text-rose-600 dark:text-rose-400 rounded-xl shadow-lg shadow-rose-500/20 group-hover:scale-110 transition-transform duration-300">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
                         </div>
                     </div>
                 </div>
-                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4">
-                    <div class="flex items-center justify-between">
+
+                <!-- Collection Rate Card -->
+                <div class="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-100 dark:border-gray-700 shadow-sm relative overflow-hidden group">
+                     <div class="absolute top-0 right-0 w-24 h-24 bg-blue-500/10 rounded-full blur-2xl -mr-10 -mt-10 transition-all group-hover:bg-blue-500/20"></div>
+                    <div class="flex justify-between items-start relative z-10">
                         <div>
-                            <p class="text-sm text-gray-500 dark:text-gray-400">Collection Rate</p>
-                            <p class="text-2xl font-bold text-indigo-600 dark:text-indigo-400" id="statRate">0%</p>
+                            <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Rate</p>
+                            <h3 class="text-2xl font-black text-gray-800 dark:text-gray-100 mt-1" id="statRate">0%</h3>
+                            <div class="flex items-center mt-2 text-xs">
+                                <span class="text-gray-400">Total collection efficiency</span>
+                            </div>
                         </div>
-                        <div class="p-3 bg-indigo-100 dark:bg-indigo-900 rounded-lg">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-indigo-600 dark:text-indigo-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <div class="p-3 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-xl shadow-lg shadow-blue-500/20 group-hover:scale-110 transition-transform duration-300">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
                             </svg>
                         </div>
@@ -415,69 +450,93 @@ async function fetchFees() {
             });
         }
         const group = studentGroups.get(studentId);
-        group.total += Number(fee.final_amount || 0);
+        group.total += Number(fee.final_amount || fee.amount || 0);
         group.paid += Number(fee.paid_amount || 0);
         group.count++;
     });
 
     if (studentGroups.size === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-gray-400">No matching students found.</td></tr>';
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" class="p-12 text-center">
+                    <div class="flex flex-col items-center justify-center opacity-50">
+                        <div class="w-16 h-16 bg-indigo-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4">
+                            <svg class="w-8 h-8 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                            </svg>
+                        </div>
+                        <h4 class="text-lg font-bold text-gray-700 dark:text-gray-300">No Students Found</h4>
+                        <p class="text-sm text-gray-500 dark:text-gray-500 mt-1">Try adjusting your filters or search terms</p>
+                    </div>
+                </td>
+            </tr>`;
         return;
     }
 
     tbody.innerHTML = Array.from(studentGroups.values()).map(group => {
         const balance = group.total - group.paid;
         const student = group.student;
+        const percentage = group.total > 0 ? (group.paid / group.total) * 100 : 0;
 
         return `
-            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                <td class="p-4">
-                    <div class="font-medium text-gray-900 dark:text-white">${student?.name || 'Unknown'}</div>
-                    <div class="text-xs text-gray-500">Roll: ${student?.roll_no || '-'} | Class: ${student?.class || '-'}</div>
+            <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors border-b border-gray-100 dark:border-gray-700/50">
+                <td class="p-4 align-middle">
+                    <div class="font-bold text-gray-800 dark:text-gray-100">${student?.name || 'Unknown'}</div>
+                    <div class="text-xs text-gray-400 font-mono mt-1">Roll: <span class="text-gray-500 dark:text-gray-400">${student?.roll_no || '-'}</span> <span class="mx-1">|</span> Class: <span class="text-gray-500 dark:text-gray-400">${student?.class || '-'}</span></div>
                 </td>
-                <td class="p-4 font-medium text-gray-800 dark:text-gray-200">${window.formatCurrency(group.total)}</td>
-                <td class="p-4 font-medium text-green-600 dark:text-green-400">${window.formatCurrency(group.paid)}</td>
-                <td class="p-4 font-medium ${balance > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-600 dark:text-gray-300'}">${window.formatCurrency(balance)}</td>
-                <td class="p-4 text-center">
-                    <span class="px-2 py-1 text-xs font-semibold rounded-full ${balance <= 0 ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
-                group.paid > 0 ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
-                    'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                <td class="p-4 align-middle font-semibold text-gray-700 dark:text-gray-200 tracking-wide">${window.formatCurrency(group.total)}</td>
+                <td class="p-4 align-middle font-semibold text-green-600 dark:text-green-400 tracking-wide">${window.formatCurrency(group.paid)}</td>
+                <td class="p-4 align-middle font-bold ${balance > 0 ? 'text-red-500 dark:text-red-400' : 'text-gray-400 dark:text-gray-500'} tracking-wide">${window.formatCurrency(balance)}</td>
+                <td class="p-4 align-middle text-center">
+                    <span class="px-3 py-1 text-[10px] font-bold tracking-wider rounded-md border backdrop-blur-md uppercase ${balance <= 0
+                ? 'bg-green-500/10 text-green-600 border-green-500/20 dark:text-green-400'
+                : group.paid > 0
+                    ? 'bg-yellow-500/10 text-yellow-600 border-yellow-500/20 dark:text-yellow-400'
+                    : 'bg-red-500/10 text-red-600 border-red-500/20 dark:text-red-400'
             }">
                         ${balance <= 0 ? 'PAID' : (group.paid > 0 ? 'PARTIAL' : 'UNPAID')}
                     </span>
                 </td>
-                <td class="p-4 text-right flex items-center justify-end space-x-2">
-                    <div class="flex flex-col items-end gap-1">
-                        <button onclick="window.printStudentReceipt('${student?.id}')" 
-                            class="text-blue-600 hover:text-blue-900 dark:hover:text-blue-400 font-medium text-xs flex items-center bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                <td class="p-4 align-middle text-right">
+                    <div class="flex items-center justify-end gap-3">
+                        <!-- Receipt (Eye) -->
+                        <button onclick="window.printStudentReceipt('${student?.id}')" title="View Receipt"
+                            class="group p-2 rounded-lg border border-blue-200 dark:border-blue-800 text-blue-500 dark:text-blue-400 hover:bg-blue-500 hover:text-white hover:border-blue-500 transition-all duration-200">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                             </svg>
-                            Receipt
                         </button>
+
+                        <!-- Sibling Receipt (Users) -->
                         ${student?.father_cnic || student?.family_code ? `
-                            <button onclick="window.printParentReceipt('${student.father_cnic || ''}', '${student.family_code || ''}')" 
-                                class="text-purple-600 hover:text-purple-900 dark:hover:text-purple-400 font-medium text-[10px] flex items-center bg-purple-50 dark:bg-purple-900/20 px-2 py-0.5 rounded">
-                                Sibling Receipt
+                            <button onclick="window.printParentReceipt('${student.father_cnic || ''}', '${student.family_code || ''}')" title="Sibling Receipt"
+                                class="group p-2 rounded-lg border border-purple-200 dark:border-purple-800 text-purple-500 dark:text-purple-400 hover:bg-purple-600 hover:text-white hover:border-purple-600 transition-all duration-200">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                                </svg>
+                            </button>
+                        ` : ''}
+
+                        <!-- History (Clock) -->
+                        <button onclick="window.viewFeeHistory('${student?.id}', '${student?.name?.replace(/'/g, "\\\\'")}')" title="View History"
+                            class="group p-2 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-400 hover:bg-gray-500 hover:text-white hover:border-gray-500 transition-all duration-200">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </button>
+                        
+                        <!-- Collect (Wallet/Plus) -->
+                        ${balance > 0 ? `
+                            <button onclick="window.viewFeeHistory('${student?.id}', '${student?.name?.replace(/'/g, "\\\\'")}')" 
+                                class="group flex items-center gap-2 px-3 py-2 rounded-lg border border-emerald-500/50 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white hover:border-emerald-500 hover:shadow-lg hover:shadow-emerald-500/20 transition-all duration-200 font-semibold text-xs tracking-wide">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm-5-1a2 2 0 11-4 0 2 2 0 014 0z" />
+                                </svg>
+                                <span>Collect</span>
                             </button>
                         ` : ''}
                     </div>
-                    <button onclick="window.viewFeeHistory('${student?.id}', '${student?.name?.replace(/'/g, "\\\\'")}')" 
-                        class="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 font-medium text-sm flex items-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        History
-                    </button>
-                    ${balance > 0 ? `
-                        <button onclick="window.viewFeeHistory('${student?.id}', '${student?.name?.replace(/'/g, "\\\\'")}')" 
-                            class="text-indigo-600 hover:text-indigo-900 dark:hover:text-indigo-400 font-medium text-sm flex items-center">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm-5-1a2 2 0 11-4 0 2 2 0 014 0z" />
-                            </svg>
-                            Collect
-                        </button>
-                    ` : ''}
                 </td>
             </tr>
         `;

@@ -648,6 +648,21 @@ async function handleGenerate(e) {
             classFeesMap[cls.class_name] = cls.class_fees || [];
         });
 
+        // Fetch active discounts for selected students in this month
+        const { data: activeDiscounts } = await supabase
+            .from('student_discounts')
+            .select('*')
+            .in('student_id', selectedStudentIds)
+            .lte('start_month', month)
+            .gte('end_month', month);
+
+        const discountMap = new Map(); // key: student_id-fee_type, value: discountObj
+        if (activeDiscounts) {
+            activeDiscounts.forEach(d => {
+                discountMap.set(`${d.student_id}-${d.fee_type}`, d);
+            });
+        }
+
         // Check existing fees - need to check by student AND fee type
         const { data: existingFees } = await supabase
             .from('fees')
@@ -711,25 +726,36 @@ async function handleGenerate(e) {
             for (const fee of feesForInitialProcessing) {
                 const feeKey = `${student.id}-${fee.fee_type}`;
 
-                // Skip only if this specific fee type already exists for this student
-                // Logic: If regenerate is TRUE, existingFeeKeys acts as a filter for what WAS fetched before delete?
-                // Actually, if regenerate is TRUE, we deleted scope-specific fees, so we should allow insertion.
-                // existingFeeKeys was built from `select * from fees where month...`
-                // If we deleted them, we should ignore existingFeeKeys check if regenerate is true.
-
                 if (!regenerate && existingFeeKeys.has(feeKey)) {
                     skippedCount++;
                     continue;
                 }
+
+                // Check for Discount
+                let discountAmount = 0;
+                const discountRule = discountMap.get(feeKey);
+
+                if (discountRule) {
+                    if (discountRule.discount_type === 'percentage') {
+                        discountAmount = (fee.amount * discountRule.discount_value) / 100;
+                    } else {
+                        discountAmount = discountRule.discount_value;
+                    }
+                    // Cap discount at total amount
+                    if (discountAmount > fee.amount) discountAmount = fee.amount;
+                }
+
+                const finalAmount = Math.max(0, fee.amount - discountAmount);
 
                 feesToInsert.push({
                     student_id: student.id,
                     fee_type: fee.fee_type,
                     month: month,
                     amount: fee.amount,
-                    final_amount: fee.amount,
+                    discount: discountAmount, // Ensure column exists in DB logic or ignored if not
+                    final_amount: finalAmount,
                     paid_amount: 0,
-                    status: 'unpaid',
+                    status: finalAmount === 0 ? 'paid' : 'unpaid', // Auto-mark fully discounted as paid? logic choice. Let's keep unpaid but 0 balance effectively. Or paid if 0.
                     generated_at: new Date().toISOString()
                 });
             }

@@ -16,8 +16,8 @@ export async function generateReceipt(studentIds, isMultiple = false, copyType =
             return;
         }
 
-        const fatherCNIC = students[0].father_cnic;
-        const fatherName = students[0].father_name;
+        const fatherCNIC = students[0].father_cnic || 'N/A';
+        const fatherName = students[0].father_name || 'N/A';
         const fatherPhone = students[0].phone || 'N/A';
 
         const issueDate = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '/');
@@ -60,46 +60,74 @@ async function buildReceiptHTML({ fatherName, fatherCNIC, fatherPhone, issueDate
 
     students.forEach(student => {
         const currentMonth = new Date().toISOString().slice(0, 7);
-        // Use ALL fees and calculate remaining balance (same as dashboard)
+        // Use ALL fees and calculate remaining balance
         const allFees = student.fees || [];
-        const currentMonthFees = allFees.filter(f => f.month === currentMonth);
-        const arrearsFees = allFees.filter(f => f.month !== currentMonth && (Number(f.final_amount || 0) - Number(f.paid_amount || 0)) > 0);
+
+        // Detailed Logic: Show details for Current Month AND Future Months
+        const detailedFees = allFees.filter(f => f.month >= currentMonth);
+
+        // Arrears Logic: Show summary for PAST months
+        // We include ALL past fees that have a balance, to show the full history of debt vs payment if needed, 
+        // OR just the ones with outstanding balance. The user wants to see "Paid: 1000", which implies we need the fee that was paid.
+        // If a fee is fully paid in the past, it's usually history. But if it has a balance (13400), it's here.
+        const arrearsFees = allFees.filter(f => f.month < currentMonth && (Number(f.final_amount || 0) - Number(f.paid_amount || 0)) > 0);
 
         let studentTotal = 0;
         let feeRows = '';
 
-        currentMonthFees.forEach(fee => {
+        // Render Detailed Fees (Current + Future)
+        detailedFees.forEach(fee => {
             const actual = Number(fee.amount || 0);
             const disc = Number(fee.discount || 0);
             const paid = Number(fee.paid_amount || 0);
-            const net = Number(fee.final_amount || 0) - paid;
 
-            // Only add if there's a remaining balance
-            if (net > 0) {
-                studentTotal += net;
+            // Net Payable for this specific fee (Amount Column)
+            // Logic: Actual - Discount - Paid = Net Payable
+            const netPayable = Math.max(0, actual - disc - paid);
+
+            if (netPayable > 0 || paid > 0) { // Show if there's a balance OR if something was paid recently? Usually just payable.
+                studentTotal += netPayable;
 
                 feeRows += `
                     <tr class="fee-row">
-                        <td>${fee.fee_type} ${paid > 0 ? '<small>(Bal)</small>' : ''} (${fee.month})</td>
+                        <td>${fee.fee_type} (${formatMonthStr(fee.month)})</td>
                         <td class="text-right">${actual.toFixed(0)}</td>
                         <td class="text-right">${disc.toFixed(0)}</td>
-                        <td class="text-right">${net.toFixed(0)}</td>
+                        <td class="text-right">${paid.toFixed(0)}</td>
+                        <td class="text-right font-bold">${netPayable.toFixed(0)}</td>
                     </tr>
                 `;
             }
         });
 
+        // Render Arrears Summary (Past Only)
         if (arrearsFees.length > 0) {
-            const months = [...new Set(arrearsFees.map(f => f.month))].sort().join(', ');
-            const totalArrears = arrearsFees.reduce((sum, f) => sum + Math.max(0, Number(f.final_amount || 0) - Number(f.paid_amount || 0)), 0);
-            studentTotal += totalArrears;
+            const months = [...new Set(arrearsFees.map(f => formatMonthStr(f.month)))].sort().join(', ');
+
+            // Calculate Aggregates for Arrears
+            // We want to show: Total Actual of these arrears, Total Paid of these arrears, and Net Balance.
+            // Note: DB 'amount' is original fee.
+            const totalArrearActual = arrearsFees.reduce((sum, f) => sum + Number(f.amount || 0), 0);
+            const totalArrearDisc = arrearsFees.reduce((sum, f) => sum + Number(f.discount || 0), 0);
+            const totalArrearPaid = arrearsFees.reduce((sum, f) => sum + Number(f.paid_amount || 0), 0);
+
+            // The "Actual Fee" column for Arrears should technically be "Amount - Discount" if we want to be clean, 
+            // OR we just put the raw Amount and separate Discount. Let's do Raw Amount.
+
+            // To match user's "Total Fees: 14400" (which corresponds to Actual 14400 in the image, or 13400+1000?)
+            // If Actual is 14400 and Paid is 1000, then Net is 13400.
+
+            const netArrearsPayable = totalArrearActual - totalArrearDisc - totalArrearPaid;
+
+            studentTotal += netArrearsPayable;
 
             feeRows += `
                 <tr class="fee-row">
                     <td>Arrears (${months})</td>
-                    <td class="text-right"></td>
-                    <td class="text-right"></td>
-                    <td class="text-right">${totalArrears.toFixed(0)}</td>
+                    <td class="text-right">${totalArrearActual.toFixed(0)}</td>
+                    <td class="text-right">${totalArrearDisc.toFixed(0)}</td>
+                    <td class="text-right">${totalArrearPaid.toFixed(0)}</td>
+                    <td class="text-right font-bold">${netArrearsPayable.toFixed(0)}</td>
                 </tr>
             `;
         }
@@ -108,7 +136,7 @@ async function buildReceiptHTML({ fatherName, fatherCNIC, fatherPhone, issueDate
 
         studentRows += `
             <tr class="student-header">
-                <td colspan="4">
+                <td colspan="5">
                     <strong>File No: ${student.roll_no || 'N/A'}</strong> &nbsp;&nbsp;
                     <strong>Name: ${student.name}</strong> &nbsp;&nbsp;
                     <strong>Class: ${student.class} ${student.section || ''}</strong> &nbsp;&nbsp;
@@ -116,8 +144,8 @@ async function buildReceiptHTML({ fatherName, fatherCNIC, fatherPhone, issueDate
                 </td>
             </tr>
             ${feeRows}
-            <tr class="total-row">
-                <td colspan="3"><strong>Total Payable of ${student.name}:</strong></td>
+            <tr class="total-row bg-gray-100">
+                <td colspan="4" class="text-right"><strong>Total Payable of ${student.name}:</strong></td>
                 <td class="text-right"><strong>${studentTotal.toFixed(0)}</strong></td>
             </tr>
         `;
@@ -170,16 +198,17 @@ async function buildReceiptHTML({ fatherName, fatherCNIC, fatherPhone, issueDate
         <table class="receipt-table">
             <thead>
                 <tr>
-                    <th style="width: 50%;">Particulars</th>
+                    <th style="width: 40%;">Particulars</th>
                     <th style="width: 15%;">Actual Fee</th>
-                    <th style="width: 15%;">Discount</th>
-                    <th style="width: 20%;">Amount</th>
+                    <th style="width: 10%;">Discount</th>
+                    <th style="width: 15%;">Paid</th>
+                    <th style="width: 20%;">Net Amount</th>
                 </tr>
             </thead>
             <tbody>
                 ${studentRows}
                 <tr class="grand-total-row">
-                    <td colspan="3" style="border-right: none;"><strong>Grand Total Payable:</strong></td>
+                    <td colspan="4" style="border-right: none;"><strong>Grand Total Payable:</strong></td>
                     <td class="text-right" style="border-left: none;"><strong>${grandTotal.toFixed(0)}</strong></td>
                 </tr>
             </tbody>
@@ -195,7 +224,8 @@ async function buildReceiptHTML({ fatherName, fatherCNIC, fatherPhone, issueDate
                         <th>Disc</th>
                         <th>T.Fee</th>
                         <th>O.Fee</th>
-                        <th>Total</th>
+                        <th>M.Total</th>
+                        <th>Payable</th>
                         <th>Paid</th>
                         <th>Balance</th>
                         <th>Rec #</th>
@@ -275,7 +305,7 @@ function buildLedgerRows(students, payments) {
         m.total = m.actual - m.disc;
     });
 
-    // Sort months ascending for cumulative calculation
+    // Sort months ascending for cumulative calculation (Oldest First)
     const allMonths = Object.keys(monthsMap).sort();
 
     let cumulativeArrears = 0;
@@ -283,7 +313,15 @@ function buildLedgerRows(students, payments) {
 
     allMonths.forEach(month => {
         const data = monthsMap[month];
-        const monthBalance = data.total - data.paid;
+
+        // Month Total = Actual - Discount
+        const monthTotal = data.actual - data.disc;
+
+        // Payable = Opening Balance + Month Total
+        const totalPayableThisMonth = cumulativeArrears + monthTotal;
+
+        // Month Balance = Payable - Paid
+        const monthBalance = totalPayableThisMonth - data.paid;
 
         // Find all payments for this month
         const monthPayments = payments.filter(p => p.payment_date.startsWith(month));
@@ -296,47 +334,67 @@ function buildLedgerRows(students, payments) {
 
         processedRows.push({
             month,
-            arrear: cumulativeArrears,
+            arrear: cumulativeArrears, // Opening Balance
             actual: data.actual,
             disc: data.disc,
             tuition: data.tuition,
             others: data.others,
-            total: data.total,
+            total: monthTotal,    // Current Month Charge
+            payable: totalPayableThisMonth, // New Column
             paid: data.paid,
-            balance: monthBalance,
+            balance: monthBalance, // Closing Balance
             recNo,
             entryDate
         });
 
-        // Carry forward the balance to next month's arrears
-        cumulativeArrears += monthBalance;
+        // Carry forward: Closing Balance becomes next month's Opening Arrear
+        cumulativeArrears = monthBalance;
     });
 
-    // Take the last 12 months for the display, reversed (newest first)
+    // Take the last 12 months for the display, reversed (Newest First) for viewing
     const displayRows = processedRows.reverse().slice(0, 12);
 
-    let html = displayRows.map(row => `
+    let html = displayRows.map((row, index) => {
+        // Highlight the Balance of the very first row (Most Recent)
+        const isLatest = index === 0;
+        const balanceStyle = isLatest
+            ? 'font-weight: 900; font-size: 14px; color: #b71c1c;'
+            : 'font-weight: bold; font-size: 11px;';
+
+        return `
         <tr>
-            <td style="font-size: 8px;">${row.month}</td>
+            <td style="font-size: 8px;">${formatMonthStr(row.month)}</td>
             <td>${row.arrear.toFixed(0)}</td>
             <td>${row.actual.toFixed(0)}</td>
             <td>${row.disc.toFixed(0)}</td>
             <td>${row.tuition.toFixed(0)}</td>
             <td>${row.others.toFixed(0)}</td>
-            <td>${row.total.toFixed(0)}</td>
+            <td class="font-bold">${row.total.toFixed(0)}</td>
+            <td class="font-bold" style="color: #444;">${row.payable.toFixed(0)}</td>
             <td>${row.paid.toFixed(0)}</td>
-            <td font-weight="bold">${row.balance.toFixed(0)}</td>
+            <td style="${balanceStyle}">${row.balance.toFixed(0)}</td>
             <td style="font-size: 7px; max-width: 60px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${row.recNo}</td>
             <td>${row.entryDate}</td>
         </tr>
-    `).join('');
+    `}).join('');
 
     // Add empty rows up to 6
     for (let i = displayRows.length; i < 6; i++) {
-        html += `<tr>${'<td>&nbsp;</td>'.repeat(11)}</tr>`;
+        html += `<tr>${'<td>&nbsp;</td>'.repeat(12)}</tr>`;
     }
 
     return html;
+}
+
+function formatMonthStr(monthStr) {
+    if (!monthStr) return '';
+    // monthStr is expected to be 'YYYY-MM'
+    const [year, month] = monthStr.split('-');
+    const date = new Date(parseInt(year), parseInt(month) - 1, 1);
+    if (isNaN(date.getTime())) return monthStr;
+
+    // Format to 'MMM-YYYY' e.g., 'Feb-2026'
+    return date.toLocaleString('default', { month: 'short' }) + '-' + year;
 }
 
 function getInlineStyles() {
@@ -363,18 +421,19 @@ function getInlineStyles() {
         
         /* Ledger Styles */
         .ledger-section { margin-top: 5px; display: flex; gap: 10px; align-items: flex-start; }
-        .ledger-table { flex: 1; border-collapse: collapse; font-size: 9px; line-height: 1.2; }
-        .ledger-table th, .ledger-table td { border: 1px solid #000; padding: 2px 4px; text-align: center; height: 16px; }
-        .ledger-table th { background: #f0f0f0 !important; }
+        .ledger-table { flex: 1; border-collapse: collapse; font-size: 10px; line-height: 1.3; }
+        .ledger-table th, .ledger-table td { border: 1px solid #444; padding: 3px 4px; text-align: center; height: 20px; vertical-align: middle; }
+        .ledger-table th { background: #f0f0f0 !important; font-weight: bold; border-bottom: 2px solid #000; }
         
         .payment-summary { width: 220px; font-size: 11px; display: flex; flex-direction: column; gap: 4px; }
         .summary-field { border-bottom: 1px solid #000; padding-bottom: 1px; display: flex; justify-content: space-between; font-weight: bold; }
         
-        .signature-section { margin-top: 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 40px; }
-        .sig-line { border-top: 1px solid #000; padding-top: 3px; width: 180px; margin-left: auto; font-size: 11px; font-weight: bold; text-align: center; }
+        .signature-section { margin-top: 50px; display: flex; justify-content: space-between; padding: 0 10px; }
+        .sig-line { border-top: 1px solid #000; padding-top: 5px; width: 200px; font-size: 12px; font-weight: bold; text-align: center; }
         .footer-note { text-align: center; margin-top: 10px; font-size: 13px; direction: rtl; font-family: serif; }
         
         .text-right { text-align: right; }
+        .font-bold { font-weight: bold; }
         .no-print { display: none !important; }
         .print-actions { text-align: center; padding: 10px; background: #eee; border-bottom: 1px solid #ccc; position: fixed; top: 0; left: 0; width: 100%; z-index: 9999; }
         .copy-select { padding: 8px; border-radius: 4px; border: 1px solid #ccc; font-size: 14px; margin-right: 10px; }
