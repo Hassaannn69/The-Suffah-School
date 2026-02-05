@@ -584,6 +584,50 @@ window.deleteTeacher = async (id) => {
     }
 };
 
+window.toggleTeacherStatus = async () => {
+    const id = document.getElementById('profileTeacherId').value;
+    const teacher = currentTeachers.find(t => t.id === id);
+    if (!teacher) return;
+
+    const newStatus = !teacher.is_active;
+    const action = newStatus ? 'activate' : 'deactivate';
+
+    if (!confirm(`Are you sure you want to ${action} this teacher?`)) return;
+
+    try {
+        const { error } = await supabase
+            .from('teachers')
+            .update({ is_active: newStatus })
+            .eq('id', id);
+
+        if (error) throw error;
+
+        // Update local state
+        teacher.is_active = newStatus;
+
+        // Update UI
+        const statusEl = document.getElementById('teacherProfileStatus');
+        const toggleText = document.getElementById('toggleStatusText');
+
+        if (newStatus) {
+            statusEl.textContent = 'Active';
+            statusEl.className = 'px-2.5 py-0.5 rounded-full bg-green-900/50 border border-green-700 text-green-400 text-xs font-medium';
+            toggleText.textContent = 'Deactivate';
+        } else {
+            statusEl.textContent = 'Inactive';
+            statusEl.className = 'px-2.5 py-0.5 rounded-full bg-red-900/50 border border-red-700 text-red-400 text-xs font-medium';
+            toggleText.textContent = 'Activate';
+        }
+
+        fetchTeachers(); // Refresh list
+        alert(`Teacher ${action}d successfully.`);
+
+    } catch (err) {
+        console.error('Error updating status:', err);
+        alert('Failed to update status: ' + err.message);
+    }
+};
+
 // Helper to generate next employee ID
 async function getNextEmployeeId(count = 1) {
     try {
