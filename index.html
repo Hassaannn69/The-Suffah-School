@@ -377,7 +377,7 @@
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
             </svg> Signing in...`;
 
-            let email = emailInput.value.trim();
+            let email = emailInput.value.trim().toLowerCase();
             const password = passwordInput.value;
 
             try {
@@ -405,10 +405,11 @@
 
                         console.log(`Verifying student: Email='${email}' OR RollNo='${originalInput}'`);
 
+                        // Check if student record exists and matches this user
                         const { data: studentData, error: studentError } = await window.supabase
                             .from('students')
                             .select('id, name, roll_no, email')
-                            .or(`email.eq."${email}",roll_no.eq."${originalInput}"`)
+                            .or(`email.eq."${email}",roll_no.eq."${originalInput}",id.eq."${data.user.id}"`)
                             .maybeSingle();
 
                         if (studentError || !studentData) {
@@ -490,7 +491,7 @@
         console.log('✅ selectRole function exists:', typeof window.selectRole);
 
         // Update Footer with Last Updated Timestamp
-        const lastUpdated = '05-Feb-2026 17:20 PKT';
+        const lastUpdated = '05-Feb-2026 17:28 PKT';
         document.body.insertAdjacentHTML('beforeend', `<div id="last-updated" style="position:fixed;bottom:10px;right:10px;background:rgba(30,41,59,0.5);backdrop-filter:blur(4px);color:rgba(148,163,184,0.8);padding:5px 12px;border-radius:6px;font-size:10px;z-index:9999;border:1px solid rgba(255,255,255,0.05);">Last Updated: ${lastUpdated}</div>`);
     </script>
 </body>

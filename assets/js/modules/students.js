@@ -2403,20 +2403,26 @@ async function syncAllPortals() {
                 continue;
             }
 
-            // Ensure we use the standardized email format for Auth
-            // Even if the database email is just a roll number or is empty
-            let authEmail = student.email;
-            if (!authEmail || !authEmail.includes('@')) {
-                authEmail = `${student.roll_no}@student.suffah.school`;
-            }
-
+            // FOR PORTAL: ALWAYS use Roll Number format to match UI display
+            // This fixes the bug where personal emails were used for Auth but roll numbers for display
+            const authEmail = `${student.roll_no.trim().toLowerCase()}@student.suffah.school`;
             const password = generatePasswordFromDOB(dob);
 
             try {
-                // We pass the normalized email to createAuthUser
-                const result = await createAuthUser(authEmail, password, student.name);
-                if (result) successCount++;
-                else skipCount++;
+                const user = await createAuthUser(authEmail, password, student.name);
+                if (user) {
+                    // Update student record with standardized login info and linked ID
+                    await supabase.from('students')
+                        .update({
+                            id: user.id, // Link to Auth ID
+                            email: authEmail // Force update to portal email
+                        })
+                        .eq('roll_no', student.roll_no);
+
+                    successCount++;
+                } else {
+                    skipCount++;
+                }
             } catch (err) {
                 if (err.message.includes('already registered') || err.message.includes('email_exists')) {
                     skipCount++;
@@ -2428,7 +2434,8 @@ async function syncAllPortals() {
         }
 
         if (window.loadingOverlay) window.loadingOverlay.hide();
-        alert(`Portal Sync Complete!\n\nEnabled Access for: ${successCount} students\nAlready Enabled: ${skipCount}\nErrors: ${errorCount}`);
+        alert(`Portal Sync Complete!\n\nAccess Enabled: ${successCount} students\nAlready Enabled/Skipped: ${skipCount}\nErrors: ${errorCount}`);
+        await fetchStudents();
 
     } catch (error) {
         console.error('Sync error:', error);
@@ -2452,17 +2459,23 @@ async function handleSyncSinglePortal() {
     btn.disabled = true;
     btn.innerHTML = 'Syncing...';
 
-    // Ensure normalized email format for Auth
-    let authEmail = student.email;
-    if (!authEmail || !authEmail.includes('@')) {
-        authEmail = `${student.roll_no}@student.suffah.school`;
-    }
-
+    // FOR PORTAL: ALWAYS use Roll Number format to match UI display
+    const authEmail = `${student.roll_no.trim().toLowerCase()}@student.suffah.school`;
     const password = generatePasswordFromDOB(student.date_of_birth);
 
     try {
-        await createAuthUser(authEmail, password, student.name);
-        alert(`Portal access enabled successfully!\n\nEmail/ID: ${student.roll_no}\nPassword: ${password}\n\nNote: Student can login using their Roll Number.`);
+        const user = await createAuthUser(authEmail, password, student.name);
+
+        // Update student record to link it properly
+        await supabase.from('students')
+            .update({
+                id: user.id,
+                email: authEmail
+            })
+            .eq('roll_no', student.roll_no);
+
+        alert(`Portal access enabled successfully!\n\nLogin User ID: ${student.roll_no}\nPassword: ${password}\n\nThe student can now log in using only their Roll Number.`);
+        await fetchStudents();
     } catch (error) {
         if (error.message.includes('already registered') || error.message.includes('email_exists')) {
             alert('This student already has portal access enabled.');
