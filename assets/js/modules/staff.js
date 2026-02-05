@@ -115,41 +115,50 @@ export async function render(container) {
                 <div class="flex-1 p-6 overflow-y-auto">
                     <!-- Tabs -->
                     <div class="flex border-b border-gray-800 mb-6">
-                        <button class="px-4 py-2 text-primary-500 border-b-2 border-primary-500 font-medium">Personal Details</button>
-                        <button class="px-4 py-2 text-gray-400 hover:text-white font-medium">Account & Credentials</button>
+                        <button id="tabPersonal" onclick="window.switchStaffTab('personal')" class="px-4 py-2 text-primary-500 border-b-2 border-primary-500 font-medium transition-colors">Personal Details</button>
+                        <button id="tabAccount" onclick="window.switchStaffTab('account')" class="px-4 py-2 text-gray-400 hover:text-white font-medium transition-colors">Account & Credentials</button>
                     </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div class="space-y-4">
-                            <div>
-                                <label class="text-xs text-gray-500 uppercase tracking-wider">Name</label>
-                                <p id="profStaffName" class="text-white font-medium"></p>
-                            </div>
-                            <div>
-                                <label class="text-xs text-gray-500 uppercase tracking-wider">Employee ID</label>
-                                <p id="profStaffId" class="text-white font-medium"></p>
-                            </div>
-                            <div>
-                                <label class="text-xs text-gray-500 uppercase tracking-wider">Role</label>
-                                <p id="profStaffRole" class="text-white font-medium"></p>
+                    <div class="mt-4">
+                        <!-- Personal Details Content -->
+                        <div id="contentPersonal" class="block">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div class="space-y-4">
+                                    <div>
+                                        <label class="text-xs text-gray-500 uppercase tracking-wider">Name</label>
+                                        <p id="profStaffName" class="text-white font-medium"></p>
+                                    </div>
+                                    <div>
+                                        <label class="text-xs text-gray-500 uppercase tracking-wider">Employee ID</label>
+                                        <p id="profStaffId" class="text-white font-medium"></p>
+                                    </div>
+                                    <div>
+                                        <label class="text-xs text-gray-500 uppercase tracking-wider">Role</label>
+                                        <p id="profStaffRole" class="text-white font-medium"></p>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                        <div class="space-y-4">
-                            <div class="p-4 bg-gray-800/50 rounded-xl border border-gray-800">
-                                <h4 class="text-sm font-semibold text-primary-400 mb-3 flex items-center">
-                                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
-                                    Login Credentials
-                                </h4>
-                                <div class="space-y-2">
-                                    <div>
-                                        <label class="text-[10px] text-gray-500 uppercase">Username / ID</label>
-                                        <p id="profStaffUser" class="text-white text-sm font-mono"></p>
+
+                        <!-- Account Details Content -->
+                        <div id="contentAccount" class="hidden">
+                            <div class="space-y-4">
+                                <div class="p-4 bg-gray-800/50 rounded-xl border border-gray-800">
+                                    <h4 class="text-sm font-semibold text-primary-400 mb-3 flex items-center">
+                                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                                        Login Credentials
+                                    </h4>
+                                    <div class="space-y-2">
+                                        <div>
+                                            <label class="text-[10px] text-gray-500 uppercase">Username / ID</label>
+                                            <p id="profStaffUser" class="text-white text-sm font-mono"></p>
+                                        </div>
+                                        <div>
+                                            <label class="text-[10px] text-gray-500 uppercase">Current Password</label>
+                                            <p id="profStaffPass" class="text-white text-sm font-mono"></p>
+                                        </div>
+                                        <p class="text-[10px] text-gray-500 mt-2 italic">* Password is derived from Date of Birth (DDMMYYYY)</p>
                                     </div>
-                                    <div>
-                                        <label class="text-[10px] text-gray-500 uppercase">Current Password</label>
-                                        <p id="profStaffPass" class="text-white text-sm font-mono"></p>
-                                    </div>
-                                    <p class="text-[10px] text-gray-500 mt-2 italic">* Password is derived from Date of Birth (DDMMYYYY)</p>
                                 </div>
                             </div>
                         </div>
@@ -233,6 +242,25 @@ window.editStaff = (id) => {
     document.getElementById('staffModalTitle').textContent = 'Edit Staff Member';
     document.getElementById('staffModal').classList.remove('hidden');
     document.getElementById('staffModal').classList.add('flex');
+};
+
+window.switchStaffTab = (tab) => {
+    const tabPersonal = document.getElementById('tabPersonal');
+    const tabAccount = document.getElementById('tabAccount');
+    const contentPersonal = document.getElementById('contentPersonal');
+    const contentAccount = document.getElementById('contentAccount');
+
+    if (tab === 'personal') {
+        tabPersonal.className = 'px-4 py-2 text-primary-500 border-b-2 border-primary-500 font-medium transition-colors';
+        tabAccount.className = 'px-4 py-2 text-gray-400 hover:text-white font-medium transition-colors';
+        contentPersonal.classList.remove('hidden');
+        contentAccount.classList.add('hidden');
+    } else {
+        tabPersonal.className = 'px-4 py-2 text-gray-400 hover:text-white font-medium transition-colors';
+        tabAccount.className = 'px-4 py-2 text-primary-500 border-b-2 border-primary-500 font-medium transition-colors';
+        contentPersonal.classList.add('hidden');
+        contentAccount.classList.remove('hidden');
+    }
 };
 
 function setupEventListeners() {
