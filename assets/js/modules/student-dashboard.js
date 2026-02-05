@@ -623,17 +623,14 @@ function renderStudentDashboard(container, student, fees, family, attendance, no
 
         try {
             const { generateReceipt } = await import('./receipt-generator.js');
-            // Fetch precise payment info
-            const { data: payment } = await supabase.from('fee_payments').select('*, students(family_code)').eq('id', paymentId).single();
 
-            // Get all siblings for the receipt
-            let familyIds = [studentId];
-            if (payment.students && payment.students.family_code) {
-                const { data: siblings } = await supabase.from('students').select('id').eq('family_code', payment.students.family_code);
-                if (siblings) familyIds = siblings.map(s => s.id);
-            }
+            // Get all siblings from the already fetched family data
+            const familyIds = [student.id, ...(family || []).map(m => m.id)];
 
-            await generateReceipt(familyIds, true, 'Student Copy', {
+            // Fetch precise payment info for the payment summary section
+            const { data: payment } = await supabase.from('fee_payments').select('*').eq('id', paymentId).single();
+
+            await generateReceipt(familyIds, familyIds.length > 1, 'Student Copy', {
                 amountPaid: payment.amount_paid,
                 receiptNo: payment.receipt_no || 'REC-' + payment.id.toString().slice(-6).toUpperCase(),
                 date: new Date(payment.payment_date).toLocaleDateString('en-GB')
@@ -659,8 +656,9 @@ function renderStudentDashboard(container, student, fees, family, attendance, no
 
             try {
                 const { generateReceipt } = await import('./receipt-generator.js');
-                // Generate bill for current student (and potentially family arrears logic handled inside)
-                await generateReceipt([student.id], false, 'Bank Copy');
+                // Generate bill for all family members
+                const familyIds = [student.id, ...(family || []).map(m => m.id)];
+                await generateReceipt(familyIds, familyIds.length > 1, 'Bank Copy');
             } catch (err) {
                 console.error('Print Error:', err);
                 alert('Failed to generate bill.');

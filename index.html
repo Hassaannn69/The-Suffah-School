@@ -15,7 +15,7 @@
 <body class="bg-gray-900 min-h-screen flex items-center justify-center p-4 overflow-hidden relative">
 
     <!-- Background Effects -->
-    <div class="fixed inset-0 overflow-hidden -z-10 pointer-events-none">
+    <!-- <div class="fixed inset-0 overflow-hidden -z-10 pointer-events-none">
         <div class="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900"></div>
         <div
             class="absolute top-[-10%] left-[-10%] w-96 h-96 bg-primary-900/30 rounded-full mix-blend-screen filter blur-3xl opacity-20 animate-blob">
@@ -26,10 +26,10 @@
         <div
             class="absolute bottom-[-10%] left-[20%] w-96 h-96 bg-purple-900/30 rounded-full mix-blend-screen filter blur-3xl opacity-20 animate-blob animation-delay-4000">
         </div>
-    </div>
+    </div> -->
 
-    <div class="glass-panel w-full max-w-md p-8 rounded-2xl shadow-2xl relative transition-all duration-500 ease-in-out border border-gray-700/50"
-        id="mainCard">
+    <div class="glass-panel w-full max-w-md p-8 rounded-2xl shadow-2xl relative transition-all duration-500 ease-in-out border border-gray-700/50 z-50 pointer-events-auto"
+        id="mainCard" style="pointer-events: auto !important;">
 
         <!-- Header Section -->
         <div class="text-center mb-8 transition-all duration-500" id="headerSection">
@@ -44,11 +44,12 @@
         </div>
 
         <!-- Role Selection View -->
-        <div id="roleSelection" class="space-y-4 transition-all duration-500 ease-in-out">
+        <div id="roleSelection" class="space-y-4 transition-all duration-500 ease-in-out relative z-10">
             <div class="grid grid-cols-2 gap-4">
                 <!-- Admin Role -->
                 <button id="btn-admin" onclick="selectRole('admin')"
-                    class="role-card group p-4 rounded-xl border border-gray-700 hover:border-primary-500 hover:shadow-lg hover:shadow-primary-500/10 bg-gray-800/50 hover:bg-gray-800 transition-all duration-300 text-left relative overflow-hidden">
+                    style="cursor: pointer !important; pointer-events: auto !important;"
+                    class="role-card group p-4 rounded-xl border border-gray-700 hover:border-primary-500 hover:shadow-lg hover:shadow-primary-500/10 bg-gray-800/50 hover:bg-gray-800 transition-all duration-300 text-left relative overflow-hidden z-20">
                     <div
                         class="absolute inset-0 bg-gradient-to-r from-primary-500/0 via-primary-500/0 to-primary-500/0 group-hover:from-primary-500/5 group-hover:via-primary-500/10 group-hover:to-primary-500/5 transition-all duration-500 pointer-events-none">
                     </div>
@@ -66,7 +67,8 @@
 
                 <!-- Teacher Role -->
                 <button id="btn-teacher" onclick="selectRole('teacher')"
-                    class="role-card group p-4 rounded-xl border border-gray-700 hover:border-green-500 hover:shadow-lg hover:shadow-green-500/10 bg-gray-800/50 hover:bg-gray-800 transition-all duration-300 text-left relative overflow-hidden">
+                    style="cursor: pointer !important; pointer-events: auto !important;"
+                    class="role-card group p-4 rounded-xl border border-gray-700 hover:border-green-500 hover:shadow-lg hover:shadow-green-500/10 bg-gray-800/50 hover:bg-gray-800 transition-all duration-300 text-left relative overflow-hidden z-20">
                     <div
                         class="absolute inset-0 bg-gradient-to-r from-green-500/0 via-green-500/0 to-green-500/0 group-hover:from-green-500/5 group-hover:via-green-500/10 group-hover:to-green-500/5 transition-all duration-500 pointer-events-none">
                     </div>
@@ -85,7 +87,8 @@
 
                 <!-- Accountant Role -->
                 <button id="btn-accountant" onclick="selectRole('accountant')"
-                    class="role-card group p-4 rounded-xl border border-gray-700 hover:border-blue-500 hover:shadow-lg hover:shadow-blue-500/10 bg-gray-800/50 hover:bg-gray-800 transition-all duration-300 text-left relative overflow-hidden">
+                    style="cursor: pointer !important; pointer-events: auto !important;"
+                    class="role-card group p-4 rounded-xl border border-gray-700 hover:border-blue-500 hover:shadow-lg hover:shadow-blue-500/10 bg-gray-800/50 hover:bg-gray-800 transition-all duration-300 text-left relative overflow-hidden z-20">
                     <div
                         class="absolute inset-0 bg-gradient-to-r from-blue-500/0 via-blue-500/0 to-blue-500/0 group-hover:from-blue-500/5 group-hover:via-blue-500/10 group-hover:to-blue-500/5 transition-all duration-500 pointer-events-none">
                     </div>
@@ -103,7 +106,8 @@
 
                 <!-- Student Role -->
                 <button id="btn-student" onclick="selectRole('student')"
-                    class="role-card group p-4 rounded-xl border border-gray-700 hover:border-purple-500 hover:shadow-lg hover:shadow-purple-500/10 bg-gray-800/50 hover:bg-gray-800 transition-all duration-300 text-left relative overflow-hidden">
+                    style="cursor: pointer !important; pointer-events: auto !important;"
+                    class="role-card group p-4 rounded-xl border border-gray-700 hover:border-purple-500 hover:shadow-lg hover:shadow-purple-500/10 bg-gray-800/50 hover:bg-gray-800 transition-all duration-300 text-left relative overflow-hidden z-20">
                     <div
                         class="absolute inset-0 bg-gradient-to-r from-purple-500/0 via-purple-500/0 to-purple-500/0 group-hover:from-purple-500/5 group-hover:via-purple-500/10 group-hover:to-purple-500/5 transition-all duration-500 pointer-events-none">
                     </div>
@@ -213,7 +217,7 @@
 
         <!-- Success Overlay -->
         <div id="successOverlay"
-            class="absolute inset-0 bg-white/90 backdrop-blur-sm rounded-2xl flex flex-col items-center justify-center z-50 hidden opacity-0 transition-opacity duration-500">
+            class="absolute inset-0 bg-white/90 backdrop-blur-sm rounded-2xl flex flex-col items-center justify-center z-50 hidden opacity-0 transition-opacity duration-500 pointer-events-none">
             <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-4 animate-bounce">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-green-600" fill="none" viewBox="0 0 24 24"
                     stroke="currentColor">
@@ -242,8 +246,6 @@
         // Don't redeclare - just use window.supabase directly
         if (!window.supabase) {
             console.error('Supabase client not initialized. Check supabase-init.js');
-            document.getElementById('errorText').textContent = 'System Error: Database connection failed.';
-            document.getElementById('errorMessage').classList.remove('hidden');
         }
 
         console.log('✅ Supabase client initialized:', window.SUPABASE_URL);
@@ -268,8 +270,20 @@
             console.log('🟢 selectRole CALLED with role:', role);
             selectedRole = role;
 
+            const roleSelection = document.getElementById('roleSelection');
+            const loginContainer = document.getElementById('loginContainer');
+            const headerSubtitle = document.getElementById('headerSubtitle');
+            const emailInput = document.getElementById('email');
+            const emailLabel = document.getElementById('emailLabel');
+
+            if (!roleSelection || !loginContainer) {
+                console.error('UI containers not found');
+                return;
+            }
+
             // Animate out role selection
             roleSelection.classList.add('opacity-0', '-translate-x-10');
+
             setTimeout(() => {
                 roleSelection.classList.add('hidden');
 
@@ -286,10 +300,9 @@
                     'accountant': 'Accountant',
                     'student': 'Student'
                 };
-                headerSubtitle.textContent = `Login as ${roleNames[role]}`;
+                headerSubtitle.textContent = `Login as ${roleNames[role] || role}`;
 
                 // Update label and placeholder for students
-                const emailLabel = document.getElementById('emailLabel');
                 if (role === 'student') {
                     emailLabel.textContent = 'Student ID';
                     emailInput.placeholder = 'Enter your Student ID';
@@ -320,182 +333,161 @@
 
                 // Clear form
                 loginForm.reset();
-                errorMessage.classList.add('hidden');
+                document.getElementById('errorMessage').classList.add('hidden');
             }, 300);
         };
 
-        // Check if already logged in
-        async function checkSession() {
-            // 1. Check if we just logged out
-            const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.get('action') === 'logout') {
-                console.log('User explicitly logged out. Skipping auto-login.');
+        // Initialize App
+        (async function init() {
+            // Uses the client initialized in supabase-init.js
+            const supabase = window.supabase;
 
-                // Explicitly clear storage to prevent loops
-                window.localStorage.clear();
-                window.sessionStorage.clear();
-
-                // Clean up URL without refreshing
-                window.history.replaceState({}, document.title, window.location.pathname);
-
-                // Ensure Supabase knows we are out
-                await window.supabase.auth.signOut();
-                return;
+            if (!supabase) {
+                console.error('Supabase client not initialized. Check supabase-init.js');
+                // We show error later if login is attempted
             }
 
-            try {
-                const { data: { session }, error } = await window.supabase.auth.getSession();
+            console.log('Init check starting...');
 
-                if (error) {
-                    console.error('Error checking session:', error);
+            // UI Elements are scoped within the function or global
+            const loginForm = document.getElementById('loginForm');
+            const emailInput = document.getElementById('email');
+            const passwordInput = document.getElementById('password');
+            const errorMessage = document.getElementById('errorMessage');
+            const errorText = document.getElementById('errorText');
+            const loginBtn = document.getElementById('loginBtn');
+            const successOverlay = document.getElementById('successOverlay');
+
+            // Check if already logged in
+            async function checkSession() {
+                if (!supabase) return;
+
+                const urlParams = new URLSearchParams(window.location.search);
+                if (urlParams.get('action') === 'logout') {
+                    console.log('User explicitly logged out. Skipping auto-login.');
+                    window.localStorage.clear();
+                    window.sessionStorage.clear();
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                    await supabase.auth.signOut();
                     return;
                 }
 
-                if (session) {
-                    console.log('User already logged in. Redirecting to dashboard...');
-                    window.location.href = 'dashboard.html';
-                } else {
-                    console.log('No active session found.');
-                }
-            } catch (err) {
-                console.error('Unexpected error during session check:', err);
-            }
-        }
-
-        // Run session check
-        checkSession();
-
-        loginForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-
-            // Reset UI
-            errorMessage.classList.add('hidden');
-            loginBtn.disabled = true;
-            const originalBtnText = loginBtn.innerHTML;
-            loginBtn.innerHTML = `<svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg> Signing in...`;
-
-            let email = emailInput.value.trim().toLowerCase();
-            const password = passwordInput.value;
-
-            try {
-                if (selectedRole === 'student') {
-                    // Normalize Student ID -> roll_no@student.suffah.school
-                    if (!email.includes('@')) {
-                        email = `${email.toLowerCase()}@student.suffah.school`;
-                    }
-                } else if (selectedRole === 'teacher' || selectedRole === 'accountant') {
-                    // For Teachers and Accountants, check if input is Employee ID
-                    // Teacher format EMP-XXX, Staff/Accountant format STF-XXX
-                    if (!email.includes('@')) {
-                        const domain = selectedRole === 'teacher' ? 'teacher.suffah.school' : 'staff.suffah.school';
-                        email = `${email.toLowerCase()}@${domain}`;
-                    }
-                }
-
-                console.log(`Checking identity for: ${email}`);
-
-                const { data, error } = await window.supabase.auth.signInWithPassword({
-                    email,
-                    password
-                });
-
-                if (error) throw error;
-
-                if (data.user) {
-                    const userRole = data.user.user_metadata?.role;
-                    console.log('Login successful, verifying role:', userRole);
-
-                    // Cross-check table for extra security (except admin)
-                    if (selectedRole !== 'admin') {
-                        let table = '';
-                        let field = 'auth_id';
-
-                        if (selectedRole === 'student') table = 'students';
-                        else if (selectedRole === 'teacher') table = 'teachers';
-                        else if (selectedRole === 'accountant') table = 'staff';
-
-                        const { data: profile } = await window.supabase
-                            .from(table)
-                            .select('id')
-                            .eq('auth_id', data.user.id)
-                            .maybeSingle();
-
-                        if (!profile) {
-                            // Link might be missing if created before the new link system
-                            // Or role mismatch
-                            console.warn(`Profile link missing for ${selectedRole}. Checking if we can recover...`);
-                            // This is a safety check for the transition period
-                            await window.supabase.auth.signOut();
-                            throw new Error(`Profile match failed. Your account might not be correctly linked as a ${selectedRole}.`);
-                        }
-                    }
-
-                    // Success animation and redirect
-                    successOverlay.classList.remove('hidden');
-                    void successOverlay.offsetWidth;
-                    successOverlay.classList.remove('opacity-0');
-
-                    setTimeout(() => {
+                try {
+                    const { data: { session }, error } = await supabase.auth.getSession();
+                    if (session) {
+                        console.log('User already logged in. Redirecting to dashboard...');
                         window.location.href = 'dashboard.html';
-                    }, 1500);
-                } else {
-                    throw new Error('Authentication failed');
+                    }
+                } catch (err) {
+                    console.error('Unexpected error during session check:', err);
                 }
-
-            } catch (error) {
-                console.error('Login error:', error);
-
-                // Show user-friendly error
-                let msg = error.message;
-                if (msg === 'Invalid login credentials') {
-                    msg = selectedRole === 'student'
-                        ? 'Incorrect Student ID or password.'
-                        : 'Incorrect email or password.';
-                }
-                if (msg.includes('Failed to fetch')) msg = 'Network error. Please check your internet connection.';
-
-                errorText.textContent = msg;
-                errorMessage.classList.remove('hidden');
-
-                // Shake animation for error
-                errorMessage.classList.remove('animate-shake');
-                void errorMessage.offsetWidth; // trigger reflow
-                errorMessage.classList.add('animate-shake');
-
-                loginBtn.disabled = false;
-                loginBtn.innerHTML = originalBtnText;
             }
-        });
 
-        // DEBUG: Add event listeners as fallback (in case onclick doesn't work)
-        console.log('🔵 Setting up fallback event listeners...');
+            // Run session check
+            await checkSession();
 
-        document.getElementById('btn-admin')?.addEventListener('click', function (e) {
-            console.log('🟡 Admin button clicked via addEventListener');
-            window.selectRole('admin');
-        });
-        document.getElementById('btn-teacher')?.addEventListener('click', function (e) {
-            console.log('🟡 Teacher button clicked via addEventListener');
-            window.selectRole('teacher');
-        });
-        document.getElementById('btn-accountant')?.addEventListener('click', function (e) {
-            console.log('🟡 Accountant button clicked via addEventListener');
-            window.selectRole('accountant');
-        });
-        document.getElementById('btn-student')?.addEventListener('click', function (e) {
-            console.log('🟡 Student button clicked via addEventListener');
-            window.selectRole('student');
-        });
+            if (loginForm) {
+                loginForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    if (!supabase) {
+                        alert('System Error: Database connection failed. Please check your internet connection.');
+                        return;
+                    }
 
-        console.log('✅ ALL SCRIPTS LOADED SUCCESSFULLY');
-        console.log('✅ selectRole function exists:', typeof window.selectRole);
+                    // Reset UI
+                    errorMessage.classList.add('hidden');
+                    loginBtn.disabled = true;
+                    const originalBtnText = loginBtn.innerHTML;
+                    loginBtn.innerHTML = `<svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline-block" ...>...</svg> Signing in...`;
 
-        // Update Footer with Last Updated Timestamp
-        const lastUpdated = '05-Feb-2026 17:28 PKT';
-        document.body.insertAdjacentHTML('beforeend', `<div id="last-updated" style="position:fixed;bottom:10px;right:10px;background:rgba(30,41,59,0.5);backdrop-filter:blur(4px);color:rgba(148,163,184,0.8);padding:5px 12px;border-radius:6px;font-size:10px;z-index:9999;border:1px solid rgba(255,255,255,0.05);">Last Updated: ${lastUpdated}</div>`);
+                    let email = emailInput.value.trim().toLowerCase();
+                    const password = passwordInput.value;
+
+                    try {
+                        if (selectedRole === 'student') {
+                            // Normalize Student ID -> roll_no@student.suffah.school
+                            if (!email.includes('@')) {
+                                email = `${email}@student.suffah.school`;
+                            }
+                        } else if (selectedRole === 'teacher' || selectedRole === 'accountant') {
+                            // For Teachers and Accountants, check if input is Employee ID
+                            if (!email.includes('@')) {
+                                const domain = selectedRole === 'teacher' ? 'teacher.suffah.school' : 'staff.suffah.school';
+                                email = `${email}@${domain}`;
+                            }
+                        }
+
+                        console.log(`Checking identity for: ${email}`);
+
+                        const { data, error } = await supabase.auth.signInWithPassword({
+                            email,
+                            password
+                        });
+
+                        if (error) throw error;
+
+                        if (data.user) {
+                            const userRole = data.user.user_metadata?.role;
+                            console.log('Login successful, verifying role:', userRole);
+
+                            // Cross-check table for extra security (except admin)
+                            if (selectedRole !== 'admin') {
+                                let table = '';
+                                if (selectedRole === 'student') table = 'students';
+                                else if (selectedRole === 'teacher') table = 'teachers';
+                                else if (selectedRole === 'accountant') table = 'staff';
+
+                                const { data: profile, error: profileError } = await supabase
+                                    .from(table)
+                                    .select('id')
+                                    .eq('auth_id', data.user.id)
+                                    .maybeSingle();
+
+                                if (profileError || !profile) {
+                                    console.warn(`Profile link missing for ${selectedRole}.`);
+                                    await supabase.auth.signOut();
+                                    throw new Error(`Profile match failed. Your account might not be correctly linked as a ${selectedRole}.`);
+                                }
+                            }
+
+                            // Success animation and redirect
+                            successOverlay.classList.remove('hidden', 'pointer-events-none');
+                            void successOverlay.offsetWidth;
+                            successOverlay.classList.remove('opacity-0');
+
+                            setTimeout(() => {
+                                window.location.href = 'dashboard.html';
+                            }, 1500);
+                        } else {
+                            throw new Error('Authentication failed');
+                        }
+
+                    } catch (error) {
+                        console.error('Login error:', error);
+
+                        // Show user-friendly error
+                        let msg = error.message;
+                        if (msg === 'Invalid login credentials') {
+                            msg = selectedRole === 'student'
+                                ? 'Incorrect Student ID or password.'
+                                : 'Incorrect email or password.';
+                        }
+                        if (msg.includes('Failed to fetch')) msg = 'Network error. Please check your internet connection.';
+
+                        errorText.textContent = msg;
+                        errorMessage.classList.remove('hidden');
+
+                        // Shake animation for error
+                        errorMessage.classList.remove('animate-shake');
+                        void errorMessage.offsetWidth; // trigger reflow
+                        errorMessage.classList.add('animate-shake');
+
+                        loginBtn.disabled = false;
+                        loginBtn.innerHTML = originalBtnText;
+                    }
+                });
+            }
+        })();
     </script>
 </body>
 
