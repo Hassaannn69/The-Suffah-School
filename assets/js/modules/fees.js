@@ -331,7 +331,7 @@ async function fetchFees() {
         .from('fees')
         .select(`
             *,
-            students (id, name, roll_no, class, father_cnic)
+            students (id, name, roll_no, class, father_cnic, family_code)
         `)
         .order('issued_at', { ascending: false });
 
@@ -424,8 +424,8 @@ async function fetchFees() {
                             </svg>
                             Receipt
                         </button>
-                        ${student?.father_cnic ? `
-                            <button onclick="window.printParentReceipt('${student.father_cnic}')" 
+                        ${student?.father_cnic || student?.family_code ? `
+                            <button onclick="window.printParentReceipt('${student.father_cnic || ''}', '${student.family_code || ''}')" 
                                 class="text-purple-600 hover:text-purple-900 dark:hover:text-purple-400 font-medium text-[10px] flex items-center bg-purple-50 dark:bg-purple-900/20 px-2 py-0.5 rounded">
                                 Sibling Receipt
                             </button>
@@ -633,9 +633,32 @@ async function handlePayment() {
         if (paymentError) throw paymentError;
 
         toast.success('Payment recorded successfully!');
+
+        // Auto-generate receipt with payment info
+        const paymentInfo = {
+            amountPaid: window.formatCurrency(amount),
+            balance: window.formatCurrency(document.getElementById('paymentBalance').textContent.replace(/[^0-9.]/g, '') - amount),
+            date: new Date(date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '/'),
+            method: method,
+            receiptNo: 'NEW' // Temporary until we get DB ID if needed, or just leave for manual entry if preferred
+        };
+
         closePaymentModal();
         await fetchStats();
         await fetchFees();
+
+        // Prompt for receipt
+        const shouldPrint = await confirmDialog.show({
+            title: 'Payment Successful',
+            message: 'Would you like to print the receipt now?',
+            confirmText: 'Print Receipt',
+            cancelText: 'Later',
+            type: 'info'
+        });
+
+        if (shouldPrint) {
+            await generateReceipt([studentId], false, 'Office Copy', paymentInfo);
+        }
 
         // Refresh history if open
         const historyModal = document.getElementById('historyModal');
@@ -660,14 +683,18 @@ window.printStudentReceipt = async (studentId) => {
     await generateReceipt([studentId]);
 };
 
-window.printParentReceipt = async (fatherCNIC) => {
-    if (!fatherCNIC) return;
+window.printParentReceipt = async (fatherCNIC, familyCode = null) => {
+    if (!fatherCNIC && !familyCode) return;
 
-    // Find all students for this parent
-    const { data: siblings, error } = await supabase
-        .from('students')
-        .select('id')
-        .eq('father_cnic', fatherCNIC);
+    let query = supabase.from('students').select('id');
+
+    if (familyCode) {
+        query = query.eq('family_code', familyCode);
+    } else {
+        query = query.eq('father_cnic', fatherCNIC);
+    }
+
+    const { data: siblings, error } = await query;
 
     if (error) {
         toast.error('Error finding siblings: ' + error.message);
@@ -675,7 +702,7 @@ window.printParentReceipt = async (fatherCNIC) => {
     }
 
     if (!siblings || siblings.length === 0) {
-        toast.error('No students found for this parent');
+        toast.error('No students found for this family');
         return;
     }
 

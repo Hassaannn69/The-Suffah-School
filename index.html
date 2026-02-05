@@ -489,9 +489,9 @@
         console.log('✅ ALL SCRIPTS LOADED SUCCESSFULLY');
         console.log('✅ selectRole function exists:', typeof window.selectRole);
 
-        // DEBUG: Visual confirmation that JS loaded
-        document.body.insertAdjacentHTML('beforeend', '<div id="js-loaded-indicator" style="position:fixed;bottom:10px;right:10px;background:#22c55e;color:white;padding:8px 16px;border-radius:8px;font-size:12px;z-index:9999;">✅ JS Loaded</div>');
-        setTimeout(() => document.getElementById('js-loaded-indicator')?.remove(), 3000);
+        // Update Footer with Last Updated Timestamp
+        const lastUpdated = '05-Feb-2026 17:20 PKT';
+        document.body.insertAdjacentHTML('beforeend', `<div id="last-updated" style="position:fixed;bottom:10px;right:10px;background:rgba(30,41,59,0.5);backdrop-filter:blur(4px);color:rgba(148,163,184,0.8);padding:5px 12px;border-radius:6px;font-size:10px;z-index:9999;border:1px solid rgba(255,255,255,0.05);">Last Updated: ${lastUpdated}</div>`);
     </script>
 </body>
 

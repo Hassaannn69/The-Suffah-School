@@ -1,7 +1,7 @@
 // Fee Receipt Generator Module
 const supabase = window.supabase;
 
-export async function generateReceipt(studentIds, isMultiple = false) {
+export async function generateReceipt(studentIds, isMultiple = false, copyType = 'Office Copy', paymentInfo = null) {
     try {
         // Fetch student and fee data
         const { data: students, error: studentError } = await supabase
@@ -16,27 +16,34 @@ export async function generateReceipt(studentIds, isMultiple = false) {
             return;
         }
 
-        // Group by family (father_cnic)
         const fatherCNIC = students[0].father_cnic;
         const fatherName = students[0].father_name;
         const fatherPhone = students[0].phone || 'N/A';
 
-        // Get current date and due date
-        const issueDate = new Date().toLocaleDateString('en-GB');
-        const dueDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString('en-GB');
+        const issueDate = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '/');
+        const dueDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '/');
+
+        // Fetch payments for ledger history
+        const { data: payments, error: paymentError } = await supabase
+            .from('fee_payments')
+            .select('*')
+            .in('student_id', studentIds)
+            .order('payment_date', { ascending: true }); // Ascending for cumulative calc
 
         // Build receipt HTML
-        const receiptHTML = buildReceiptHTML({
+        const receiptHTML = await buildReceiptHTML({
             fatherName,
             fatherCNIC,
             fatherPhone,
             issueDate,
             dueDate,
-            students
+            students,
+            payments,
+            copyType,
+            paymentInfo // { amountPaid, balance, receiptNo }
         });
 
-        // Open receipt in new window
-        const receiptWindow = window.open('', '_blank', 'width=800,height=1000');
+        const receiptWindow = window.open('', '_blank', 'width=900,height=1200');
         receiptWindow.document.write(receiptHTML);
         receiptWindow.document.close();
     } catch (error) {
@@ -45,44 +52,40 @@ export async function generateReceipt(studentIds, isMultiple = false) {
     }
 }
 
-function buildReceiptHTML({ fatherName, fatherCNIC, fatherPhone, issueDate, dueDate, students }) {
+async function buildReceiptHTML({ fatherName, fatherCNIC, fatherPhone, issueDate, dueDate, students, payments, copyType, paymentInfo }) {
     let studentRows = '';
     let grandTotal = 0;
 
-    students.forEach(student => {
-        const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
-        const unpaidFees = student.fees?.filter(f => f.status !== 'paid') || [];
+    const ledgerRows = buildLedgerRows(students, payments);
 
-        // Find current tuition fee
-        const currentTuition = unpaidFees.find(f => f.fee_type === 'Tuition Fee' && f.month === currentMonth);
-        const otherFees = unpaidFees.filter(f => f !== currentTuition);
+    students.forEach(student => {
+        const currentMonth = new Date().toISOString().slice(0, 7);
+        const unpaidFees = student.fees?.filter(f => f.status !== 'paid') || [];
+        const currentMonthFees = unpaidFees.filter(f => f.month === currentMonth);
+        const arrearsFees = unpaidFees.filter(f => f.month !== currentMonth);
 
         let studentTotal = 0;
         let feeRows = '';
 
-        // 1. Show Current Tuition Fee if exists
-        if (currentTuition) {
-            const actual = Number(currentTuition.final_amount || 0);
-            const disc = Number(currentTuition.discount || 0);
-            const net = actual - disc;
+        currentMonthFees.forEach(fee => {
+            const actual = Number(fee.amount || 0);
+            const disc = Number(fee.discount || 0);
+            const net = Number(fee.final_amount || 0);
             studentTotal += net;
 
             feeRows += `
                 <tr class="fee-row">
-                    <td>Tuition Fee (${currentTuition.month})</td>
+                    <td>${fee.fee_type} (${fee.month})</td>
                     <td class="text-right">${actual.toFixed(0)}</td>
                     <td class="text-right">${disc.toFixed(0)}</td>
                     <td class="text-right">${net.toFixed(0)}</td>
                 </tr>
             `;
-        } else {
-            // If no current tuition, maybe show a placeholder or just Skip
-        }
+        });
 
-        // 2. Group all other unpaid fees as Arrears
-        if (otherFees.length > 0) {
-            const months = [...new Set(otherFees.map(f => f.month))].sort().join(', ');
-            const totalArrears = otherFees.reduce((sum, f) => sum + (Number(f.final_amount) - Number(f.discount || 0)), 0);
+        if (arrearsFees.length > 0) {
+            const months = [...new Set(arrearsFees.map(f => f.month))].sort().join(', ');
+            const totalArrears = arrearsFees.reduce((sum, f) => sum + (Number(f.final_amount) - Number(f.paid_amount || 0)), 0);
             studentTotal += totalArrears;
 
             feeRows += `
@@ -127,6 +130,10 @@ function buildReceiptHTML({ fatherName, fatherCNIC, fatherPhone, issueDate, dueD
 </head>
 <body>
     <div class="print-actions no-print">
+        <select onchange="window.updateCopyType(this.value)" class="copy-select">
+            <option value="Office Copy" ${copyType === 'Office Copy' ? 'selected' : ''}>Office Copy</option>
+            <option value="Student Copy" ${copyType === 'Student Copy' ? 'selected' : ''}>Student Copy</option>
+        </select>
         <button class="print-btn" onclick="window.print()">🖨️ Print Receipt</button>
         <button class="print-btn close-btn" onclick="window.close()">✖ Close</button>
     </div>
@@ -134,7 +141,7 @@ function buildReceiptHTML({ fatherName, fatherCNIC, fatherPhone, issueDate, dueD
     <div id="feeReceipt" class="receipt-container">
         <div class="receipt-header">
             <img src="/assets/images/school-logo.jpg" alt="School Logo" class="receipt-logo" onerror="this.style.display='none'">
-            <div class="office-copy">Office Copy</div>
+            <div class="office-copy" id="copyLabel">${copyType}</div>
             <h1 class="receipt-school-name">THE SUFFAH SCHOOL</h1>
             <p class="receipt-address">Municipal Corporation Colony Dalazak Road Peshawar (0912247371)</p>
             <h2 class="receipt-title">FEE SLIP</h2>
@@ -171,13 +178,59 @@ function buildReceiptHTML({ fatherName, fatherCNIC, fatherPhone, issueDate, dueD
                 </tr>
             </tbody>
         </table>
+
+        <div class="ledger-section">
+            <table class="ledger-table">
+                <thead>
+                    <tr>
+                        <th style="width: 70px;">Fee Month</th>
+                        <th>Arrear</th>
+                        <th>Actual</th>
+                        <th>Disc</th>
+                        <th>T.Fee</th>
+                        <th>O.Fee</th>
+                        <th>Total</th>
+                        <th>Paid</th>
+                        <th>Balance</th>
+                        <th>Rec #</th>
+                        <th style="width: 70px;">Entry Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${ledgerRows}
+                </tbody>
+            </table>
+
+            <div class="payment-summary">
+                <div class="summary-field"><span>Fees Paid:</span> <span>${paymentInfo?.amountPaid || '_______'}</span></div>
+                <div class="summary-field"><span>Balance:</span> <span>${paymentInfo?.balance || '_______'}</span></div>
+                <div class="summary-field"><span>Date:</span> <span>${paymentInfo?.date || issueDate}</span></div>
+                <div class="summary-field"><span>Method:</span> <span>${paymentInfo?.method || 'Cash / Bank / Online'}</span></div>
+                <div class="summary-field"><span>Receipt No:</span> <span>${paymentInfo?.receiptNo || '_______'}</span></div>
+            </div>
+        </div>
+
+        <div class="signature-section">
+            <div>
+                <p class="sig-line">Accountant's Sign</p>
+            </div>
+            <div>
+                <p class="sig-line">Parent Sign</p>
+            </div>
+        </div>
+
+        <div class="footer-note">
+            محترم والدین! فیس جمع کرانے کیلئے یہ رسید لانا لازمی ہے۔ شکریہ
+        </div>
     </div>
 
     <script>
-        // Auto-focus print dialog after load
+        window.updateCopyType = function(val) {
+            document.getElementById('copyLabel').textContent = val;
+        };
+        
         window.onload = function() {
             setTimeout(() => {
-                // Uncomment to auto-print
                 // window.print();
             }, 500);
         };
@@ -187,43 +240,143 @@ function buildReceiptHTML({ fatherName, fatherCNIC, fatherPhone, issueDate, dueD
     `;
 }
 
+function buildLedgerRows(students, payments) {
+    const allFees = [];
+    students.forEach(s => {
+        if (s.fees) allFees.push(...s.fees);
+    });
+
+    // Group by month
+    const monthsMap = {};
+    allFees.forEach(fee => {
+        if (!monthsMap[fee.month]) {
+            monthsMap[fee.month] = {
+                month: fee.month,
+                actual: 0,
+                disc: 0,
+                tuition: 0,
+                others: 0,
+                paid: 0,
+                total: 0
+            };
+        }
+        const m = monthsMap[fee.month];
+        m.actual += Number(fee.amount || 0);
+        m.disc += Number(fee.discount || 0);
+        if (fee.fee_type === 'Tuition Fee') m.tuition += Number(fee.amount || 0);
+        else m.others += Number(fee.amount || 0);
+        m.paid += Number(fee.paid_amount || 0);
+        m.total = m.actual - m.disc;
+    });
+
+    // Sort months ascending for cumulative calculation
+    const allMonths = Object.keys(monthsMap).sort();
+
+    let cumulativeArrears = 0;
+    const processedRows = [];
+
+    allMonths.forEach(month => {
+        const data = monthsMap[month];
+        const monthBalance = data.total - data.paid;
+
+        const monthPayment = payments.find(p => p.payment_date.startsWith(month));
+        const recNo = monthPayment ? monthPayment.id.toString().slice(-4) : '-';
+        const entryDate = monthPayment ? new Date(monthPayment.payment_date).toLocaleDateString('en-GB') : '-';
+
+        processedRows.push({
+            month,
+            arrear: cumulativeArrears,
+            actual: data.actual,
+            disc: data.disc,
+            tuition: data.tuition,
+            others: data.others,
+            total: data.total,
+            paid: data.paid,
+            balance: monthBalance,
+            recNo,
+            entryDate
+        });
+
+        // Carry forward the balance to next month's arrears
+        cumulativeArrears += monthBalance;
+    });
+
+    // Take the last 12 months for the display, reversed (newest first)
+    const displayRows = processedRows.reverse().slice(0, 12);
+
+    let html = displayRows.map(row => `
+        <tr>
+            <td>${row.month}</td>
+            <td>${row.arrear.toFixed(0)}</td>
+            <td>${row.actual.toFixed(0)}</td>
+            <td>${row.disc.toFixed(0)}</td>
+            <td>${row.tuition.toFixed(0)}</td>
+            <td>${row.others.toFixed(0)}</td>
+            <td>${row.total.toFixed(0)}</td>
+            <td>${row.paid.toFixed(0)}</td>
+            <td>${row.balance.toFixed(0)}</td>
+            <td>${row.recNo}</td>
+            <td>${row.entryDate}</td>
+        </tr>
+    `).join('');
+
+    // Add empty rows up to 6
+    for (let i = displayRows.length; i < 6; i++) {
+        html += `<tr>${'<td>&nbsp;</td>'.repeat(11)}</tr>`;
+    }
+
+    return html;
+}
+
 function getInlineStyles() {
     return `
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: Arial, sans-serif; background: #f5f5f5; }
-        .receipt-container { max-width: 210mm; margin: 20px auto; padding: 20px; background: white; color: #000; }
-        .receipt-header { text-align: center; border-bottom: 3px solid #000; padding-bottom: 10px; margin-bottom: 15px; position: relative; }
-        .receipt-logo { width: 80px; height: 80px; position: absolute; left: 0; top: 0; }
-        .receipt-school-name { font-size: 28px; font-weight: bold; margin: 0; letter-spacing: 2px; }
-        .receipt-address { font-size: 12px; margin: 5px 0; }
-        .receipt-title { font-size: 18px; font-weight: bold; margin: 10px 0; text-decoration: underline; }
-        .office-copy { position: absolute; right: 0; top: 0; background: #000; color: #fff; padding: 5px 15px; font-size: 14px; font-weight: bold; }
-        .receipt-meta { border: 2px solid #000; padding: 10px; margin-bottom: 15px; }
-        .meta-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 8px; font-size: 13px; }
+        body { font-family: Arial, sans-serif; background: #fff; color: #000; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .receipt-container { width: 100%; max-width: 210mm; margin: 0 auto; padding: 8mm; background: white; }
+        .receipt-header { text-align: center; border-bottom: 3px solid #000; padding-bottom: 5px; margin-bottom: 10px; position: relative; }
+        .receipt-logo { width: 60px; height: 60px; position: absolute; left: 0; top: 0; }
+        .receipt-school-name { font-size: 24px; font-weight: bold; margin: 0; letter-spacing: 1px; }
+        .receipt-address { font-size: 11px; margin: 2px 0; }
+        .receipt-title { font-size: 16px; font-weight: bold; margin: 5px 0; text-decoration: underline; }
+        .office-copy { position: absolute; right: 0; top: 0; background: #000; color: #fff; padding: 3px 10px; font-size: 12px; font-weight: bold; }
+        .receipt-meta { border: 2px solid #000; padding: 5px; margin-bottom: 10px; }
+        .meta-row { display: grid; grid-template-columns: 1.5fr 1fr; gap: 10px; margin-bottom: 4px; font-size: 12px; }
         .meta-label { font-weight: bold; }
-        .receipt-table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
-        .receipt-table th { background: #e0e0e0; border: 2px solid #000; padding: 8px; text-align: center; font-size: 14px; font-weight: bold; }
-        .receipt-table td { border: 1px solid #000; padding: 6px 8px; font-size: 13px; }
-        .student-header { background: #f5f5f5; font-weight: bold; border: 2px solid #000 !important; }
-        .fee-row td { padding-left: 20px; }
-        .total-row { font-weight: bold; font-size: 14px; }
-        .grand-total-row { background: #f0f0f0; font-weight: bold; font-size: 16px; }
+        .receipt-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+        .receipt-table th { background: #e0e0e0 !important; border: 2px solid #000; padding: 5px; text-align: center; font-size: 13px; font-weight: bold; }
+        .receipt-table td { border: 1px solid #000; padding: 4px 6px; font-size: 12px; }
+        .student-header { background: #f0f0f0 !important; font-weight: bold; border: 2px solid #000 !important; }
+        .fee-row td { padding-left: 15px; }
+        .total-row { font-weight: bold; font-size: 13px; }
+        .grand-total-row { background: #e0e0e0 !important; font-weight: bold; font-size: 14px; }
+        
+        /* Ledger Styles */
+        .ledger-section { margin-top: 5px; display: flex; gap: 10px; align-items: flex-start; }
+        .ledger-table { flex: 1; border-collapse: collapse; font-size: 9px; line-height: 1.2; }
+        .ledger-table th, .ledger-table td { border: 1px solid #000; padding: 2px 4px; text-align: center; height: 16px; }
+        .ledger-table th { background: #f0f0f0 !important; }
+        
+        .payment-summary { width: 220px; font-size: 11px; display: flex; flex-direction: column; gap: 4px; }
+        .summary-field { border-bottom: 1px solid #000; padding-bottom: 1px; display: flex; justify-content: space-between; font-weight: bold; }
+        
+        .signature-section { margin-top: 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 40px; }
+        .sig-line { border-top: 1px solid #000; padding-top: 3px; width: 180px; margin-left: auto; font-size: 11px; font-weight: bold; text-align: center; }
+        .footer-note { text-align: center; margin-top: 10px; font-size: 13px; direction: rtl; font-family: serif; }
+        
         .text-right { text-align: right; }
-        .text-center { text-align: center; }
-        .print-actions { text-align: center; margin: 20px 0; padding: 20px; }
-        .print-btn { background: #4CAF50; color: white; border: none; padding: 12px 30px; font-size: 16px; border-radius: 5px; cursor: pointer; margin: 0 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
-        .print-btn:hover { background: #45a049; }
-        .close-btn { background: #f44336; }
-        .close-btn:hover { background: #da190b; }
+        .no-print { display: none !important; }
+        .print-actions { text-align: center; padding: 10px; background: #eee; border-bottom: 1px solid #ccc; position: fixed; top: 0; left: 0; width: 100%; z-index: 9999; }
+        .copy-select { padding: 8px; border-radius: 4px; border: 1px solid #ccc; font-size: 14px; margin-right: 10px; }
+        .print-btn { background: #4CAF50; color: white; border: none; padding: 10px 20px; font-size: 14px; border-radius: 4px; cursor: pointer; }
+        .close-btn { background: #f44336; margin-left: 5px; }
+        
         @media print {
-            body * { visibility: hidden; }
-            #feeReceipt, #feeReceipt * { visibility: visible; }
-            #feeReceipt { position: absolute; left: 0; top: 0; width: 100%; }
-            .no-print { display: none !important; }
+            .print-actions { display: none !important; }
+            body { background: #fff; margin: 0; padding: 0; }
+            .receipt-container { margin: 0; padding: 5mm; border: none; }
         }
-        @page { size: A4; margin: 15mm; }
+        @page { size: A4; margin: 0; }
     `;
 }
 
-// Export for use in fees module
 window.generateFeeReceipt = generateReceipt;

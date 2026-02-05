@@ -278,7 +278,7 @@ async function loadModule(moduleId) {
                 actualModuleId = 'student-dashboard';
             }
 
-            const APP_VERSION = '1.0.1'; // Increment this when modules change
+            const APP_VERSION = '1.0.2'; // Increment this when modules change
             const module = await import(`./modules/${actualModuleId}.js?v=${APP_VERSION}`);
             if (module && module.render) {
                 await module.render(mainContent);

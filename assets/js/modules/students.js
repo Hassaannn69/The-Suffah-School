@@ -63,7 +63,16 @@ export async function render(container) {
                                 </svg>
                                 <div>
                                     <div class="font-medium text-gray-900 dark:text-white">Fix Class Names</div>
-                                    <div class="text-xs text-gray-500 dark:text-gray-400">Normalize class names (e.g. 7 -> Class 7)</div>
+                                    <div class="text-xs text-gray-500 dark:text-gray-400">Normalize class names</div>
+                                </div>
+                            </button>
+                            <button id="syncPortals" class="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center transition-colors border-t border-gray-100 dark:border-gray-700 group">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3 text-purple-500 dark:text-purple-400 group-hover:text-purple-600 dark:group-hover:text-purple-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                </svg>
+                                <div>
+                                    <div class="font-medium text-gray-900 dark:text-white">Sync All to Portal</div>
+                                    <div class="text-xs text-gray-500 dark:text-gray-400">Create login for all students</div>
                                 </div>
                             </button>
                         </div>
@@ -672,6 +681,12 @@ export async function render(container) {
                                         </svg>
                                         Reset to DOB Password (Admin)
                                     </button>
+                                    <button id="syncSinglePortalBtn" class="w-full flex items-center justify-center px-4 py-2.5 bg-indigo-900/40 border border-indigo-700/50 hover:bg-indigo-800/60 text-indigo-300 hover:text-white rounded-lg transition-colors font-medium text-sm">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                                        </svg>
+                                        Sync Access Now
+                                    </button>
                                     <p class="text-xs text-gray-500 mt-2">
                                         <span class="font-semibold">Note:</span> Default password is your date of birth in DDMMYYYY format.
                                     </p>
@@ -773,6 +788,12 @@ export async function render(container) {
         await fixClassNames();
     });
 
+    // Sync Portals button
+    addEvent('syncPortals', 'click', async () => {
+        if (dropdownMenu) dropdownMenu.classList.add('hidden');
+        await syncAllPortals();
+    });
+
     addEvent('closeBulkModalBtn', 'click', closeBulkModal);
     addEvent('cancelBulkBtn', 'click', closeBulkModal);
     addEvent('downloadTemplateBtn', 'click', downloadTemplate);
@@ -815,6 +836,7 @@ export async function render(container) {
     addEvent('cancelChangePasswordBtn', 'click', closeChangePasswordModal);
     addEvent('changePasswordForm', 'submit', handleChangePassword);
     addEvent('resetPasswordBtn', 'click', handleResetPassword);
+    addEvent('syncSinglePortalBtn', 'click', handleSyncSinglePortal);
 
     // CNIC Auto-formatting
     addEvent('father_cnic', 'input', formatCNICInput);
@@ -2355,5 +2377,100 @@ async function fixClassNames() {
         if (window.loadingOverlay) window.loadingOverlay.hide();
         if (window.toast) window.toast.error('Failed to fix class names');
         else alert('Failed to fix class names');
+    }
+}
+
+// ========== PORTAL SYNC SYSTEM ==========
+async function syncAllPortals() {
+    if (!confirm('This will create portal login access for all students. It may take a while if you have many students. Continue?')) {
+        return;
+    }
+
+    if (window.loadingOverlay) window.loadingOverlay.show('Syncing Student Portals...');
+
+    try {
+        const { data: students, error } = await supabase.from('students').select('name, roll_no, date_of_birth, email');
+        if (error) throw error;
+
+        let successCount = 0;
+        let skipCount = 0;
+        let errorCount = 0;
+
+        for (const student of students) {
+            const dob = student.date_of_birth;
+            if (!dob) {
+                skipCount++;
+                continue;
+            }
+
+            // Ensure we use the standardized email format for Auth
+            // Even if the database email is just a roll number or is empty
+            let authEmail = student.email;
+            if (!authEmail || !authEmail.includes('@')) {
+                authEmail = `${student.roll_no}@student.suffah.school`;
+            }
+
+            const password = generatePasswordFromDOB(dob);
+
+            try {
+                // We pass the normalized email to createAuthUser
+                const result = await createAuthUser(authEmail, password, student.name);
+                if (result) successCount++;
+                else skipCount++;
+            } catch (err) {
+                if (err.message.includes('already registered') || err.message.includes('email_exists')) {
+                    skipCount++;
+                } else {
+                    console.error(`Error syncing ${student.roll_no}:`, err);
+                    errorCount++;
+                }
+            }
+        }
+
+        if (window.loadingOverlay) window.loadingOverlay.hide();
+        alert(`Portal Sync Complete!\n\nEnabled Access for: ${successCount} students\nAlready Enabled: ${skipCount}\nErrors: ${errorCount}`);
+
+    } catch (error) {
+        console.error('Sync error:', error);
+        if (window.loadingOverlay) window.loadingOverlay.hide();
+        alert('Sync failed: ' + error.message);
+    }
+}
+
+async function handleSyncSinglePortal() {
+    const studentId = document.getElementById('profileStudentId').value;
+    const student = currentStudents.find(s => s.id === studentId);
+
+    if (!student) return;
+    if (!student.date_of_birth) {
+        alert('Date of Birth is required to enable portal access.');
+        return;
+    }
+
+    const btn = document.getElementById('syncSinglePortalBtn');
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = 'Syncing...';
+
+    // Ensure normalized email format for Auth
+    let authEmail = student.email;
+    if (!authEmail || !authEmail.includes('@')) {
+        authEmail = `${student.roll_no}@student.suffah.school`;
+    }
+
+    const password = generatePasswordFromDOB(student.date_of_birth);
+
+    try {
+        await createAuthUser(authEmail, password, student.name);
+        alert(`Portal access enabled successfully!\n\nEmail/ID: ${student.roll_no}\nPassword: ${password}\n\nNote: Student can login using their Roll Number.`);
+    } catch (error) {
+        if (error.message.includes('already registered') || error.message.includes('email_exists')) {
+            alert('This student already has portal access enabled.');
+        } else {
+            alert('Sync failed: ' + error.message);
+        }
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
     }
 }

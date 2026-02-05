@@ -39,6 +39,19 @@ export async function render(container) {
                                 <option value="family">Specific Family</option>
                             </select>
                         </div>
+
+                        <!-- Fee Assignment Mode -->
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Fee Assignment Mode
+                            </label>
+                            <select id="feeAssignmentMode" 
+                                class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                                <option value="both">Both (Class Structure + Manual Fee)</option>
+                                <option value="structure">Only Class Fee Structure</option>
+                                <option value="manual">Only Manual / Custom Fee</option>
+                            </select>
+                        </div>
                     </div>
 
                     <!-- Class Selection (Hidden by default) -->
@@ -78,18 +91,32 @@ export async function render(container) {
                         <div id="familyMembersDisplay" class="mt-2 hidden"></div>
                     </div>
 
-                    <!-- Manual Fee Amount (for students without class fee structure) -->
-                    <div class="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                    <!-- Manual Fee Amount -->
+                    <div id="manualFeeContainer" class="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
                         <label class="block text-sm font-medium text-yellow-800 dark:text-yellow-200 mb-2">
-                            Manual Fee Amount (for classes without fee structure)
+                            Manual / Custom Fee Details
                         </label>
-                        <div class="flex items-center space-x-4">
-                            <input type="text" id="manualFeeType" placeholder="Fee Type (e.g., Tuition Fee)" 
-                                class="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
-                            <input type="number" id="manualFeeAmount" placeholder="Amount" min="0" step="0.01"
-                                class="w-32 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <select id="manualFeeTypeSelect" 
+                                    class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                                    <option value="Fine">Fine</option>
+                                    <option value="Admission Fee">Admission Fee</option>
+                                    <option value="Tuition Fee">Tuition Fee</option>
+                                    <option value="Annual Fee">Annual Fee</option>
+                                    <option value="custom">Custom (Type below)</option>
+                                </select>
+                            </div>
+                            <div id="customFeeNameContainer" class="hidden">
+                                <input type="text" id="manualFeeType" placeholder="Enter Custom Fee Name" 
+                                    class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                            </div>
+                            <div>
+                                <input type="number" id="manualFeeAmount" placeholder="Amount" min="0" step="0.01"
+                                    class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                            </div>
                         </div>
-                        <p class="text-xs text-yellow-600 dark:text-yellow-400 mt-1">Use this for students whose class doesn't have a fee structure defined</p>
+                        <p class="text-xs text-yellow-600 dark:text-yellow-400 mt-2">Values entered here will be applied based on the "Fee Assignment Mode" selected above.</p>
                     </div>
 
                     <!-- Regenerate Option -->
@@ -165,6 +192,26 @@ export async function render(container) {
 
     // Family search listener
     document.getElementById('searchFamilyBtn').addEventListener('click', handleFamilySearch);
+
+    // Manual fee type toggle
+    document.getElementById('manualFeeTypeSelect').addEventListener('change', (e) => {
+        const container = document.getElementById('customFeeNameContainer');
+        if (e.target.value === 'custom') {
+            container.classList.remove('hidden');
+        } else {
+            container.classList.add('hidden');
+        }
+    });
+
+    // Assignment mode toggle
+    document.getElementById('feeAssignmentMode').addEventListener('change', (e) => {
+        const container = document.getElementById('manualFeeContainer');
+        if (e.target.value === 'structure') {
+            container.classList.add('opacity-50', 'pointer-events-none');
+        } else {
+            container.classList.remove('opacity-50', 'pointer-events-none');
+        }
+    });
 
     // Selection listeners (will be active after preview loads)
     document.getElementById('selectAllBtn').addEventListener('click', () => {
@@ -409,13 +456,17 @@ async function handlePreview() {
     const previewData = students.map(student => {
         let classFees = classFeesMap[student.class] || [];
         const studentExistingFees = studentFeesMap[student.id] || [];
+        const mode = document.getElementById('feeAssignmentMode').value;
+        const feeTypeSelect = document.getElementById('manualFeeTypeSelect').value;
+        const finalManualFeeType = feeTypeSelect === 'custom'
+            ? (document.getElementById('manualFeeType').value.trim() || 'Custom Fee')
+            : feeTypeSelect;
 
         let newFees = [];
         let newTotal = 0;
 
-        // Determine new fees to be generated
-        if (classFees.length > 0) {
-            // Use Class Fee Structure
+        // 1. Class Fee Structure (Only if mode is 'both' or 'structure')
+        if (mode !== 'manual' && classFees.length > 0) {
             classFees.forEach(cf => {
                 const isDuplicate = existingFeeKeys.has(`${student.id}-${cf.fee_types.name}`);
                 if (!isDuplicate) {
@@ -428,12 +479,14 @@ async function handlePreview() {
                     newTotal += Number(cf.amount);
                 }
             });
-        } else if (manualFeeAmount > 0) {
-            // Use Manual Fee
-            const isDuplicate = existingFeeKeys.has(`${student.id}-${manualFeeType}`);
+        }
+
+        // 2. Manual Fee (Only if mode is 'both' or 'manual')
+        if (mode !== 'structure' && manualFeeAmount > 0) {
+            const isDuplicate = existingFeeKeys.has(`${student.id}-${finalManualFeeType}`);
             if (!isDuplicate) {
                 newFees.push({
-                    name: manualFeeType,
+                    name: finalManualFeeType,
                     amount: manualFeeAmount,
                     month: month,
                     type: 'new'
@@ -526,14 +579,22 @@ async function handleGenerate(e) {
     }
 
     // Get selected students from checkboxes
-    const selectedCheckboxes = document.querySelectorAll('.student-checkbox:checked');
-    if (selectedCheckboxes.length === 0) {
-        toast.warning('Please select at least one student');
-        return;
+    let selectedStudentIds = Array.from(document.querySelectorAll('.student-checkbox:checked')).map(cb => cb.dataset.studentId);
+
+    // If no checkboxes (user didn't click preview), but target is student or family, use those
+    if (selectedStudentIds.length === 0) {
+        const target = document.getElementById('generateTarget').value;
+        if (target === 'student' && selectedStudent) {
+            selectedStudentIds = [selectedStudent.id];
+        } else if (target === 'family' && familyStudents.length > 0) {
+            selectedStudentIds = familyStudents.map(s => s.id);
+        }
     }
 
-    // Get selected student IDs
-    const selectedStudentIds = Array.from(selectedCheckboxes).map(cb => cb.dataset.studentId);
+    if (selectedStudentIds.length === 0) {
+        toast.warning('Please select students or find a family/student first');
+        return;
+    }
 
     // Get manual fee info
     const manualFeeType = document.getElementById('manualFeeType').value.trim() || 'Monthly Fee';
@@ -613,21 +674,33 @@ async function handleGenerate(e) {
         const feesToInsert = [];
         let skippedCount = 0;
 
+        // Get mode and manual fee types
+        const mode = document.getElementById('feeAssignmentMode').value;
+        const feeTypeSelect = document.getElementById('manualFeeTypeSelect').value;
+        const finalManualFeeType = feeTypeSelect === 'custom'
+            ? (document.getElementById('manualFeeType').value.trim() || 'Custom Fee')
+            : feeTypeSelect;
+
         for (const student of students) {
             const classFees = classFeesMap[student.class] || [];
             let feesForInitialProcessing = [];
 
-            // Logic: Use Class Fees if available, otherwise check for Manual Fee
-            if (classFees.length > 0) {
-                feesForInitialProcessing = classFees.map(cf => ({
-                    fee_type: cf.fee_types.name,
-                    amount: Number(cf.amount)
-                }));
-            } else if (manualFeeAmount > 0) {
-                feesForInitialProcessing = [{
-                    fee_type: manualFeeType,
+            // 1. Add Class Structure Fees
+            if (mode !== 'manual' && classFees.length > 0) {
+                classFees.forEach(cf => {
+                    feesForInitialProcessing.push({
+                        fee_type: cf.fee_types.name,
+                        amount: Number(cf.amount)
+                    });
+                });
+            }
+
+            // 2. Add Manual Fee
+            if (mode !== 'structure' && manualFeeAmount > 0) {
+                feesForInitialProcessing.push({
+                    fee_type: finalManualFeeType,
                     amount: manualFeeAmount
-                }];
+                });
             }
 
             if (feesForInitialProcessing.length === 0) {
