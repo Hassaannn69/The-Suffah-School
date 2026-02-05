@@ -4,6 +4,9 @@ const supabase = window.supabase || (() => {
     throw new Error('Supabase client not initialized');
 })();
 
+// Import receipt generator
+import { generateReceipt } from './receipt-generator.js';
+
 export async function render(container) {
     container.innerHTML = `
         <div class="space-y-6">
@@ -221,11 +224,19 @@ export async function render(container) {
                         <h3 class="text-lg font-bold text-gray-800 dark:text-white">Fee History</h3>
                         <p id="historyStudentName" class="text-sm text-gray-500 dark:text-gray-400">-</p>
                     </div>
-                    <button id="closeHistoryModal" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </button>
+                    <div class="flex items-center gap-3">
+                        <button id="printHistoryReceipt" class="flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                            </svg>
+                            Print Slip
+                        </button>
+                        <button id="closeHistoryModal" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
                 </div>
                 <div class="p-6 overflow-y-auto flex-1">
                     <div class="overflow-x-auto">
@@ -320,7 +331,7 @@ async function fetchFees() {
         .from('fees')
         .select(`
             *,
-            students (id, name, roll_no, class)
+            students (id, name, roll_no, class, father_cnic)
         `)
         .order('issued_at', { ascending: false });
 
@@ -404,8 +415,23 @@ async function fetchFees() {
                         ${balance <= 0 ? 'PAID' : (group.paid > 0 ? 'PARTIAL' : 'UNPAID')}
                     </span>
                 </td>
-                <td class="p-4 text-right flex items-center justify-end space-x-3">
-                    <button onclick="window.viewFeeHistory('${student?.id}', '${student?.name?.replace(/'/g, "\\'")}')" 
+                <td class="p-4 text-right flex items-center justify-end space-x-2">
+                    <div class="flex flex-col items-end gap-1">
+                        <button onclick="window.printStudentReceipt('${student?.id}')" 
+                            class="text-blue-600 hover:text-blue-900 dark:hover:text-blue-400 font-medium text-xs flex items-center bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                            </svg>
+                            Receipt
+                        </button>
+                        ${student?.father_cnic ? `
+                            <button onclick="window.printParentReceipt('${student.father_cnic}')" 
+                                class="text-purple-600 hover:text-purple-900 dark:hover:text-purple-400 font-medium text-[10px] flex items-center bg-purple-50 dark:bg-purple-900/20 px-2 py-0.5 rounded">
+                                Sibling Receipt
+                            </button>
+                        ` : ''}
+                    </div>
+                    <button onclick="window.viewFeeHistory('${student?.id}', '${student?.name?.replace(/'/g, "\\\\'")}')" 
                         class="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 font-medium text-sm flex items-center">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -413,7 +439,7 @@ async function fetchFees() {
                         History
                     </button>
                     ${balance > 0 ? `
-                        <button onclick="window.viewFeeHistory('${student?.id}', '${student?.name?.replace(/'/g, "\\'")}')" 
+                        <button onclick="window.viewFeeHistory('${student?.id}', '${student?.name?.replace(/'/g, "\\\\'")}')" 
                             class="text-indigo-600 hover:text-indigo-900 dark:hover:text-indigo-400 font-medium text-sm flex items-center">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm-5-1a2 2 0 11-4 0 2 2 0 014 0z" />
@@ -463,6 +489,10 @@ window.viewFeeHistory = async (studentId, studentName) => {
 
     nameEl.textContent = studentName;
     tbody.innerHTML = '<tr><td colspan="6" class="py-8 text-center text-gray-500">Loading history...</td></tr>';
+
+    // Set up print button
+    const printBtn = document.getElementById('printHistoryReceipt');
+    printBtn.onclick = () => window.printStudentReceipt(studentId);
 
     // Move modal to body
     if (modal.parentElement !== document.body) {
@@ -623,6 +653,35 @@ async function handlePayment() {
         btn.textContent = originalText;
     }
 }
+
+// Print Handlers
+window.printStudentReceipt = async (studentId) => {
+    if (!studentId) return;
+    await generateReceipt([studentId]);
+};
+
+window.printParentReceipt = async (fatherCNIC) => {
+    if (!fatherCNIC) return;
+
+    // Find all students for this parent
+    const { data: siblings, error } = await supabase
+        .from('students')
+        .select('id')
+        .eq('father_cnic', fatherCNIC);
+
+    if (error) {
+        toast.error('Error finding siblings: ' + error.message);
+        return;
+    }
+
+    if (!siblings || siblings.length === 0) {
+        toast.error('No students found for this parent');
+        return;
+    }
+
+    const ids = siblings.map(s => s.id);
+    await generateReceipt(ids, true);
+};
 
 function debounce(func, wait) {
     let timeout;
