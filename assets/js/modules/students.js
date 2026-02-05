@@ -1363,7 +1363,8 @@ async function openModal(student = null) {
 
         rollNoInput.value = student.roll_no;
         rollNoInput.readOnly = true; // Roll no shouldn't change usually
-        rollNoInput.classList.add('bg-gray-100', 'text-gray-900');
+        rollNoInput.classList.remove('bg-gray-100', 'text-gray-900');
+        rollNoInput.classList.add('bg-gray-800/50', 'text-gray-400', 'border-gray-700/50');
 
         document.getElementById('class').value = student.class;
 
@@ -1390,7 +1391,8 @@ async function openModal(student = null) {
         // Roll number will be auto-generated when class is selected
         rollNoInput.value = 'Select class first...';
         rollNoInput.readOnly = true;
-        rollNoInput.classList.add('bg-gray-100', 'text-gray-900');
+        rollNoInput.classList.remove('bg-gray-100', 'text-gray-900');
+        rollNoInput.classList.add('bg-gray-800/50', 'text-gray-400', 'border-gray-700/50');
     }
 }
 
