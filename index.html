@@ -401,19 +401,15 @@
 
                     // Role-based authentication check
                     if (selectedRole === 'student') {
-                        // Extract the original Student ID from email input (before conversion)
                         const originalInput = emailInput.value.trim();
 
-                        // Verify the user is actually a student in the database
-                        // Check by email OR by roll_no (to support both old and new records)
-                        // Use ilike for roll_no to be case-insensitive
-                        console.log(`Verifying student: Email='${email}' OR RollNo (ilike)='${originalInput}'`);
+                        console.log(`Verifying student: Email='${email}' OR RollNo='${originalInput}'`);
 
                         const { data: studentData, error: studentError } = await window.supabase
                             .from('students')
                             .select('id, name, roll_no, email')
-                            .or(`email.eq.${email},roll_no.ilike.${originalInput}`)
-                            .single();
+                            .or(`email.eq."${email}",roll_no.eq."${originalInput}"`)
+                            .maybeSingle();
 
                         if (studentError || !studentData) {
                             // User authenticated but is not a student
