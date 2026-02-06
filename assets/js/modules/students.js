@@ -984,40 +984,52 @@ window.viewProfile = async (id) => {
         return;
     }
 
-    const content = modal.querySelector('.max-w-4xl') || modal.querySelector('div');
+    // Move modal to body to break out of dashboard layout
+    if (modal.parentElement !== document.body) {
+        document.body.appendChild(modal);
+    }
+
+    const content = modal.querySelector('.bg-gray-900.rounded-xl') || modal.querySelector('div.bg-gray-900');
 
     modal.classList.remove('hidden');
     modal.classList.add('flex');
 
-    // Animate In
-    void modal.offsetWidth; // Trigger reflow
-    if (content) {
-        content.classList.remove('opacity-0', 'scale-95', 'translate-y-4');
-        content.classList.add('opacity-100', 'scale-100', 'translate-y-0');
-    }
-
     // Reset Tabs to Personal Info
-    const tabBtns = modal.querySelectorAll('.tab-btn');
-    tabBtns.forEach(b => {
-        b.classList.remove('active-tab', 'border-primary-500', 'text-primary-400', 'border-indigo-500', 'text-indigo-600');
-        b.classList.add('border-transparent', 'text-gray-400');
-    });
+    try {
+        const tabBtns = modal.querySelectorAll('.tab-btn');
+        tabBtns.forEach(b => {
+            b.classList.remove('active-tab', 'border-primary-500', 'text-primary-400', 'border-indigo-500', 'text-indigo-600');
+            b.classList.add('border-transparent', 'text-gray-400');
+        });
 
-    const personalTabBtn = modal.querySelector('.tab-btn[data-tab="personal"]');
-    if (personalTabBtn) {
-        personalTabBtn.classList.add('active-tab', 'border-primary-500', 'text-primary-400');
-        personalTabBtn.classList.remove('border-transparent', 'text-gray-400');
+        const personalTabBtn = modal.querySelector('.tab-btn[data-tab="personal"]');
+        if (personalTabBtn) {
+            personalTabBtn.classList.add('active-tab', 'border-primary-500', 'text-primary-400');
+            personalTabBtn.classList.remove('border-transparent', 'text-gray-400');
+        }
+
+        modal.querySelectorAll('.tab-content').forEach(c => {
+            c.classList.add('hidden');
+            c.classList.remove('block');
+        });
+        const personalTab = modal.querySelector('#tab-personal');
+        if (personalTab) {
+            personalTab.classList.remove('hidden');
+            personalTab.classList.add('block');
+        }
+    } catch (err) {
+        console.warn('Error resetting profile tabs:', err);
     }
 
-    modal.querySelectorAll('.tab-content').forEach(c => {
-        c.classList.add('hidden');
-        c.classList.remove('block');
-    });
-    const personalTab = modal.querySelector('#tab-personal');
-    if (personalTab) {
-        personalTab.classList.remove('hidden');
-        personalTab.classList.add('block');
-    }
+    // Animate In with tiny timeout to ensure display change reflects
+    setTimeout(() => {
+        if (content) {
+            content.classList.remove('opacity-0', 'scale-95', 'translate-y-4');
+            content.classList.add('opacity-100', 'scale-100', 'translate-y-0');
+        } else {
+            console.error('Profile modal content div not found');
+        }
+    }, 10);
 
     // Safe Population Helpers
     const setContent = (id, text) => {
@@ -1409,10 +1421,11 @@ async function openModal(student = null) {
     modal.classList.remove('hidden');
     modal.classList.add('flex');
 
-    // Animate In
-    void modal.offsetWidth;
-    content.classList.remove('opacity-0', 'scale-95', 'translate-y-4');
-    content.classList.add('opacity-100', 'scale-100', 'translate-y-0');
+    // Animate In with tiny timeout to ensure display change reflects
+    setTimeout(() => {
+        content.classList.remove('opacity-0', 'scale-95', 'translate-y-4');
+        content.classList.add('opacity-100', 'scale-100', 'translate-y-0');
+    }, 10);
 
     // Load classes into dropdown
     await loadClassesIntoDropdown();
@@ -2003,10 +2016,11 @@ function showCredentialsModal(studentId, password) {
     modal.classList.remove('hidden');
     modal.classList.add('flex');
 
-    // Animate In
-    void modal.offsetWidth;
-    content.classList.remove('opacity-0', 'scale-95', 'translate-y-4');
-    content.classList.add('opacity-100', 'scale-100', 'translate-y-0');
+    // Animate In with tiny timeout to ensure display change reflects
+    setTimeout(() => {
+        content.classList.remove('opacity-0', 'scale-95', 'translate-y-4');
+        content.classList.add('opacity-100', 'scale-100', 'translate-y-0');
+    }, 10);
 }
 
 function handleSearch(e) {
@@ -2036,21 +2050,11 @@ function openBulkModal() {
     modal.classList.remove('hidden');
     modal.classList.add('flex');
 
-    // Animate In
-    void modal.offsetWidth;
-    // Note: I need to make sure I select the correct child. 
-    // In openBulkModal, I'll use modal.children[0] or querySelector.
-    // The previous replacement used modal.querySelector('div') which finds the first div descendant.
-    // The first div descendant IS the content card.
-
-    // However, for bulk modal, there might be other divs?
-    // HTML: <div id="bulkUploadModal"> <!-- comment --> <div class="bg-white...">
-    // querySelector('div') will find the bg-white div. Correct.
-
-    const innerContent = modal.querySelector('.bg-white'); // More specific
-
-    innerContent.classList.remove('opacity-0', 'scale-95', 'translate-y-4');
-    innerContent.classList.add('opacity-100', 'scale-100', 'translate-y-0');
+    // Animate In with tiny timeout to ensure display change reflects
+    setTimeout(() => {
+        innerContent.classList.remove('opacity-0', 'scale-95', 'translate-y-4');
+        innerContent.classList.add('opacity-100', 'scale-100', 'translate-y-0');
+    }, 10);
 
     // Reset state
     parsedStudents = [];

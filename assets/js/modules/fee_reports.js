@@ -178,31 +178,31 @@ function setupFilters(reportId) {
     const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
 
     if (reportId === 'daily_collection') {
-        html += `<input type="date" id="f_date" value="${today}" class="border rounded px-2 py-1 text-sm bg-white dark:bg-gray-700 dark:border-gray-600">`;
+        html += `<input type="date" id="f_date" value="${today}" class="border rounded px-2 py-1 text-sm bg-white dark:bg-gray-700 dark:border-gray-600 text-gray-900 dark:text-white">`;
     }
     else if (reportId === 'monthly_collection' || reportId === 'class_collection') {
-        html += `<input type="month" id="f_month" value="${currentMonth}" class="border rounded px-2 py-1 text-sm bg-white dark:bg-gray-700 dark:border-gray-600">`;
+        html += `<input type="month" id="f_month" value="${currentMonth}" class="border rounded px-2 py-1 text-sm bg-white dark:bg-gray-700 dark:border-gray-600 text-gray-900 dark:text-white">`;
     }
     else if (reportId === 'payment_mode' || reportId === 'custom_filter') {
-        html += `<input type="date" id="f_start" value="${today}" class="border rounded px-2 py-1 text-sm bg-white dark:bg-gray-700 dark:border-gray-600">`;
+        html += `<input type="date" id="f_start" value="${today}" class="border rounded px-2 py-1 text-sm bg-white dark:bg-gray-700 dark:border-gray-600 text-gray-900 dark:text-white">`;
         html += `<span class="text-xs">to</span>`;
-        html += `<input type="date" id="f_end" value="${today}" class="border rounded px-2 py-1 text-sm bg-white dark:bg-gray-700 dark:border-gray-600">`;
+        html += `<input type="date" id="f_end" value="${today}" class="border rounded px-2 py-1 text-sm bg-white dark:bg-gray-700 dark:border-gray-600 text-gray-900 dark:text-white">`;
     }
     else if (reportId === 'fee_type') {
-        html += `<select id="f_feetype" class="border rounded px-2 py-1 text-sm bg-white dark:bg-gray-700 dark:border-gray-600">
-            <option value="">All Fee Types</option>
-            ${feeTypes.map(t => `<option value="${t.name}">${t.name}</option>`).join('')}
+        html += `<select id="f_feetype" class="border rounded px-2 py-1 text-sm bg-white dark:bg-gray-700 dark:border-gray-600 text-gray-900 dark:text-white">
+            <option value="" class="bg-white dark:bg-gray-800">All Fee Types</option>
+            ${feeTypes.map(t => `<option value="${t.name}" class="bg-white dark:bg-gray-800">${t.name}</option>`).join('')}
          </select>`;
-        html += `<input type="month" id="f_month" value="${currentMonth}" class="border rounded px-2 py-1 text-sm bg-white dark:bg-gray-700 dark:border-gray-600">`;
+        html += `<input type="month" id="f_month" value="${currentMonth}" class="border rounded px-2 py-1 text-sm bg-white dark:bg-gray-700 dark:border-gray-600 text-gray-900 dark:text-white">`;
     }
     else if (reportId === 'student_history') {
-        html += `<input type="text" id="f_search" placeholder="Search Student/Roll..." class="border rounded px-2 py-1 text-sm bg-white dark:bg-gray-700 dark:border-gray-600 w-48">`;
+        html += `<input type="text" id="f_search" placeholder="Search Student/Roll..." class="border rounded px-2 py-1 text-sm bg-white dark:bg-gray-700 dark:border-gray-600 w-48 text-gray-900 dark:text-white">`;
     }
 
     if (['outstanding', 'late_payment', 'discounts'].includes(reportId)) {
-        html += `<select id="f_class" class="border rounded px-2 py-1 text-sm bg-white dark:bg-gray-700 dark:border-gray-600">
-            <option value="">All Classes</option>
-            ${Array.from(classRank.keys()).map(c => `<option value="${c}">${c}</option>`).join('')}
+        html += `<select id="f_class" class="border rounded px-2 py-1 text-sm bg-white dark:bg-gray-700 dark:border-gray-600 text-gray-900 dark:text-white">
+            <option value="" class="bg-white dark:bg-gray-800">All Classes</option>
+            ${Array.from(classRank.keys()).map(c => `<option value="${c}" class="bg-white dark:bg-gray-800">${c}</option>`).join('')}
          </select>`;
     }
 

@@ -1,76 +1,149 @@
 // Admin Dashboard Module - Modern FinTech Design
 const supabase = window.supabase;
 
+// Ensure loadModule is accessible for tile clicks
+if (!window.loadModule) {
+    window.loadModule = (moduleName) => {
+        const event = new CustomEvent('navigate', { detail: moduleName });
+        window.dispatchEvent(event);
+    };
+}
+
 export async function render(container) {
     container.innerHTML = `
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
             <!-- Main Content (Left Side) -->
             <div class="lg:col-span-9 space-y-6">
-                <!-- Top Stats Row -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <!-- Total Students with Attendance Gauge -->
-                    <div class="bg-white dark:bg-gray-800/50 backdrop-blur-xl rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700/50 p-6">
-                        <p class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">Total Students</p>
-                        <div class="flex items-center justify-between">
+                <!-- Top Stats Grid (6 Individual Tiles) -->
+                <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-6">
+                    <!-- Tile 1: Total Students (Clickable) -->
+                    <div onclick="window.loadModule('students')" class="bg-white dark:bg-gray-800/50 backdrop-blur-xl rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700/50 p-4 relative overflow-hidden cursor-pointer group hover:border-indigo-500/50 hover:shadow-lg hover:shadow-indigo-500/10 transition-all">
+                        <div class="absolute top-0 right-0 w-20 h-20 bg-indigo-500/5 rounded-full blur-2xl -mr-10 -mt-10 group-hover:bg-indigo-500/10 transition-all"></div>
+                        <p class="text-[9px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1.5">Total Students</p>
+                        <div class="flex items-center justify-between gap-2">
                             <div>
-                                <p class="text-4xl font-black text-gray-900 dark:text-white" id="statTotalStudents">...</p>
-                                <p class="text-xs text-emerald-500 font-semibold mt-1">Today: <span id="attendancePercent">85%</span> Present</p>
+                                <p class="text-2xl font-black text-gray-900 dark:text-white" id="statTotalStudents">...</p>
+                                <p class="text-[9px] font-black text-indigo-500 mt-1 flex items-center gap-1">
+                                    <span id="attendanceCount">0</span> Present
+                                    <svg class="w-2 h-2 group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
+                                </p>
                             </div>
-                            <div class="relative w-20 h-20">
-                                <svg class="w-20 h-20 transform -rotate-90">
-                                    <circle cx="40" cy="40" r="32" stroke="currentColor" stroke-width="6" fill="none" class="text-gray-200 dark:text-gray-700" />
-                                    <circle id="attendanceCircle" cx="40" cy="40" r="32" stroke="currentColor" stroke-width="6" fill="none" class="text-indigo-500 transition-all duration-1000" stroke-dasharray="201" stroke-dashoffset="50" stroke-linecap="round" />
+                            <div class="relative w-12 h-12">
+                                <svg class="w-12 h-12 transform -rotate-90">
+                                    <circle cx="24" cy="24" r="20" stroke="currentColor" stroke-width="4" fill="none" class="text-gray-100 dark:text-gray-800" />
+                                    <circle id="attendanceCircle" cx="24" cy="24" r="20" stroke="currentColor" stroke-width="4" fill="none" class="text-indigo-500 transition-all duration-1000" stroke-dasharray="125.66" stroke-dashoffset="125.66" stroke-linecap="round" />
                                 </svg>
                                 <div class="absolute inset-0 flex items-center justify-center">
-                                    <span class="text-sm font-bold text-indigo-600 dark:text-indigo-400" id="attendanceGaugeText">85%</span>
+                                    <span class="text-[9px] font-black text-gray-900 dark:text-white" id="attendanceGaugeText">0%</span>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Fees Collected -->
-                    <div class="bg-white dark:bg-gray-800/50 backdrop-blur-xl rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700/50 p-6">
-                        <p class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">Fees Collected</p>
-                        <p class="text-4xl font-black text-gray-900 dark:text-white" id="statFeesCollected">...</p>
-                        <div class="mt-2 flex items-center gap-2">
-                            <div class="h-1.5 flex-1 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                                <div id="feeProgressBar" class="h-full bg-gradient-to-r from-emerald-400 to-emerald-600 rounded-full transition-all duration-1000" style="width: 0%"></div>
+                    <!-- Tile 2: Monthly Fees (Current Period) -->
+                    <div class="bg-white dark:bg-gray-800/50 backdrop-blur-xl rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700/50 p-4 relative overflow-hidden group hover:border-indigo-500/30 transition-all">
+                        <div class="absolute top-0 right-0 w-20 h-20 bg-indigo-500/5 rounded-full blur-2xl -mr-10 -mt-10 transition-all"></div>
+                        <p class="text-[9px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2" id="feesPeriodLabel">Monthly Fees</p>
+                        <p class="text-2xl font-black text-gray-900 dark:text-white" id="statFeesCollected">PKR 0</p>
+                        <div class="mt-3 flex items-center gap-2">
+                            <div class="h-1 flex-1 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                                <div id="feeProgressBar" class="h-full bg-gradient-to-r from-indigo-400 to-indigo-600 rounded-full transition-all duration-1000" style="width: 0%"></div>
                             </div>
+                            <span class="text-[9px] font-black text-indigo-600 dark:text-indigo-400" id="feePercentage">0%</span>
                         </div>
-                        <p class="text-xs text-gray-400 mt-1"><span id="feePercentage">0%</span> of target (PKR <span id="statTotalFees">...</span>)</p>
                     </div>
 
-                    <!-- Pending Dues -->
-                    <div class="bg-white dark:bg-gray-800/50 backdrop-blur-xl rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700/50 p-6 relative overflow-hidden">
-                        <div class="absolute top-0 right-0 w-20 h-20 bg-red-500/10 rounded-full blur-2xl -mr-10 -mt-10"></div>
-                        <p class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2 relative z-10">Pending Dues</p>
-                        <p class="text-4xl font-black text-gray-900 dark:text-white relative z-10" id="statPendingFees">...</p>
-                        <div class="mt-2 flex items-center gap-2 relative z-10">
-                            <svg class="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
-                            </svg>
-                            <p class="text-xs text-red-500 font-semibold">Urgent Follow-up</p>
-                        </div>
+                    <!-- Tile 3: Monthly Expenses (Current Period) -->
+                    <div class="bg-white dark:bg-gray-800/50 backdrop-blur-xl rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700/50 p-4 relative overflow-hidden group hover:border-rose-500/30 transition-all">
+                        <div class="absolute top-0 right-0 w-20 h-20 bg-rose-500/5 rounded-full blur-2xl -mr-10 -mt-10 transition-all"></div>
+                        <p class="text-[9px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2" id="expensesPeriodLabel">Monthly Expenses</p>
+                        <p class="text-2xl font-black text-gray-900 dark:text-white" id="statMonthlyExpenses">PKR 0</p>
+                        <p class="text-[9px] text-gray-400 mt-2 flex items-center gap-1">
+                            <svg class="w-2.5 h-2.5 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" /></svg>
+                            Operational Costs
+                        </p>
+                    </div>
+
+                    <!-- Tile 4: Income Today -->
+                    <div class="bg-white dark:bg-gray-800/50 backdrop-blur-xl rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700/50 p-4 relative overflow-hidden group hover:border-emerald-500/30 transition-all">
+                        <div class="absolute top-0 right-0 w-20 h-20 bg-emerald-500/5 rounded-full blur-2xl -mr-10 -mt-10 transition-all"></div>
+                        <p class="text-[9px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Income Today</p>
+                        <p class="text-2xl font-black text-emerald-600 dark:text-emerald-400" id="statCollectedToday">PKR 0</p>
+                        <p class="text-[9px] text-emerald-500/60 mt-2 flex items-center gap-1">
+                            <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18" /></svg>
+                            Direct Cashflow
+                        </p>
+                    </div>
+
+                    <!-- Tile 5: Expense Today -->
+                    <div class="bg-white dark:bg-gray-800/50 backdrop-blur-xl rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700/50 p-4 relative overflow-hidden group hover:border-rose-500/30 transition-all">
+                        <div class="absolute top-0 right-0 w-20 h-20 bg-rose-500/5 rounded-full blur-2xl -mr-10 -mt-10 transition-all"></div>
+                        <p class="text-[9px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Expense Today</p>
+                        <p class="text-2xl font-black text-rose-600 dark:text-rose-400" id="statExpensesToday">PKR 0</p>
+                        <p class="text-[9px] text-rose-500/60 mt-2 flex items-center gap-1">
+                            <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>
+                            Daily Spending
+                        </p>
+                    </div>
+
+                    <!-- Tile 6: Net Today -->
+                    <div class="bg-white dark:bg-gray-800/50 backdrop-blur-xl rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700/50 p-4 relative overflow-hidden group hover:border-indigo-500/30 transition-all">
+                        <div id="netTodayBg" class="absolute top-0 right-0 w-20 h-20 bg-indigo-500/5 rounded-full blur-2xl -mr-10 -mt-10 transition-all"></div>
+                        <p class="text-[9px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Net Today</p>
+                        <p class="text-2xl font-black transition-colors" id="statNetToday">PKR 0</p>
+                        <p class="text-[9px] text-gray-400 mt-2 flex items-center gap-1">
+                            <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+                            Daily Balance
+                        </p>
                     </div>
                 </div>
 
                 <!-- Monthly Revenue Chart -->
                 <div class="bg-white dark:bg-gray-800/50 backdrop-blur-xl rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700/50 p-6">
-                    <div class="flex items-center justify-between mb-6">
-                        <h3 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                            <svg class="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                            </svg>
-                            Profit Margin Analysis
-                        </h3>
-                        <div class="flex items-center gap-4 text-xs">
-                            <div class="flex items-center gap-1.5">
-                                <div class="w-3 h-3 rounded-full bg-indigo-500"></div>
-                                <span class="text-gray-600 dark:text-gray-400">Revenue</span>
+                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                        <div>
+                            <h3 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                <svg class="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                                </svg>
+                                Profit Margin Analysis
+                            </h3>
+                            <div class="flex items-center gap-4 text-[10px] mt-1 ml-7">
+                                <div class="flex items-center gap-1.5">
+                                    <div class="w-2 h-2 rounded-full bg-indigo-500"></div>
+                                    <span class="text-gray-500">Revenue</span>
+                                </div>
+                                <div class="flex items-center gap-1.5">
+                                    <div class="w-2 h-2 rounded-full bg-rose-500"></div>
+                                    <span class="text-gray-500">Expenses</span>
+                                </div>
                             </div>
-                            <div class="flex items-center gap-1.5">
-                                <div class="w-3 h-3 rounded-full bg-rose-500"></div>
-                                <span class="text-gray-600 dark:text-gray-400">Expenses</span>
+                        </div>
+
+                        <!-- Timeframe Filters -->
+                        <div class="flex items-center gap-2 p-1 bg-gray-100 dark:bg-[#0f172a] rounded-xl border border-gray-200 dark:border-gray-800">
+                            <button data-period="daily" class="chart-filter-btn px-4 py-1.5 text-xs font-bold rounded-lg transition-all text-[#E2E8F0] dark:text-[#E2E8F0] hover:text-indigo-600 dark:hover:text-white">Daily</button>
+                            <button data-period="weekly" class="chart-filter-btn px-4 py-1.5 text-xs font-bold rounded-lg transition-all text-[#E2E8F0] dark:text-[#E2E8F0] hover:text-indigo-600 dark:hover:text-white">Weekly</button>
+                            <button data-period="monthly" class="chart-filter-btn px-4 py-1.5 text-xs font-bold rounded-lg transition-all bg-white dark:bg-indigo-600 dark:text-white text-indigo-600 shadow-sm border border-gray-200 dark:border-indigo-500">Monthly</button>
+                            <div class="relative group">
+                                <button id="customRangeTrigger" class="px-4 py-1.5 text-xs font-bold rounded-lg text-[#E2E8F0] dark:text-[#E2E8F0] hover:text-indigo-600 dark:hover:text-white flex items-center gap-1">
+                                    Custom
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                                </button>
+                                <!-- Custom Date Picker (Strict Theme Fix) -->
+                                <div id="customRangePicker" class="hidden absolute right-0 mt-2 p-5 bg-white dark:bg-[#1a1f2e] rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-700/50 z-[100] min-w-[240px] animate-fadeIn">
+                                    <div class="space-y-4">
+                                        <div>
+                                            <label class="block text-[10px] uppercase font-bold text-gray-400 dark:text-[#E2E8F0] mb-2">Start Date</label>
+                                            <input type="date" id="chartStartDate" style="color: #FFFFFF !important; color-scheme: dark !important;" class="w-full px-3 py-2.5 text-xs bg-[#0f172a] border border-gray-700 rounded-xl text-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
+                                        </div>
+                                        <div>
+                                            <label class="block text-[10px] uppercase font-bold text-gray-400 dark:text-[#E2E8F0] mb-2">End Date</label>
+                                            <input type="date" id="chartEndDate" style="color: #FFFFFF !important; color-scheme: dark !important;" class="w-full px-3 py-2.5 text-xs bg-[#0f172a] border border-gray-700 rounded-xl text-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
+                                        </div>
+                                        <button id="applyCustomRange" class="w-full py-3 bg-indigo-600 text-white text-xs font-bold rounded-xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-600/20 active:scale-95">Apply Range</button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -98,10 +171,9 @@ export async function render(container) {
                             <thead>
                                 <tr class="text-left text-[10px] text-gray-400 uppercase tracking-widest border-b border-gray-100 dark:border-gray-700/50">
                                     <th class="pb-3 font-semibold">Student</th>
-                                    <th class="pb-3 font-semibold">Total Fee</th>
-                                    <th class="pb-3 font-semibold">Paid</th>
                                     <th class="pb-3 font-semibold">Balance Due</th>
-                                    <th class="pb-3 font-semibold text-right">Quick Action</th>
+                                    <th class="pb-3 font-semibold text-center">Overdue Days</th>
+                                    <th class="pb-3 font-semibold text-right">Action</th>
                                 </tr>
                             </thead>
                             <tbody id="urgentFollowups" class="divide-y divide-gray-100 dark:divide-gray-700/50">
@@ -227,19 +299,15 @@ export async function render(container) {
     `;
 
     // Load all data
+    // Load stats and charts
+    loadDashboardStats();
+    loadCharts();
     await Promise.all([
-        loadDashboardStats(),
-        loadCharts(),
+        startClock(),
         checkAttendanceSMS(),
         loadUrgentFollowups(),
         loadRecentActivity()
     ]);
-
-    // Setup Realtime Subscription for Activity Feed
-    // This allows the "Automatically update" requirement to be met
-    if (window.activityChannel) {
-        supabase.removeChannel(window.activityChannel);
-    }
 
     window.activityChannel = supabase.channel('dashboard-feed')
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'students' }, (payload) => {
@@ -254,7 +322,83 @@ export async function render(container) {
             loadUrgentFollowups(); // Update arrears
         })
         .subscribe();
+
+    // Chart Timeframe Listeners
+    const filterBtns = document.querySelectorAll('.chart-filter-btn');
+    const customTrigger = document.getElementById('customRangeTrigger');
+    const customPicker = document.getElementById('customRangePicker');
+    const applyCustom = document.getElementById('applyCustomRange');
+
+    filterBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            // Update UI - Force light colors and prevent black text inversion
+            filterBtns.forEach(b => {
+                b.classList.remove('bg-white', 'dark:bg-indigo-600', 'text-indigo-600', 'dark:text-white', 'shadow-sm', 'border', 'dark:border-indigo-500');
+                b.classList.add('text-[#E2E8F0]', 'dark:text-[#E2E8F0]');
+            });
+            btn.classList.remove('text-[#E2E8F0]', 'dark:text-[#E2E8F0]');
+            btn.classList.add('bg-white', 'dark:bg-indigo-600', 'text-indigo-600', 'dark:text-white', 'shadow-sm', 'border', 'border-gray-200', 'dark:border-indigo-500');
+
+            const period = btn.dataset.period;
+            // Isolate chart update - do not refresh global dashboard stats
+            loadCharts(period);
+        });
+    });
+
+    customTrigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        customPicker.classList.toggle('hidden');
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!customPicker.contains(e.target) && e.target !== customTrigger) {
+            customPicker.classList.add('hidden');
+        }
+    });
+
+    applyCustom.addEventListener('click', () => {
+        const start = document.getElementById('chartStartDate').value;
+        const end = document.getElementById('chartEndDate').value;
+        if (start && end) {
+            // Isolate chart update
+            loadCharts('custom', start, end);
+            customPicker.classList.add('hidden');
+            // Remove active style from presets
+            filterBtns.forEach(b => {
+                b.classList.remove('bg-white', 'dark:bg-indigo-600', 'text-indigo-600', 'dark:text-white', 'shadow-sm', 'border');
+                b.classList.add('text-[#E2E8F0]', 'dark:text-[#E2E8F0]');
+            });
+        } else {
+            if (window.toast) window.toast.error('Please select both start and end dates');
+        }
+    });
 };
+
+function startClock() {
+    const timeEl = document.getElementById('currentTime');
+    const dateEl = document.getElementById('currentDate');
+
+    if (!timeEl || !dateEl) return;
+
+    function update() {
+        const now = new Date();
+
+        // Time
+        timeEl.textContent = now.toLocaleTimeString('en-US', {
+            hour12: true,
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        });
+
+        // Date
+        const options = { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' };
+        dateEl.textContent = now.toLocaleDateString('en-US', options);
+    }
+
+    update();
+    setInterval(update, 1000);
+}
 
 async function checkAttendanceSMS() {
     try {
@@ -278,198 +422,463 @@ async function checkAttendanceSMS() {
         console.error('Error checking attendance SMS:', error);
     }
 }
+const getLocalDateStr = (date) => {
+    const d = new Date(date);
+    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+    return d.toISOString().split('T')[0];
+};
 
-async function loadDashboardStats() {
+async function loadDashboardStats(period = 'monthly', customStart = null, customEnd = null) {
     try {
-        const [studentsRes, classesRes, feesRes] = await Promise.all([
-            supabase.from('students').select('id, class'),
-            supabase.from('classes').select('id'),
-            supabase.from('fees').select('final_amount, paid_amount, student_id')
-        ]);
+        const now = new Date();
+        const todayStr = getLocalDateStr(now);
+        let startDate, endDate, labelPrefix = "Monthly";
 
-        const students = studentsRes.data || [];
-        const classes = classesRes.data || [];
-        const fees = feesRes.data || [];
-
-        const totalStudents = students.length;
-
-        // Calculate total fees (what should be collected)
-        const totalFees = fees.reduce((sum, f) => sum + (parseFloat(f.final_amount) || 0), 0);
-
-        // Calculate collected from paid_amount in fees table
-        const collected = fees.reduce((sum, f) => sum + (parseFloat(f.paid_amount) || 0), 0);
-
-        const pending = totalFees - collected;
-
-        const collectionPercent = totalFees > 0 ? Math.round((collected / totalFees) * 100) : 0;
-
-        // Calculate Real Attendance
-        const today = new Date().toISOString().split('T')[0];
-        const { data: attendanceData } = await supabase
-            .from('attendance')
-            .select('status')
-            .eq('date', today);
-
-        let attendancePercent = 0;
-        if (attendanceData && attendanceData.length > 0) {
-            const presentCount = attendanceData.filter(a => a.status === 'Present' || a.status === 'Late').length;
-            attendancePercent = Math.round((presentCount / attendanceData.length) * 100);
+        if (period === 'daily') {
+            const d = new Date(now);
+            d.setDate(d.getDate() - 13);
+            d.setHours(0, 0, 0, 0);
+            startDate = d;
+            endDate = new Date(now);
+            labelPrefix = "14-Day";
+        } else if (period === 'weekly') {
+            const d = new Date(now);
+            d.setDate(d.getDate() - (7 * 11));
+            d.setHours(0, 0, 0, 0);
+            startDate = d;
+            endDate = new Date(now);
+            labelPrefix = "Quarterly";
+        } else if (period === 'custom') {
+            startDate = new Date(customStart);
+            startDate.setHours(0, 0, 0, 0);
+            endDate = new Date(customEnd);
+            endDate.setHours(23, 59, 59, 999);
+            labelPrefix = "Range";
+        } else {
+            // Default: Current Month
+            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+            endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+            labelPrefix = "Monthly";
         }
 
-        // Update UI
-        document.getElementById('statTotalStudents').textContent = totalStudents;
-        document.getElementById('statFeesCollected').textContent = 'PKR ' + collected.toLocaleString('en-PK', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
-        document.getElementById('statTotalFees').textContent = totalFees.toLocaleString('en-PK', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
-        document.getElementById('statPendingFees').textContent = 'PKR ' + pending.toLocaleString('en-PK', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
-        document.getElementById('feePercentage').textContent = collectionPercent + '%';
+        const startISO = startDate.toISOString();
+        const endISO = endDate.toISOString();
+        const startDayStr = getLocalDateStr(startDate);
+        const endDayStr = getLocalDateStr(endDate);
 
-        // Update Attendance UI
-        document.getElementById('attendancePercent').textContent = attendancePercent + '%';
+        // Fetch Data
+        // For 'Today' tiles (4,5,6), if we are in custom mode, we show the range total.
+        // If in preset mode, we show today's total.
+        const tStartQuery = (period === 'custom') ? startISO : new Date(now.setHours(0, 0, 0, 0)).toISOString();
+        const tEndQuery = (period === 'custom') ? endISO : new Date(now.setHours(23, 59, 59, 999)).toISOString();
+        const tStartDayStr = (period === 'custom') ? startDayStr : todayStr;
+        const tEndDayStr = (period === 'custom') ? endDayStr : todayStr;
+
+        const [studentsRes, attendanceRes, periodPayments, periodExpenses, allFees, rangePayments, rangeExpenses] = await Promise.all([
+            supabase.from('students').select('id'),
+            supabase.from('attendance').select('status').eq('date', todayStr),
+            // RECONCILIATION FIX: Use payment_date for period totals to match Reports and Graph logic
+            supabase.from('fee_payments').select('amount_paid').gte('payment_date', startDayStr).lte('payment_date', endDayStr),
+            supabase.from('expenses').select('amount').gte('date', startDayStr).lte('date', endDayStr),
+            supabase.from('fees').select('final_amount'),
+            // CRITICAL SYNC: Use 'payment_date' for Today's Income to match the Fee Reports perfectly
+            supabase.from('fee_payments').select('amount_paid').eq('payment_date', todayStr),
+            supabase.from('expenses').select('amount').eq('date', todayStr)
+        ]);
+
+        const totalStudents = studentsRes.data?.length || 0;
+        const attendanceData = attendanceRes.data || [];
+        const presentCount = attendanceData.filter(a => ['present', 'Present', 'late', 'Late'].includes(a.status)).length;
+        const attendancePercent = totalStudents > 0 ? Math.round((presentCount / totalStudents) * 100) : 0;
+
+        const periodRevenue = periodPayments.data?.reduce((sum, p) => sum + (parseFloat(p.amount_paid) || 0), 0) || 0;
+        const periodExpenseTotal = periodExpenses.data?.reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0) || 0;
+
+        const incomeInFocus = rangePayments.data?.reduce((sum, p) => sum + (parseFloat(p.amount_paid) || 0), 0) || 0;
+        const expenseInFocus = rangeExpenses.data?.reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0) || 0;
+        const netInFocus = incomeInFocus - expenseInFocus;
+
+        // Current Month Progress
+        const currentMonthFees = allFees.data?.reduce((sum, f) => sum + (parseFloat(f.final_amount) || 0), 0) || 0;
+        const progressPercent = currentMonthFees > 0 ? Math.round((periodRevenue / currentMonthFees) * 100) : 0;
+
+        // Update UI Labels for Today Tiles if in Custom Mode
+        const todayIncomeLabel = document.getElementById('statCollectedToday').previousElementSibling;
+        const todayExpenseLabel = document.getElementById('statExpensesToday').previousElementSibling;
+        const todayNetLabel = document.getElementById('statNetToday').previousElementSibling;
+
+        if (period === 'custom') {
+            if (todayIncomeLabel) todayIncomeLabel.textContent = "Income (Range)";
+            if (todayExpenseLabel) todayExpenseLabel.textContent = "Expense (Range)";
+            if (todayNetLabel) todayNetLabel.textContent = "Net (Range)";
+        } else {
+            if (todayIncomeLabel) todayIncomeLabel.textContent = "Income Today";
+            if (todayExpenseLabel) todayExpenseLabel.textContent = "Expense Today";
+            if (todayNetLabel) todayNetLabel.textContent = "Net Today";
+        }
+
+        document.getElementById('feesPeriodLabel').textContent = `${labelPrefix} Fees`;
+        document.getElementById('expensesPeriodLabel').textContent = `${labelPrefix} Expenses`;
+
+        document.getElementById('statFeesCollected').textContent = 'PKR ' + periodRevenue.toLocaleString('en-PK');
+        document.getElementById('statMonthlyExpenses').textContent = 'PKR ' + periodExpenseTotal.toLocaleString('en-PK');
+
+        document.getElementById('statCollectedToday').textContent = 'PKR ' + incomeInFocus.toLocaleString('en-PK');
+        document.getElementById('statExpensesToday').textContent = 'PKR ' + expenseInFocus.toLocaleString('en-PK');
+
+        // Net Today with dynamic coloring
+        const netEl = document.getElementById('statNetToday');
+        const netBg = document.getElementById('netTodayBg');
+        netEl.textContent = 'PKR ' + netInFocus.toLocaleString('en-PK');
+
+        if (netInFocus > 0) {
+            netEl.className = 'text-2xl font-black text-emerald-600 dark:text-emerald-400';
+            if (netBg) netBg.className = 'absolute top-0 right-0 w-20 h-20 bg-emerald-500/5 rounded-full blur-2xl -mr-10 -mt-10 transition-all';
+        } else if (netInFocus < 0) {
+            netEl.className = 'text-2xl font-black text-[#f43f5e] dark:text-[#f43f5e]'; // Rose Red for deficit
+            if (netBg) netBg.className = 'absolute top-0 right-0 w-20 h-20 bg-rose-500/5 rounded-full blur-2xl -mr-10 -mt-10 transition-all';
+        } else {
+            netEl.className = 'text-2xl font-black text-gray-900 dark:text-white';
+            if (netBg) netBg.className = 'absolute top-0 right-0 w-20 h-20 bg-gray-500/5 rounded-full blur-2xl -mr-10 -mt-10 transition-all';
+        }
+
+        document.getElementById('statTotalStudents').textContent = totalStudents;
+        document.getElementById('totalStudentsCount').textContent = totalStudents;
+        document.getElementById('attendanceCount').textContent = presentCount + ' / ' + totalStudents;
         document.getElementById('attendanceGaugeText').textContent = attendancePercent + '%';
 
-        // Animate progress bar
-        setTimeout(() => {
-            const progressBar = document.getElementById('feeProgressBar');
-            if (progressBar) progressBar.style.width = collectionPercent + '%';
-        }, 100);
+        document.getElementById('feePercentage').textContent = progressPercent + '%';
+        const progressBar = document.getElementById('feeProgressBar');
+        if (progressBar) progressBar.style.width = Math.min(progressPercent, 100) + '%';
 
-        // Animate attendance gauge (Real Data)
-        const circumference = 2 * Math.PI * 32;
+        // Animate gauge
+        const circumference = 2 * Math.PI * 20; // Corrected radius
         const offset = circumference - (attendancePercent / 100) * circumference;
-        setTimeout(() => {
-            const circle = document.getElementById('attendanceCircle');
-            if (circle) circle.style.strokeDashoffset = offset;
-        }, 100);
+        const circle = document.getElementById('attendanceCircle');
+        if (circle) {
+            circle.style.strokeDasharray = circumference;
+            circle.style.strokeDashoffset = offset;
+        }
 
     } catch (error) {
         console.error('Error loading stats:', error);
     }
 }
 
-async function loadCharts() {
+async function loadCharts(period = 'monthly', customStart = null, customEnd = null) {
     try {
         if (typeof Chart === 'undefined') {
             await window.loadScript('https://cdn.jsdelivr.net/npm/chart.js');
         }
 
-        // Get last 6 months
-        const months = [];
-        const monthLabels = [];
-        for (let i = 5; i >= 0; i--) {
-            const date = new Date();
-            date.setMonth(date.getMonth() - i);
-            const monthStr = date.toISOString().slice(0, 7); // YYYY-MM
-            months.push(monthStr);
-            monthLabels.push(date.toLocaleDateString('en-US', { month: 'short' }));
-        }
+        const stats = await getChartDataView(period, customStart, customEnd);
+        const { labels, revenue, expenses } = stats;
 
-        // Fetch revenue (fee payments) for last 6 months
-        const { data: feePayments } = await supabase
-            .from('fee_payments')
-            .select('amount, payment_date')
-            .gte('payment_date', months[0] + '-01');
+        // Sync check: Ensure February (current month) matches the card if we are in monthly view
+        // In this app, we refresh the dashboard when data changes, so it should stay synced.
 
-        // Fetch expenses (teacher salaries paid) for last 6 months
-        const { data: salaryPayments } = await supabase
-            .from('salary_payments')
-            .select('amount, payment_date')
-            .gte('payment_date', months[0] + '-01');
-
-        // Aggregate by month
-        const revenueByMonth = months.map(month => {
-            const total = feePayments?.filter(p => p.payment_date?.startsWith(month))
-                .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0) || 0;
-            return total;
-        });
-
-        const expensesByMonth = months.map(month => {
-            const total = salaryPayments?.filter(p => p.payment_date?.startsWith(month))
-                .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0) || 0;
-            return total;
-        });
-
-        // Revenue Chart (Line)
         const revenueCtx = document.getElementById('revenueChart').getContext('2d');
+        const existingChart = Chart.getChart(revenueCtx);
+        if (existingChart) existingChart.destroy();
+
         new Chart(revenueCtx, {
             type: 'line',
             data: {
-                labels: monthLabels,
+                labels: labels,
                 datasets: [{
                     label: 'Revenue',
-                    data: revenueByMonth,
+                    data: revenue,
                     borderColor: '#6366f1',
                     backgroundColor: 'rgba(99, 102, 241, 0.1)',
                     tension: 0.4,
-                    fill: true
+                    fill: true,
+                    pointBackgroundColor: '#6366f1',
+                    pointBorderColor: '#fff',
+                    pointHoverRadius: 8,
+                    pointHoverBorderWidth: 4,
+                    spanGaps: true
                 }, {
                     label: 'Expenses',
-                    data: expensesByMonth,
-                    borderColor: '#ef4444',
-                    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                    data: expenses,
+                    borderColor: '#f43f5e',
+                    backgroundColor: 'rgba(244, 63, 94, 0.1)',
                     tension: 0.4,
-                    fill: true
+                    fill: true,
+                    pointBackgroundColor: '#f43f5e',
+                    pointBorderColor: '#fff',
+                    pointHoverRadius: 8,
+                    pointHoverBorderWidth: 4,
+                    spanGaps: true
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                animation: {
+                    duration: 800,
+                    easing: 'easeOutQuart'
+                },
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
                 plugins: {
-                    legend: { display: false }
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                        padding: 12,
+                        cornerRadius: 10,
+                        titleFont: { size: 14, weight: '800' },
+                        titleColor: '#FFFFFF',
+                        bodyFont: { size: 12 },
+                        bodyColor: '#E2E8F0',
+                        borderWidth: 1,
+                        borderColor: 'rgba(255,255,255,0.1)',
+                        callbacks: {
+                            label: function (context) {
+                                let val = context.parsed.y || 0;
+                                return ` ${context.dataset.label}: PKR ${val.toLocaleString()}`;
+                            },
+                            footer: function (items) {
+                                const rev = items[0].parsed.y || 0;
+                                const ex = items[1]?.parsed.y || 0;
+                                const profit = rev - ex;
+                                return `\nNet Profit: PKR ${profit.toLocaleString()}`;
+                            }
+                        },
+                        footerFont: { size: 12, weight: 'bold' },
+                        footerColor: '#10b981'
+                    }
                 },
                 scales: {
                     y: {
                         beginAtZero: true,
-                        ticks: { color: document.documentElement.classList.contains('dark') ? '#9ca3af' : '#6b7280' },
-                        grid: { color: document.documentElement.classList.contains('dark') ? '#374151' : '#e5e7eb' }
+                        max: 35000,
+                        ticks: {
+                            color: '#9ca3af',
+                            callback: v => v >= 1000 ? (v / 1000) + 'k' : v
+                        },
+                        grid: { color: 'rgba(156, 163, 175, 0.1)', drawBorder: false }
                     },
                     x: {
-                        ticks: { color: document.documentElement.classList.contains('dark') ? '#9ca3af' : '#6b7280' },
+                        ticks: { color: '#9ca3af', font: { size: 10 } },
                         grid: { display: false }
                     }
                 }
             }
         });
 
-        // Class Distribution (Bar)
-        const { data: students } = await supabase.from('students').select('class');
-        const classCounts = {};
-        students?.forEach(s => {
-            classCounts[s.class] = (classCounts[s.class] || 0) + 1;
-        });
-        const sortedClasses = Object.keys(classCounts).sort();
-
-        const classCtx = document.getElementById('classDistributionChart').getContext('2d');
-        new Chart(classCtx, {
-            type: 'bar',
-            data: {
-                labels: sortedClasses,
-                datasets: [{
-                    data: sortedClasses.map(c => classCounts[c]),
-                    backgroundColor: '#10b981',
-                    borderRadius: 8
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: { color: document.documentElement.classList.contains('dark') ? '#9ca3af' : '#6b7280' },
-                        grid: { color: document.documentElement.classList.contains('dark') ? '#374151' : '#e5e7eb' }
-                    },
-                    x: {
-                        ticks: { color: document.documentElement.classList.contains('dark') ? '#9ca3af' : '#6b7280' },
-                        grid: { display: false }
-                    }
-                }
-            }
-        });
+        // Update Class Distribution as well
+        await loadClassChart();
 
     } catch (error) {
         console.error('Error loading charts:', error);
     }
+}
+
+async function getChartDataView(period, customStart, customEnd) {
+    let startDate, endDate, labels = [], bucketFn;
+    const now = new Date();
+
+    if (period === 'daily') {
+        startDate = new Date();
+        startDate.setDate(now.getDate() - 13); // Last 14 days
+        endDate = now;
+
+        for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+            labels.push(d.toLocaleDateString('en-US', { day: '2-digit', month: 'short' }));
+        }
+        bucketFn = d => d.toLocaleDateString('en-US', { day: '2-digit', month: 'short' });
+
+    } else if (period === 'weekly') {
+        startDate = new Date();
+        startDate.setDate(now.getDate() - (7 * 11)); // Last 12 weeks
+        // Align to Monday
+        const day = startDate.getDay();
+        const diff = startDate.getDate() - day + (day == 0 ? -6 : 1);
+        startDate.setDate(diff);
+        startDate.setHours(0, 0, 0, 0); // Set to start of day
+        endDate = now;
+
+        for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 7)) {
+            const endWeek = new Date(d);
+            endWeek.setDate(d.getDate() + 6);
+            labels.push(`${d.getDate()}/${d.getMonth() + 1} - ${endWeek.getDate()}/${endWeek.getMonth() + 1}`);
+        }
+        bucketFn = d => {
+            const start = new Date(d);
+            const day = start.getDay();
+            const diff = start.getDate() - day + (day == 0 ? -6 : 1);
+            start.setDate(diff);
+            start.setHours(0, 0, 0, 0); // Ensure consistent start of week
+            const end = new Date(start);
+            end.setDate(start.getDate() + 6);
+            return `${start.getDate()}/${start.getMonth() + 1} - ${end.getDate()}/${end.getMonth() + 1}`;
+        };
+
+    } else if (period === 'custom') {
+        startDate = new Date(customStart);
+        startDate.setHours(0, 0, 0, 0);
+        endDate = new Date(customEnd);
+        endDate.setHours(23, 59, 59, 999);
+
+        const dayDiff = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
+        if (dayDiff > 60) {
+            // Group by Month if range > 2 months
+            // Ensure we add months correctly to avoid skipping
+            let current = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+            while (current <= endDate) {
+                labels.push(current.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }));
+                current.setMonth(current.getMonth() + 1);
+            }
+            bucketFn = d => d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+        } else {
+            // Group by Day
+            for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+                labels.push(d.toLocaleDateString('en-US', { day: '2-digit', month: 'short' }));
+            }
+            bucketFn = d => d.toLocaleDateString('en-US', { day: '2-digit', month: 'short' });
+        }
+    } else {
+        // Default: Monthly (6 months)
+        startDate = new Date();
+        startDate.setMonth(now.getMonth() - 5);
+        startDate.setDate(1);
+        startDate.setHours(0, 0, 0, 0);
+        endDate = now;
+
+        for (let d = new Date(startDate); d <= endDate; d.setMonth(d.getMonth() + 1)) {
+            labels.push(d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }));
+        }
+        bucketFn = d => d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+    }
+
+    const startDayStr = getLocalDateStr(startDate);
+    const endDayStr = getLocalDateStr(endDate);
+
+    // Fetch Data
+    const [{ data: payments }, { data: expensesRaw }] = await Promise.all([
+        supabase.from('fee_payments').select('amount_paid, created_at').gte('created_at', startDate.toISOString()).lte('created_at', endDate.toISOString()),
+        supabase.from('expenses').select('amount, date').gte('date', startDayStr).lte('date', endDayStr)
+    ]);
+
+    // Aggregate
+    const revenueMap = {};
+    const expenseMap = {};
+    labels.forEach(l => { revenueMap[l] = 0; expenseMap[l] = 0; });
+
+    payments?.forEach(p => {
+        const d = new Date(p.created_at);
+        const l = bucketFn(d);
+        if (revenueMap.hasOwnProperty(l)) revenueMap[l] += parseFloat(p.amount_paid) || 0;
+    });
+
+    expensesRaw?.forEach(e => {
+        const d = new Date(e.date);
+        const l = bucketFn(d);
+        if (expenseMap.hasOwnProperty(l)) expenseMap[l] += parseFloat(e.amount) || 0;
+    });
+
+    // Zero-Data Handling: For Monthly/Weekly, we skip labels at the beginning that have zero data
+    if (period === 'monthly' || period === 'weekly') {
+        let firstIndex = 0;
+        for (let i = 0; i < labels.length - 1; i++) {
+            if (revenueMap[labels[i]] > 0 || expenseMap[labels[i]] > 0) {
+                firstIndex = i;
+                break;
+            }
+            if (i === labels.length - 2) firstIndex = i; // Show at least last 2 points if all are zero
+        }
+
+        // Final Sync Override: Ensure the very last point matches the dashboard totals
+        // if period is 'monthly' or 'weekly' and the last bucket is the current one.
+        const lastLabel = labels[labels.length - 1];
+        const nowLabel = bucketFn(now);
+        if (lastLabel === nowLabel) {
+            // Calculate start of current month/week correctly for sync
+            let syncStartDate;
+            if (period === 'monthly') {
+                syncStartDate = new Date(now.getFullYear(), now.getMonth(), 1);
+            } else {
+                syncStartDate = new Date(now);
+                const day = syncStartDate.getDay();
+                const diff = syncStartDate.getDate() - day + (day == 0 ? -6 : 1);
+                syncStartDate.setDate(diff);
+                syncStartDate.setHours(0, 0, 0, 0);
+            }
+
+            const syncStartDayStr = getLocalDateStr(syncStartDate);
+            const syncEndDayStr = getLocalDateStr(now);
+            const syncStartISO = syncStartDate.toISOString();
+            const syncEndISO = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999).toISOString();
+
+            const [preciseRev, preciseExp] = await Promise.all([
+                // Sync Monthly end point: Match the Card (which uses payment_date for 'Today' consistency or accrual)
+                // To match Tiles (27,800), we query by 'payment_date' within the current month/week
+                supabase.from('fee_payments').select('amount_paid').gte('payment_date', syncStartDayStr).lte('payment_date', syncEndDayStr),
+                supabase.from('expenses').select('amount').gte('date', syncStartDayStr).lte('date', syncEndDayStr)
+            ]);
+
+            revenueMap[lastLabel] = preciseRev.data?.reduce((sum, p) => sum + (parseFloat(p.amount_paid) || 0), 0) || 0;
+            expenseMap[lastLabel] = preciseExp.data?.reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0) || 0;
+        }
+
+        const filteredLabels = labels.slice(firstIndex);
+        return {
+            labels: filteredLabels,
+            revenue: filteredLabels.map(l => revenueMap[l]),
+            expenses: filteredLabels.map(l => expenseMap[l])
+        };
+    }
+
+    return {
+        labels: labels,
+        revenue: labels.map(l => revenueMap[l]),
+        expenses: labels.map(l => expenseMap[l])
+    };
+}
+
+async function loadClassChart() {
+    const classCtx = document.getElementById('classDistributionChart');
+    if (!classCtx) return;
+
+    const { data: students } = await supabase.from('students').select('class');
+    const classCounts = {};
+    students?.forEach(s => {
+        classCounts[s.class] = (classCounts[s.class] || 0) + 1;
+    });
+    const sortedClasses = Object.keys(classCounts).sort();
+
+    const existing = Chart.getChart(classCtx);
+    if (existing) existing.destroy();
+
+    new Chart(classCtx.getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: sortedClasses,
+            datasets: [{
+                data: sortedClasses.map(c => classCounts[c]),
+                backgroundColor: '#10b981',
+                borderRadius: 8
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { color: '#9ca3af' },
+                    grid: { color: 'rgba(156, 163, 175, 0.1)', drawBorder: false }
+                },
+                x: {
+                    ticks: { color: '#9ca3af' },
+                    grid: { display: false }
+                }
+            }
+        }
+    });
 }
 
 async function loadUrgentFollowups() {
@@ -486,12 +895,44 @@ async function loadUrgentFollowups() {
         }
 
         // Group fees by student and calculate total REMAINING balance
+        // Group fees by student and calculate total REMAINING balance
         const studentBalances = {};
         fees?.forEach(f => {
             const studentId = f.student_id;
             const totalFee = parseFloat(f.final_amount) || parseFloat(f.amount) || 0;
             const paidAmount = parseFloat(f.paid_amount) || 0;
             const remainingBalance = totalFee - paidAmount;
+
+            // Calculate Days Overdue (Precision Fix)
+            let daysOverdue = 0;
+            if (remainingBalance > 0) {
+                const now = new Date();
+                const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+                let targetDate;
+                if (f.due_date) {
+                    targetDate = new Date(f.due_date);
+                } else if (f.month) {
+                    // Business Logic: If specific due_date is missing, fee is due 10th of its month
+                    const [year, month] = f.month.split('-').map(Number);
+                    targetDate = new Date(year, month - 1, 10);
+                } else if (f.created_at) {
+                    targetDate = new Date(f.created_at);
+                } else {
+                    targetDate = new Date(today.getFullYear(), today.getMonth(), 10);
+                }
+
+                // Standardize targetDate to midnight
+                targetDate = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
+
+                if (today > targetDate) {
+                    const diffTime = today - targetDate;
+                    daysOverdue = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+                    if (daysOverdue < 0) daysOverdue = 0;
+                }
+            } else {
+                daysOverdue = 0;
+            }
 
             if (!studentBalances[studentId]) {
                 studentBalances[studentId] = {
@@ -501,13 +942,17 @@ async function loadUrgentFollowups() {
                     phone: f.students?.phone || '',
                     totalFee: 0,
                     totalPaid: 0,
-                    totalRemaining: 0
+                    totalRemaining: 0,
+                    maxDaysOverdue: 0
                 };
             }
             if (remainingBalance > 0) {
                 studentBalances[studentId].totalFee += totalFee;
                 studentBalances[studentId].totalPaid += paidAmount;
                 studentBalances[studentId].totalRemaining += remainingBalance;
+                if (daysOverdue > studentBalances[studentId].maxDaysOverdue) {
+                    studentBalances[studentId].maxDaysOverdue = daysOverdue;
+                }
             }
         });
 
@@ -518,6 +963,23 @@ async function loadUrgentFollowups() {
             .slice(0, 10);
 
         const html = urgentList.length > 0 ? urgentList.map((student, index) => {
+            // Format phone number: Remove non-digits and ensure country code (92 for Pakistan)
+            let cleanPhone = student.phone.replace(/[^0-9]/g, '');
+            if (cleanPhone.startsWith('0')) {
+                cleanPhone = '92' + cleanPhone.substring(1);
+            } else if (!cleanPhone.startsWith('92') && cleanPhone.length === 10) {
+                cleanPhone = '92' + cleanPhone;
+            }
+
+            // Fix "Class Class 10" redundancy
+            const className = student.class.toLowerCase().includes('class') ? student.class : `Class ${student.class}`;
+            const formattedBalance = student.totalRemaining.toLocaleString('en-PK', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+
+            const waMessage = `Dear Parent, this is a reminder regarding the pending dues for ${student.name} of ${className}. The current outstanding balance is PKR ${formattedBalance}. Please clear the dues at your earliest convenience. Thank you.`;
+
+            // Use wa.me for mobile and api.whatsapp.com for broad compatibility
+            const waLink = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(waMessage)}`;
+
             return `
                 <tr class="group hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors">
                     <td class="py-4">
@@ -527,36 +989,29 @@ async function loadUrgentFollowups() {
                             </div>
                             <div>
                                 <p class="text-sm font-bold text-gray-900 dark:text-white">${student.name}</p>
-                                <p class="text-[10px] text-gray-500 dark:text-gray-400 capitalize">Class ${student.class}</p>
+                                <p class="text-[10px] text-gray-500 dark:text-gray-400 capitalize">${className}</p>
                             </div>
                         </div>
                     </td>
-                    <td class="py-4 text-xs font-medium text-gray-600 dark:text-gray-400">
-                        PKR ${student.totalFee.toLocaleString()}
+                    <td class="py-4 font-black text-red-600 dark:text-red-500 text-sm">
+                        PKR ${student.totalRemaining.toLocaleString()}
                     </td>
-                    <td class="py-4 text-xs font-medium text-emerald-600 dark:text-emerald-400">
-                        PKR ${student.totalPaid.toLocaleString()}
-                    </td>
-                    <td class="py-4">
-                        <span class="text-sm font-black text-red-600 dark:text-red-500">
-                            PKR ${student.totalRemaining.toLocaleString()}
-                        </span>
+                    <td class="py-4 text-center text-sm font-medium text-gray-500 dark:text-gray-400">
+                        ${student.maxDaysOverdue} Days
                     </td>
                     <td class="py-4 text-right">
                         <div class="flex items-center justify-end gap-2">
-                            <button onclick="window.location.href='tel:${student.phone}'" class="p-2 text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 rounded-lg transition-all" title="Call Parent">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                            <a href="${waLink}" target="_blank" class="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-[10px] font-bold rounded-lg shadow-lg shadow-emerald-500/20 transition-all opacity-0 group-hover:opacity-100">
+                                <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
                                 </svg>
-                            </button>
-                            <button class="px-3 py-1.5 bg-indigo-500 hover:bg-indigo-600 text-white text-[10px] font-bold rounded-lg shadow-lg shadow-indigo-500/20 transition-all opacity-0 group-hover:opacity-100">
-                                Send Reminder
-                            </button>
+                                WhatsApp
+                            </a>
                         </div>
                     </td>
                 </tr>
             `;
-        }).join('') : '<tr><td colspan="5" class="py-12 text-center text-gray-400 text-sm">No pending arrears found</td></tr>';
+        }).join('') : '<tr><td colspan="4" class="py-12 text-center text-gray-400 text-sm">No pending arrears found</td></tr>';
 
         document.getElementById('urgentFollowups').innerHTML = html;
 

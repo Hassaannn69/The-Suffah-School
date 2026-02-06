@@ -80,7 +80,19 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
                 </svg>
             </button>
-            <h1 class="text-xl font-bold text-gray-900 dark:text-white tracking-tight" id="pageTitle">Dashboard</h1>
+            <div class="flex flex-col md:flex-row md:items-center md:space-x-4">
+                <h1 class="text-xl font-bold text-gray-900 dark:text-white tracking-tight" id="pageTitle">Dashboard</h1>
+                <div id="headerClock"
+                    class="hidden md:flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800/50 px-3 py-1 rounded-full border border-gray-200 dark:border-gray-700/50">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span id="currentTime" class="font-mono font-medium">--:--:--</span>
+                    <span class="text-gray-300 dark:text-gray-600">|</span>
+                    <span id="currentDate" class="font-medium">---, -- ---</span>
+                </div>
+            </div>
             <div class="flex items-center space-x-4">
                 <!-- Dark Mode Toggle -->
                 <button id="themeToggle"

@@ -158,3 +158,16 @@ input:-webkit-autofill:active {
   -webkit-text-fill-color: white !important;
   caret-color: white;
 }
+
+/* Dark Mode Select & Option Fix (Anti-Blackout) */
+.dark select option {
+  background-color: #1a1f2e !important;
+  color: #ffffff !important;
+}
+
+.dark select option:hover,
+.dark select option:focus,
+.dark select option:active {
+  background-color: #4f46e5 !important;
+  color: #ffffff !important;
+}
