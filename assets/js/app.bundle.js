@@ -107,7 +107,7 @@ var App = (() => {
                         <p><strong>Supabase URL:</strong> ${window.SUPABASE_URL}</p>
                     </div>
                     <div style="margin-top: 30px;">
-                        <button onclick="window.location.href='index.html?action=logout'" style="padding: 10px 20px; background: #4f46e5; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                        <button onclick="window.location.href='login.html?action=logout'" style="padding: 10px 20px; background: #4f46e5; color: white; border: none; border-radius: 6px; cursor: pointer;">
                             Back to Login
                         </button>
                         <button onclick="location.reload()" style="padding: 10px 20px; background: #9ca3af; color: white; border: none; border-radius: 6px; cursor: pointer; margin-left: 10px;">
@@ -349,10 +349,10 @@ var App = (() => {
           document.cookie.split(";").forEach((c) => {
             document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + (/* @__PURE__ */ new Date()).toUTCString() + ";path=/");
           });
-          window.location.href = "index.html?action=logout";
+          window.location.href = "login.html?action=logout";
         } catch (err) {
           console.error("Logout error:", err);
-          window.location.href = "index.html?action=logout";
+          window.location.href = "login.html?action=logout";
         }
       }));
       openSidebarBtn.addEventListener("click", () => sidebar.classList.remove("-translate-x-full"));

@@ -633,7 +633,7 @@ export async function render(container) {
     await fetchAll();
 
     const pathDir = window.location.pathname.replace(/[^/]+$/, '') || '/';
-    const landingUrl = window.location.origin + pathDir + 'landing.html';
+    const landingUrl = window.location.origin + pathDir + 'index.html';
 
     container.innerHTML = `
         <div class="flex flex-col h-full">

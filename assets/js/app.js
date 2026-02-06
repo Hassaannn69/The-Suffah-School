@@ -68,7 +68,7 @@ async function initApp() {
                         <p><strong>Supabase URL:</strong> ${window.SUPABASE_URL}</p>
                     </div>
                     <div style="margin-top: 30px;">
-                        <button onclick="window.location.href='index.html?action=logout'" style="padding: 10px 20px; background: #4f46e5; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                        <button onclick="window.location.href='login.html?action=logout'" style="padding: 10px 20px; background: #4f46e5; color: white; border: none; border-radius: 6px; cursor: pointer;">
                             Back to Login
                         </button>
                         <button onclick="location.reload()" style="padding: 10px 20px; background: #9ca3af; color: white; border: none; border-radius: 6px; cursor: pointer; margin-left: 10px;">
@@ -444,12 +444,12 @@ logoutBtn.addEventListener('click', async () => {
         });
 
         // 4. Redirect with a flag to prevent auto-login loop
-        window.location.href = 'index.html?action=logout';
+        window.location.href = 'login.html?action=logout';
 
     } catch (err) {
         console.error('Logout error:', err);
         // Force redirect even on error
-        window.location.href = 'index.html?action=logout';
+        window.location.href = 'login.html?action=logout';
     }
 });
 
