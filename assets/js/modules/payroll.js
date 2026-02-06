@@ -6,9 +6,11 @@ const supabase = window.supabase || (() => {
 })();
 
 let teachers = [];
-let salaries = [];
+let staff = [];
+let salaries = [];       // teacher_salaries
+let staffSalaries = [];  // staff_salaries (same structure: staff_id, base_salary, monthly_working_days)
 let payrollData = [];
-let attendanceData = []; // Cache or fetch on demand
+let attendanceData = [];
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
@@ -22,7 +24,7 @@ export async function render(container) {
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Payroll & Salary Management</h2>
-                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Manage teacher salaries and process monthly payments with automated deductions.</p>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Manage teacher and staff salaries and process monthly payments with automated deductions.</p>
                 </div>
                 
                 <!-- Period Selector -->
@@ -82,7 +84,8 @@ export async function render(container) {
                             <table class="w-full text-sm text-left">
                                 <thead class="bg-gray-50 dark:bg-gray-900/50 text-gray-500 dark:text-gray-400 font-medium border-b border-gray-200 dark:border-gray-700">
                                     <tr>
-                                        <th class="px-6 py-4">Teacher</th>
+                                        <th class="px-6 py-4">Employee</th>
+                                        <th class="px-6 py-4 text-center">Type</th>
                                         <th class="px-6 py-4 text-center">Status</th>
                                         <th class="px-6 py-4 text-right">Base Salary</th>
                                         <th class="px-6 py-4 text-right">Net Payout</th>
@@ -90,7 +93,7 @@ export async function render(container) {
                                     </tr>
                                 </thead>
                                 <tbody id="processTableBody" class="divide-y divide-gray-200 dark:divide-gray-800">
-                                    <tr><td colspan="5" class="px-6 py-8 text-center text-gray-500">Loading...</td></tr>
+                                    <tr><td colspan="6" class="px-6 py-8 text-center text-gray-500">Loading...</td></tr>
                                 </tbody>
                             </table>
                         </div>
@@ -106,7 +109,8 @@ export async function render(container) {
                             <table class="w-full text-sm text-left">
                                 <thead class="bg-gray-50 dark:bg-gray-900/50 text-gray-500 dark:text-gray-400 font-medium border-b border-gray-200 dark:border-gray-700">
                                     <tr>
-                                        <th class="px-6 py-4">Teacher</th>
+                                        <th class="px-6 py-4">Employee</th>
+                                        <th class="px-6 py-4">Type</th>
                                         <th class="px-6 py-4">Base Salary (Rs)</th>
                                         <th class="px-6 py-4">Monthly Working Days</th>
                                         <th class="px-6 py-4 text-right">Action</th>
@@ -293,26 +297,55 @@ export async function render(container) {
     await loadData();
 }
 
+// Combined list: all teachers + all staff (accountants, office staff, etc.). No role/designation filter.
+function getEmployees() {
+    const fromTeachers = Array.isArray(teachers) ? teachers.map(t => ({ ...t, _type: 'teacher' })) : [];
+    const fromStaff = Array.isArray(staff) ? staff.map(s => ({ ...s, _type: 'staff' })) : [];
+    const combined = [...fromTeachers, ...fromStaff];
+    return combined.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+}
+
+function formatEmployeeId(id) {
+    if (id == null || id === '') return '-';
+    return String(id).trim().replace(/^STF-/i, 'EMP-');
+}
+
 async function loadData() {
+    const monthEl = document.getElementById('payrollMonth');
+    const yearEl = document.getElementById('payrollYear');
+    const month = monthEl ? monthEl.value : new Date().getMonth() + 1;
+    const year = yearEl ? yearEl.value : new Date().getFullYear();
+
     try {
-        // Load teachers
+        // 1. Fetch ALL staff (accountants, office staff, etc.) – no role or designation filter
+        staff = [];
+        const { data: staffData, error: staffErr } = await supabase
+            .from('staff')
+            .select('*')
+            .order('name', { ascending: true });
+        if (staffErr) {
+            console.warn('Payroll: staff fetch failed', staffErr);
+        }
+        staff = Array.isArray(staffData) ? staffData : [];
+
+        // 2. Fetch active teachers
+        teachers = [];
         const { data: tData } = await supabase.from('teachers').select('*').eq('is_active', true).order('name');
-        teachers = tData || [];
+        teachers = Array.isArray(tData) ? tData : [];
 
-        // Load salaries
+        // 3. Salary configs (optional – don’t block list if tables missing)
         const { data: sData } = await supabase.from('teacher_salaries').select('*');
-        salaries = sData || [];
+        salaries = Array.isArray(sData) ? sData : [];
 
-        // Load payroll for current month
-        const month = document.getElementById('payrollMonth').value;
-        const year = document.getElementById('payrollYear').value;
+        const { data: ssData, error: ssErr } = await supabase.from('staff_salaries').select('*');
+        if (ssErr) console.warn('Payroll: staff_salaries fetch failed (table may not exist)', ssErr);
+        staffSalaries = Array.isArray(ssData) ? ssData : [];
+
         const { data: pData } = await supabase.from('payroll')
             .select('*')
             .eq('month', month)
             .eq('year', year);
-        payrollData = pData || [];
-
-        // Ideally load attendance here too, but we'll mock or fetch per teacher for performance
+        payrollData = Array.isArray(pData) ? pData : [];
 
         renderProcessView();
         renderSetupView();
@@ -320,54 +353,59 @@ async function loadData() {
 
     } catch (err) {
         console.error('Data load error:', err);
+        staff = Array.isArray(staff) ? staff : [];
+        teachers = Array.isArray(teachers) ? teachers : [];
     }
 }
 
 function renderProcessView() {
     const tbody = document.getElementById('processTableBody');
-    if (!teachers.length) {
-        tbody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-gray-500">No active teachers found.</td></tr>`;
+    const employees = getEmployees();
+    if (!employees.length) {
+        tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-gray-500">No teachers or staff in the list. Add people in Manage Teachers and Staff &amp; Users, and ensure both tables are readable (e.g. RLS allows access).</td></tr>`;
         return;
     }
 
-    tbody.innerHTML = teachers.map(t => {
-        const salary = salaries.find(s => s.teacher_id === t.id);
-        const payroll = payrollData.find(p => p.teacher_id === t.id);
+    tbody.innerHTML = employees.map(emp => {
+        const isTeacher = emp._type === 'teacher';
+        const salary = isTeacher ? salaries.find(s => s.teacher_id === emp.id) : staffSalaries.find(s => s.staff_id === emp.id);
+        const payroll = payrollData.find(p => (isTeacher && p.teacher_id === emp.id) || (!isTeacher && p.staff_id === emp.id));
         const isPaid = payroll && payroll.status === 'paid';
-        const isPending = payroll && payroll.status === 'pending'; // In this new logic, we might just have 'paid' or 'not processed'
+        const isPending = payroll && payroll.status === 'pending';
 
-        // Status Badge
         let statusHtml = '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300">Not Processed</span>';
         if (isPaid) statusHtml = '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">Paid</span>';
         else if (isPending) statusHtml = '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">Draft</span>';
+
+        const typeLabel = isTeacher ? 'Teacher' : 'Staff';
+        const viewSlipFn = isTeacher ? `window.viewSlip('${emp.id}', 'teacher')` : `window.viewSlip('${emp.id}', 'staff')`;
+        const payFn = isTeacher ? `window.payEmployee('${emp.id}', 'teacher')` : `window.payEmployee('${emp.id}', 'staff')`;
 
         return `
             <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors border-b border-gray-100 dark:border-gray-800 last:border-0">
                 <td class="px-6 py-4">
                     <div class="flex items-center">
                         <div class="h-10 w-10 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-white font-bold text-sm shadow-sm mr-3">
-                            ${t.name.charAt(0)}
+                            ${(emp.name || '').charAt(0)}
                         </div>
                         <div>
-                            <div class="font-medium text-gray-900 dark:text-white">${t.name}</div>
-                            <div class="text-xs text-gray-500 font-mono">${t.employee_id}</div>
+                            <div class="font-medium text-gray-900 dark:text-white">${emp.name}</div>
+                            <div class="text-xs text-gray-500 font-mono">${formatEmployeeId(emp.employee_id)}</div>
                         </div>
                     </div>
                 </td>
+                <td class="px-6 py-4 text-center"><span class="px-2 py-0.5 rounded text-xs font-medium ${isTeacher ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'}">${typeLabel}</span></td>
                 <td class="px-6 py-4 text-center">${statusHtml}</td>
                 <td class="px-6 py-4 text-right font-mono text-gray-600 dark:text-gray-400">
-                    ${salary ? `Rs ${salary.base_salary.toLocaleString()}` : '<span class="text-red-400 text-xs">Salary Not Set</span>'}
+                    ${salary ? `Rs ${Number(salary.base_salary).toLocaleString()}` : '<span class="text-red-400 text-xs">Salary Not Set</span>'}
                 </td>
                 <td class="px-6 py-4 text-right font-bold text-gray-900 dark:text-white">
-                    ${isPaid || isPending ? `Rs ${payroll.net_salary.toLocaleString()}` : '-'}
+                    ${isPaid || isPending ? `Rs ${Number(payroll.net_salary).toLocaleString()}` : '-'}
                 </td>
                 <td class="px-6 py-4 text-right">
                     ${isPaid
-                ? `<button onclick="window.viewSlip('${t.id}')" class="text-indigo-600 hover:text-indigo-700 font-medium text-sm flex items-center justify-end gap-1 ml-auto">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
-                            View Slip
-                           </button>`
-                : `<button onclick="window.payTeacher('${t.id}')" class="text-white bg-indigo-600 hover:bg-indigo-700 px-3 py-1.5 rounded-lg text-xs font-medium shadow-lg shadow-indigo-500/20 transition-all active:scale-95 ${!salary ? 'opacity-50 cursor-not-allowed' : ''}" ${!salary ? 'disabled' : ''}>Pay Now</button>`
+                ? `<button onclick="${viewSlipFn}" class="text-indigo-600 hover:text-indigo-700 font-medium text-sm flex items-center justify-end gap-1 ml-auto">View Slip</button>`
+                : `<button onclick="${payFn}" class="text-white bg-indigo-600 hover:bg-indigo-700 px-3 py-1.5 rounded-lg text-xs font-medium shadow-lg shadow-indigo-500/20 transition-all active:scale-95 ${!salary ? 'opacity-50 cursor-not-allowed' : ''}" ${!salary ? 'disabled' : ''}>Pay Now</button>`
             }
                 </td>
             </tr>
@@ -376,21 +414,21 @@ function renderProcessView() {
 }
 
 /**
- * NEW: Implementation of Payslip View
+ * View payslip for teacher or staff (type = 'teacher' | 'staff')
  */
-window.viewSlip = (teacherId) => {
-    const teacher = teachers.find(t => t.id === teacherId);
-    const payroll = payrollData.find(p => p.teacher_id === teacherId);
-    const salaryConfig = salaries.find(s => s.teacher_id === teacherId);
+window.viewSlip = (employeeId, type) => {
+    const isTeacher = type === 'teacher';
+    const employee = isTeacher ? teachers.find(t => t.id === employeeId) : staff.find(s => s.id === employeeId);
+    const payroll = payrollData.find(p => (isTeacher && p.teacher_id === employeeId) || (!isTeacher && p.staff_id === employeeId));
+    const salaryConfig = isTeacher ? salaries.find(s => s.teacher_id === employeeId) : staffSalaries.find(s => s.staff_id === employeeId);
 
-    if (!payroll) return alert('No payroll record found.');
+    if (!employee || !payroll) return alert('No payroll record found.');
 
     const modal = document.getElementById('slipModal');
     if (modal.parentElement !== document.body) document.body.appendChild(modal);
 
-    // Populate Slip Header
-    document.getElementById('slipTeacherName').textContent = teacher.name;
-    document.getElementById('slipEmployeeID').textContent = teacher.employee_id;
+    document.getElementById('slipTeacherName').textContent = employee.name;
+    document.getElementById('slipEmployeeID').textContent = formatEmployeeId(employee.employee_id) || employeeId;
     document.getElementById('slipMonthYear').textContent = `${MONTHS[payroll.month - 1]} ${payroll.year}`;
     document.getElementById('slipPayDate').textContent = new Date(payroll.paid_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 
@@ -457,150 +495,134 @@ window.printSlip = () => {
 
 function renderSetupView() {
     const tbody = document.getElementById('setupTableBody');
-    tbody.innerHTML = teachers.map(t => {
-        const salary = salaries.find(s => s.teacher_id === t.id);
+    const employees = getEmployees();
+    tbody.innerHTML = employees.map(emp => {
+        const isTeacher = emp._type === 'teacher';
+        const salary = isTeacher ? salaries.find(s => s.teacher_id === emp.id) : staffSalaries.find(s => s.staff_id === emp.id);
         const base = salary ? salary.base_salary : '';
-        const days = salary ? (salary.monthly_working_days || 30) : 30; // Default 30
+        const days = salary ? (salary.monthly_working_days || 30) : 30;
+        const typeLabel = isTeacher ? 'Teacher' : 'Staff';
+        const dataKey = `${emp._type}-${emp.id}`;
 
         return `
-            <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors border-b border-gray-100 dark:border-gray-800 last:border-0" id="setupRow-${t.id}">
+            <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors border-b border-gray-100 dark:border-gray-800 last:border-0" id="setupRow-${dataKey}">
                 <td class="px-6 py-4">
-                    <div class="font-medium text-gray-900 dark:text-white">${t.name}</div>
-                    <div class="text-xs text-gray-500">${t.employee_id}</div>
+                    <div class="font-medium text-gray-900 dark:text-white">${emp.name}</div>
+                    <div class="text-xs text-gray-500">${formatEmployeeId(emp.employee_id)}</div>
                 </td>
+                <td class="px-6 py-4"><span class="px-2 py-0.5 rounded text-xs font-medium ${isTeacher ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700' : 'bg-gray-100 dark:bg-gray-700 text-gray-700'}">${typeLabel}</span></td>
                 <td class="px-6 py-4">
                     <input type="number" class="salary-input bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-sm w-32 focus:ring-2 focus:ring-primary-500 outline-none text-gray-900 dark:text-white placeholder-gray-400" 
-                        value="${base}" placeholder="0" id="inputBase-${t.id}">
+                        value="${base}" placeholder="0" id="inputBase-${dataKey}" data-type="${emp._type}" data-id="${emp.id}">
                 </td>
                 <td class="px-6 py-4">
                     <input type="number" class="days-input bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-sm w-24 focus:ring-2 focus:ring-primary-500 outline-none text-gray-900 dark:text-white placeholder-gray-400" 
-                        value="${days}" placeholder="30" id="inputDays-${t.id}">
+                        value="${days}" placeholder="30" id="inputDays-${dataKey}">
                 </td>
                 <td class="px-6 py-4 text-right">
-                    <button onclick="window.saveSalarySetup('${t.id}')" class="text-primary-600 hover:text-primary-700 font-medium text-sm hover:underline">Save</button>
+                    <button onclick="window.saveSalarySetup('${dataKey}')" class="text-primary-600 hover:text-primary-700 font-medium text-sm hover:underline">Save</button>
                 </td>
             </tr>
         `;
     }).join('');
 }
 
-// Global window functions for inline events
-window.saveSalarySetup = async (teacherId) => {
-    const base = parseFloat(document.getElementById(`inputBase-${teacherId}`).value) || 0;
-    const days = parseFloat(document.getElementById(`inputDays-${teacherId}`).value) || 30;
+// dataKey is "teacher-<uuid>" or "staff-<uuid>" (uuid may contain dashes)
+window.saveSalarySetup = async (dataKey) => {
+    const parts = dataKey.split('-');
+    const type = parts[0];
+    const employeeId = parts.slice(1).join('-');
+    const isTeacher = type === 'teacher';
+    const baseInput = document.getElementById(`inputBase-${dataKey}`);
+    const daysInput = document.getElementById(`inputDays-${dataKey}`);
+    if (!baseInput || !daysInput) return;
+    const base = parseFloat(baseInput.value) || 0;
+    const days = parseFloat(daysInput.value) || 30;
 
-    const row = document.getElementById(`setupRow-${teacherId}`);
-    const btn = row.querySelector('button');
-    const originalText = btn.textContent;
-    btn.textContent = 'Saving...';
-    btn.disabled = true;
-
-    // Check if exists
-    const existing = salaries.find(s => s.teacher_id === teacherId);
-
-    // We assume the DB has 'monthly_working_days' column. If not, this might fail or ignore it.
-    // Ideally we'd use a meta-data column or similar if schema was strict and unchangeable.
-    const payload = {
-        teacher_id: teacherId,
-        base_salary: base,
-        monthly_working_days: days
-    };
+    const row = document.getElementById(`setupRow-${dataKey}`);
+    const btn = row ? row.querySelector('button') : null;
+    if (btn) { btn.textContent = 'Saving...'; btn.disabled = true; }
 
     let error;
-    if (existing) {
-        const res = await supabase.from('teacher_salaries').update(payload).eq('id', existing.id);
-        error = res.error;
+    if (isTeacher) {
+        const existing = salaries.find(s => s.teacher_id === employeeId);
+        const payload = { teacher_id: employeeId, base_salary: base, monthly_working_days: days };
+        if (existing) {
+            const res = await supabase.from('teacher_salaries').update(payload).eq('id', existing.id);
+            error = res.error;
+        } else {
+            const res = await supabase.from('teacher_salaries').insert([payload]);
+            error = res.error;
+        }
     } else {
-        const res = await supabase.from('teacher_salaries').insert([payload]);
-        error = res.error;
+        const existing = staffSalaries.find(s => s.staff_id === employeeId);
+        const payload = { staff_id: employeeId, base_salary: base, monthly_working_days: days };
+        if (existing) {
+            const res = await supabase.from('staff_salaries').update(payload).eq('id', existing.id);
+            error = res.error;
+        } else {
+            const res = await supabase.from('staff_salaries').insert([payload]);
+            error = res.error;
+        }
     }
 
     if (error) {
         alert('Error saving: ' + error.message);
     } else {
-        // Update local state
         await loadData();
-        btn.textContent = 'Saved!';
-        setTimeout(() => { btn.textContent = 'Save'; btn.disabled = false; }, 2000);
+        if (btn) { btn.textContent = 'Saved!'; setTimeout(() => { btn.textContent = 'Save'; btn.disabled = false; }, 2000); }
     }
 };
 
-window.payTeacher = async (teacherId) => {
-    const teacher = teachers.find(t => t.id === teacherId);
-    const salary = salaries.find(s => s.teacher_id === teacherId);
+window.payTeacher = (teacherId) => window.payEmployee(teacherId, 'teacher');
 
-    if (!salary) return alert('Please set up salary first.');
+window.payEmployee = async (employeeId, type) => {
+    const isTeacher = type === 'teacher';
+    const employee = isTeacher ? teachers.find(t => t.id === employeeId) : staff.find(s => s.id === employeeId);
+    const salary = isTeacher ? salaries.find(s => s.teacher_id === employeeId) : staffSalaries.find(s => s.staff_id === employeeId);
 
-    // 1. Open Modal
+    if (!employee || !salary) return alert('Please set up salary first.');
+
     const modal = document.getElementById('payModal');
     if (modal.parentElement !== document.body) document.body.appendChild(modal);
 
-    // 2. Fetch Real Attendance
     const month = parseInt(document.getElementById('payrollMonth').value);
     const year = parseInt(document.getElementById('payrollYear').value);
-
-    // Construct Date Range
-    const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
-    const lastDay = new Date(year, month, 0).getDate();
-    const endDate = `${year}-${String(month).padStart(2, '0')}-${lastDay}`;
-
-    // Show loading state
-    document.getElementById('payModalName').textContent = "Loading data...";
-    modal.classList.remove('hidden');
-    modal.classList.add('flex');
-
-    console.log(`Fetching attendance for Teacher ${teacherId} from ${startDate} to ${endDate}`);
-
-    const { data: attendanceData, error } = await supabase
-        .from('teacher_attendance')
-        .select('*') // Select all fields to be safe
-        .eq('teacher_id', teacherId)
-        .gte('date', startDate)
-        .lte('date', endDate);
-
-    if (error) {
-        console.error('Error fetching attendance:', error);
-        alert('Failed to fetch attendance data.');
-        modal.classList.add('hidden');
-        return;
-    }
-
-    // Filter strictly by status string
-    const presentRecords = attendanceData.filter(a => a.status === 'present');
-    const absentRecords = attendanceData.filter(a => a.status === 'absent');
-    const leaveRecords = attendanceData.filter(a => a.status === 'leave');
-
-    const presentDays = presentRecords.length;
-    const absentDays = absentRecords.length;
-    const leaveDays = leaveRecords.length;
-
-    console.log(`Attendance Stats - Present: ${presentDays}, Absent: ${absentDays}, Leave: ${leaveDays}`);
-
-    const totalWorkingDays = salary.monthly_working_days || 30; // Prevent divide by zero if needed in future
-
-    // 3. Populate Data
-    document.getElementById('payModalName').textContent = teacher.name;
-    document.getElementById('payModalId').textContent = teacher.employee_id;
-
-    document.getElementById('payModalBase').textContent = `Rs ${salary.base_salary.toLocaleString()}`;
-
-    // Calculate Rates
+    const totalWorkingDays = salary.monthly_working_days || 30;
     const dailyRate = Math.round(salary.base_salary / totalWorkingDays);
+    let presentDays;
 
-    document.getElementById('payModalRate').textContent = `Rs ${dailyRate}`;
-    document.getElementById('payModalDays').textContent = totalWorkingDays;
+    if (isTeacher) {
+        const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+        const lastDay = new Date(year, month, 0).getDate();
+        const endDate = `${year}-${String(month).padStart(2, '0')}-${lastDay}`;
+        document.getElementById('payModalName').textContent = 'Loading...';
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
 
-    // Calculate Base earned from attendance
-    const earnedBase = presentDays * dailyRate;
+        const { data: attendanceData, error } = await supabase
+            .from('teacher_attendance')
+            .select('*')
+            .eq('teacher_id', employeeId)
+            .gte('date', startDate)
+            .lte('date', endDate);
+        if (error) {
+            alert('Failed to fetch attendance data.');
+            modal.classList.add('hidden');
+            return;
+        }
+        const presentRecords = attendanceData.filter(a => a.status === 'present');
+        const absentRecords = attendanceData.filter(a => a.status === 'absent');
+        const leaveRecords = attendanceData.filter(a => a.status === 'leave');
+        presentDays = presentRecords.length;
+        const absentDays = absentRecords.length;
+        const leaveDays = leaveRecords.length;
+        const earnedBase = presentDays * dailyRate;
 
-    // Update Modal UI for Present Days Concept
-    const deductionSection = modal.querySelector('.bg-blue-50') || modal.querySelector('.bg-red-50');
-    // Fallback in case class name changed in previous steps
-
-    if (deductionSection) {
-        // Ensure consistent blue styling
-        deductionSection.className = "bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 p-4 rounded-lg";
-        deductionSection.innerHTML = `
+        const deductionSection = modal.querySelector('.bg-blue-50') || modal.querySelector('.bg-red-50');
+        if (deductionSection) {
+            deductionSection.className = "bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 p-4 rounded-lg";
+            deductionSection.innerHTML = `
             <div class="flex justify-between items-center mb-2">
                  <div class="text-sm font-medium text-blue-800 dark:text-blue-300 flex items-center gap-2">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
@@ -613,7 +635,32 @@ window.payTeacher = async (teacherId) => {
                 <span class="text-gray-400">(Absent: ${absentDays}, Leave: ${leaveDays})</span>
             </div>
         `;
+        }
+    } else {
+        presentDays = totalWorkingDays;
+        const deductionSection = modal.querySelector('.bg-blue-50') || modal.querySelector('.bg-red-50');
+        if (deductionSection) {
+            deductionSection.className = "bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 p-4 rounded-lg";
+            deductionSection.innerHTML = `
+            <div class="flex justify-between items-center mb-2">
+                <div class="text-sm font-medium text-blue-800 dark:text-blue-300">Staff – Full month</div>
+                <div class="text-sm font-bold text-blue-600 dark:text-blue-400">Rs ${(presentDays * dailyRate).toLocaleString()}</div>
+            </div>
+            <div class="text-xs text-gray-500 dark:text-gray-400">Working days: ${totalWorkingDays}</div>
+            `;
+        }
+        const absentEl = document.getElementById('payModalAbsentDays');
+        const absentDedEl = document.getElementById('payModalAbsentDeduction');
+        if (absentEl) absentEl.textContent = '0';
+        if (absentDedEl) absentDedEl.textContent = '- Rs 0';
     }
+
+    document.getElementById('payModalName').textContent = employee.name;
+    document.getElementById('payModalId').textContent = formatEmployeeId(employee.employee_id) || employeeId;
+
+    document.getElementById('payModalBase').textContent = `Rs ${salary.base_salary.toLocaleString()}`;
+    document.getElementById('payModalRate').textContent = `Rs ${dailyRate}`;
+    document.getElementById('payModalDays').textContent = totalWorkingDays;
 
     // Reset Inputs
     const inpAllow = document.getElementById('payInputAllowances');
@@ -621,11 +668,12 @@ window.payTeacher = async (teacherId) => {
     inpAllow.value = '';
     inpDeduct.value = '';
 
-    // Store state for calculation
     currentPayState = {
-        teacherId,
-        dailyRate: dailyRate,
-        presentDays: presentDays,
+        teacherId: employeeId,
+        employeeId,
+        employeeType: type,
+        dailyRate,
+        presentDays,
         allowances: 0,
         manualDeductions: 0
     };
@@ -719,13 +767,8 @@ async function processPayment() {
     const month = parseInt(document.getElementById('payrollMonth').value);
     const year = parseInt(document.getElementById('payrollYear').value);
 
-    // Payload Construction
-    // gross_salary = The amount earned from working (Present Days * Rate)
-    // bonus = Allowances
-    // deductions = Manual Deductions
-
+    const isTeacher = currentPayState.employeeType === 'teacher';
     const payload = {
-        teacher_id: currentPayState.teacherId,
         month,
         year,
         gross_salary: earnedBase,
@@ -735,13 +778,18 @@ async function processPayment() {
         status: 'paid',
         paid_at: new Date().toISOString()
     };
-
-    console.log('Final Payroll Payload:', payload);
+    if (isTeacher) {
+        payload.teacher_id = currentPayState.employeeId;
+        payload.staff_id = null;
+    } else {
+        payload.staff_id = currentPayState.employeeId;
+        payload.teacher_id = null;
+    }
 
     try {
-        // Use upsert to handle updates or new inserts based on the unique constraint
+        const conflictKey = isTeacher ? 'teacher_id,month,year' : 'staff_id,month,year';
         const { error } = await supabase.from('payroll').upsert([payload], {
-            onConflict: 'teacher_id, month, year'
+            onConflict: conflictKey
         });
 
         if (error) throw error;
@@ -758,9 +806,10 @@ async function processPayment() {
 }
 
 function updateStats() {
+    const employees = getEmployees();
     const paid = payrollData.filter(p => p.status === 'paid');
     const totalPaid = paid.reduce((acc, curr) => acc + (curr.net_salary || 0), 0);
-    const pendingCount = teachers.length - paid.length;
+    const pendingCount = Math.max(0, employees.length - paid.length);
 
     document.getElementById('statPending').textContent = pendingCount;
     document.getElementById('statProcessed').textContent = paid.length;

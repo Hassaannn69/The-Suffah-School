@@ -8,6 +8,11 @@ const filesToUpdate = [
 
 const timestamp = Date.now();
 
+// Write version.json so the app can detect when code has been updated (show "Website updated" without auto-refresh)
+const versionPath = path.join(__dirname, 'version.json');
+fs.writeFileSync(versionPath, JSON.stringify({ version: String(timestamp) }, null, 2));
+console.log(`Updated version.json to v=${timestamp}`);
+
 filesToUpdate.forEach(file => {
     if (fs.existsSync(file)) {
         let content = fs.readFileSync(file, 'utf8');

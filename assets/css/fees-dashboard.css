@@ -182,6 +182,19 @@
     color: white;
 }
 
+/* Unified style for all family cards - same button for overdue, partial, paid */
+.view-profile-btn-neutral {
+    border: 1px solid var(--glass-border);
+    color: var(--text-muted);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.view-profile-btn-neutral:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-white);
+    border-color: rgba(255, 255, 255, 0.15);
+}
+
 .solid-red-btn {
     background: var(--status-overdue);
     color: white;

@@ -823,7 +823,7 @@ async function handleApplyDiscount() {
     // We will update fee.discount += actualDiscount
 
     const confirmMsg = `Apply discount of Rs ${actualDiscount.toLocaleString()} to ${fee.fee_type}?`;
-    if (!confirm(confirmMsg)) return;
+    if (!await confirm(confirmMsg)) return;
 
     const newBtn = document.getElementById('d_btnApply');
     const originalText = newBtn.innerHTML;

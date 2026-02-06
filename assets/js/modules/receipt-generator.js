@@ -1,6 +1,104 @@
 // Fee Receipt Generator Module
 const supabase = window.supabase;
 
+/**
+ * UNIFIED BALANCE CALCULATION - Single Source of Truth
+ * Paid amounts and outstanding come from fee_payments (actual transactions), not fees.paid_amount.
+ * Calculates total outstanding using the same cumulative (month-by-month) logic as the ledger.
+ * This ensures consistency across Dashboard, Receipt Header, and Ledger Balance.
+ * EXPORTED for use in fees.js module.
+ */
+export function calculateUnifiedBalance(students, payments) {
+    const allFees = [];
+    students.forEach(s => {
+        if (s.fees) allFees.push(...s.fees);
+    });
+
+    // Group fees by month (same logic as buildLedgerRows)
+    const monthsMap = {};
+    allFees.forEach(fee => {
+        if (!monthsMap[fee.month]) {
+            monthsMap[fee.month] = {
+                actual: 0,
+                disc: 0,
+                paid: 0
+            };
+        }
+        const m = monthsMap[fee.month];
+        m.actual += Number(fee.amount || 0);
+        m.disc += Number(fee.discount || 0);
+        const paidForThisFee = (payments || []).filter(p => p.fee_id === fee.id).reduce((sum, p) => sum + Number(p.amount_paid || 0), 0);
+        m.paid += paidForThisFee;
+    });
+
+    // Sort months ascending for cumulative calculation (Oldest First)
+    const allMonths = Object.keys(monthsMap).sort();
+    
+    let cumulativeArrears = 0;
+    
+    // Calculate cumulative balance month by month (same as ledger)
+    allMonths.forEach(month => {
+        const data = monthsMap[month];
+        const monthTotal = data.actual - data.disc; // Actual - Discount
+        const totalPayableThisMonth = cumulativeArrears + monthTotal;
+        const monthBalance = totalPayableThisMonth - data.paid;
+        cumulativeArrears = monthBalance; // Carry forward to next month
+    });
+    
+    // Return the final cumulative balance (matches latest ledger balance)
+    return Math.max(0, cumulativeArrears); // Ensure non-negative for display
+}
+
+/**
+ * Calculate per-student balance using the same cumulative ledger logic
+ * This ensures individual student totals are accurate and match the ledger calculation
+ */
+function calculateStudentBalance(student, allStudents, allPayments, unifiedBalance) {
+    const studentFees = student.fees || [];
+    const studentPayments = (allPayments || []).filter(p => p.student_id === student.id);
+    
+    if (studentFees.length === 0) {
+        return 0;
+    }
+    
+    // Group fees by month (same logic as calculateUnifiedBalance and buildLedgerRows)
+    const monthsMap = {};
+    studentFees.forEach(fee => {
+        if (!monthsMap[fee.month]) {
+            monthsMap[fee.month] = {
+                actual: 0,
+                disc: 0,
+                paid: 0
+            };
+        }
+        const m = monthsMap[fee.month];
+        m.actual += Number(fee.amount || 0);
+        m.disc += Number(fee.discount || 0);
+        // Use ACTUAL payment transactions for this fee (not fee.paid_amount)
+        const paidForThisFee = studentPayments
+            .filter(p => p.fee_id === fee.id)
+            .reduce((sum, p) => sum + Number(p.amount_paid || 0), 0);
+        m.paid += paidForThisFee;
+    });
+    
+    // Sort months ascending for cumulative calculation (Oldest First)
+    const allMonths = Object.keys(monthsMap).sort();
+    
+    let cumulativeArrears = 0;
+    
+    // Calculate cumulative balance month by month (same as ledger)
+    allMonths.forEach(month => {
+        const data = monthsMap[month];
+        const monthTotal = data.actual - data.disc; // Actual - Discount
+        const totalPayableThisMonth = cumulativeArrears + monthTotal;
+        const monthBalance = totalPayableThisMonth - data.paid;
+        cumulativeArrears = monthBalance; // Carry forward to next month
+    });
+    
+    // Return the final cumulative balance for this student
+    return Math.max(0, cumulativeArrears);
+}
+
 export async function generateReceipt(studentIds, isMultiple = false, copyType = 'Office Copy', paymentInfo = null) {
     try {
         // Fetch student and fee data
@@ -16,9 +114,11 @@ export async function generateReceipt(studentIds, isMultiple = false, copyType =
             return;
         }
 
-        const fatherCNIC = students[0].father_cnic || 'N/A';
-        const fatherName = students[0].father_name || 'N/A';
-        const fatherPhone = students[0].phone || 'N/A';
+        // Use first student with available guardian details (fallback across siblings)
+        const primaryStudent = students.find(s => (s.father_name && s.father_name.trim()) || (s.father_cnic && s.father_cnic.trim()) || (s.phone && s.phone.trim())) || students[0];
+        const fatherCNIC = (primaryStudent.father_cnic && String(primaryStudent.father_cnic).trim()) ? primaryStudent.father_cnic : 'N/A';
+        const fatherName = (primaryStudent.father_name && String(primaryStudent.father_name).trim()) ? primaryStudent.father_name : 'N/A';
+        const fatherPhone = (primaryStudent.phone && String(primaryStudent.phone).trim()) ? primaryStudent.phone : (primaryStudent.guardian_phone && String(primaryStudent.guardian_phone).trim()) ? primaryStudent.guardian_phone : 'N/A';
 
         const issueDate = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '/');
         const dueDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '/');
@@ -30,7 +130,7 @@ export async function generateReceipt(studentIds, isMultiple = false, copyType =
             .in('student_id', studentIds)
             .order('payment_date', { ascending: true }); // Ascending for cumulative calc
 
-        // Build receipt HTML
+        // Build receipt HTML (pass paymentInfo which may contain paymentIds and feeIds)
         const receiptHTML = await buildReceiptHTML({
             fatherName,
             fatherCNIC,
@@ -40,12 +140,55 @@ export async function generateReceipt(studentIds, isMultiple = false, copyType =
             students,
             payments,
             copyType,
-            paymentInfo // { amountPaid, balance, receiptNo }
+            paymentInfo // { amountPaid, balance, receiptNo, paymentIds, feeIds }
         });
 
-        const receiptWindow = window.open('', '_blank', 'width=900,height=1200');
-        receiptWindow.document.write(receiptHTML);
-        receiptWindow.document.close();
+        // Try to open new window for receipt - check if popup was blocked
+        let receiptWindow = window.open('', '_blank', 'width=900,height=1200');
+        
+        if (!receiptWindow || receiptWindow.closed || typeof receiptWindow.closed === 'undefined') {
+            // Popup was blocked - try alternative method using blob URL
+            try {
+                const blob = new Blob([receiptHTML], { type: 'text/html' });
+                const url = URL.createObjectURL(blob);
+                receiptWindow = window.open(url, '_blank', 'width=900,height=1200');
+                
+                // Clean up blob URL after a delay
+                setTimeout(() => {
+                    URL.revokeObjectURL(url);
+                }, 1000);
+                
+                if (!receiptWindow || receiptWindow.closed) {
+                    alert('Popup blocked! Please allow popups for this site to print receipts.\n\nAlternatively, you can:\n1. Check your browser\'s popup blocker settings\n2. Try clicking the print button again');
+                    return;
+                }
+            } catch (blobError) {
+                console.error('Blob URL method failed:', blobError);
+                alert('Failed to open receipt window. Please allow popups for this site.');
+                return;
+            }
+        }
+
+        // Write HTML content to the window (if using document.write method)
+        if (receiptWindow.document) {
+            receiptWindow.document.open();
+            receiptWindow.document.write(receiptHTML);
+            receiptWindow.document.close();
+        }
+
+        // Wait for window to fully load before allowing interactions
+        const focusWindow = () => {
+            if (receiptWindow && !receiptWindow.closed) {
+                receiptWindow.focus();
+            }
+        };
+
+        if (receiptWindow.addEventListener) {
+            receiptWindow.addEventListener('load', focusWindow, { once: true });
+        }
+
+        // Fallback: If load event doesn't fire, wait a bit and focus anyway
+        setTimeout(focusWindow, 200);
     } catch (error) {
         console.error('Error generating receipt:', error);
         alert('Failed to generate receipt: ' + error.message);
@@ -58,78 +201,107 @@ async function buildReceiptHTML({ fatherName, fatherCNIC, fatherPhone, issueDate
 
     const ledgerRows = buildLedgerRows(students, payments);
 
+    // For payment receipt: build merged rows (same table as normal receipt) and total paid / updated balance
+    let paidFeesRows = [];
+    let totalPaidThisTransaction = 0;
+    if (paymentInfo && (paymentInfo.paymentIds && paymentInfo.paymentIds.length > 0)) {
+        try {
+            const { data: paymentData, error: paymentDataError } = await supabase
+                .from('fee_payments')
+                .select('*, fees(*)')
+                .in('id', paymentInfo.paymentIds);
+            if (!paymentDataError && paymentData) {
+                const processedPaymentIds = new Set();
+                paymentData.forEach(payment => {
+                    if (processedPaymentIds.has(payment.id)) return;
+                    processedPaymentIds.add(payment.id);
+                    let paidFee = null;
+                    students.forEach(student => {
+                        const fee = (student.fees || []).find(f => f.id === payment.fee_id);
+                        if (fee) paidFee = fee;
+                    });
+                    if (!paidFee && payment.fees) paidFee = payment.fees;
+                    if (paidFee) {
+                        const actual = Number(paidFee.amount || 0);
+                        const disc = Number(paidFee.discount || 0);
+                        const amountPaid = Number(payment.amount_paid || 0);
+                        totalPaidThisTransaction += amountPaid;
+                        paidFeesRows.push({
+                            feeType: paidFee.fee_type,
+                            month: formatMonthStr(paidFee.month),
+                            actual,
+                            disc,
+                            amountPaid
+                        });
+                    }
+                });
+            }
+        } catch (err) {
+            console.warn('Could not fetch payment records for receipt:', err);
+        }
+    }
+
+    // Calculate unified balance first (needed for per-student calculations)
+    const unifiedBalance = calculateUnifiedBalance(students, payments);
+    
+    // Track individual student balances to ensure grand total accuracy
+    let sumOfStudentBalances = 0;
+    
     students.forEach(student => {
-        const currentMonth = new Date().toISOString().slice(0, 7);
-        // Use ALL fees and calculate remaining balance
         const allFees = student.fees || [];
+        const studentPayments = (payments || []).filter(p => p.student_id === student.id);
 
-        // Detailed Logic: Show details for Current Month AND Future Months
-        // Only include fees that have an outstanding balance
-        const detailedFees = allFees.filter(f => {
-            const balance = Number(f.amount || 0) - Number(f.discount || 0) - Number(f.paid_amount || 0);
-            return f.month >= currentMonth && balance > 0;
+        // Show ALL individual fee entries - use ACTUAL payment transactions to calculate balance
+        // This ensures Transport Fee and all other fee types are shown separately
+        const feesWithBalance = allFees.filter(f => {
+            // Calculate paid amount from actual payment transactions (not fee.paid_amount)
+            const paidForThisFee = studentPayments
+                .filter(p => p.fee_id === f.id)
+                .reduce((sum, p) => sum + Number(p.amount_paid || 0), 0);
+            
+            const actual = Number(f.amount || 0);
+            const disc = Number(f.discount || 0);
+            const balance = actual - disc - paidForThisFee;
+            
+            // Show fee if it has any balance remaining
+            return balance > 0;
         });
 
-        // Arrears Logic: Show summary for PAST months
-        // Only include items with outstanding balance
-        const arrearsFees = allFees.filter(f => {
-            const balance = Number(f.amount || 0) - Number(f.discount || 0) - Number(f.paid_amount || 0);
-            return f.month < currentMonth && balance > 0;
+        // Sort by month then fee_type for consistent receipt order
+        feesWithBalance.sort((a, b) => {
+            const monthCompare = (a.month || '').localeCompare(b.month || '');
+            if (monthCompare !== 0) return monthCompare;
+            return (a.fee_type || '').localeCompare(b.fee_type || '');
         });
 
-        let studentTotal = 0;
         let feeRows = '';
 
-        // Render Detailed Fees (Current + Future)
-        detailedFees.forEach(fee => {
+        // Render EVERY individual fee entry as its own row (including duplicates)
+        // Show REMAINING balance using actual payment transactions
+        feesWithBalance.forEach(fee => {
             const actual = Number(fee.amount || 0);
             const disc = Number(fee.discount || 0);
-            const paid = Number(fee.paid_amount || 0);
+            
+            // Use ACTUAL payment transactions for this specific fee (not fee.paid_amount)
+            const paidForThisFee = studentPayments
+                .filter(p => p.fee_id === fee.id)
+                .reduce((sum, p) => sum + Number(p.amount_paid || 0), 0);
+            
+            const remaining = Math.max(0, actual - disc - paidForThisFee);
 
-            // Net Payable for this specific fee
-            // We "not include" the amount that has been paid by showing only the remaining balance
-            const netPayable = Math.max(0, actual - disc - paid);
-
-            if (netPayable > 0) {
-                studentTotal += netPayable;
-
-                feeRows += `
-                    <tr class="fee-row">
-                        <td>${fee.fee_type} (${formatMonthStr(fee.month)})</td>
-                        <td class="text-right">${actual.toFixed(0)}</td>
-                        <td class="text-right">${disc.toFixed(0)}</td>
-                        <td class="text-right font-bold">${netPayable.toFixed(0)}</td>
-                    </tr>
-                `;
-            }
+            feeRows += `
+                <tr class="fee-row">
+                    <td>${fee.fee_type || 'Fee'} (${formatMonthStr(fee.month)})</td>
+                    <td class="text-right">${actual.toFixed(0)}</td>
+                    <td class="text-right">${disc.toFixed(0)}</td>
+                    <td class="text-right font-bold">${remaining.toFixed(0)}</td>
+                </tr>
+            `;
         });
 
-        // Render Arrears Summary (Past Only)
-        if (arrearsFees.length > 0) {
-            const months = [...new Set(arrearsFees.map(f => formatMonthStr(f.month)))].sort().join(', ');
-
-            // Calculate Aggregates for Arrears
-            const totalArrearActual = arrearsFees.reduce((sum, f) => sum + Number(f.amount || 0), 0);
-            const totalArrearDisc = arrearsFees.reduce((sum, f) => sum + Number(f.discount || 0), 0);
-            const totalArrearPaid = arrearsFees.reduce((sum, f) => sum + Number(f.paid_amount || 0), 0);
-
-            const netArrearsPayable = totalArrearActual - totalArrearDisc - totalArrearPaid;
-
-            if (netArrearsPayable > 0) {
-                studentTotal += netArrearsPayable;
-
-                feeRows += `
-                    <tr class="fee-row">
-                        <td>Arrears (${months})</td>
-                        <td class="text-right">${totalArrearActual.toFixed(0)}</td>
-                        <td class="text-right">${totalArrearDisc.toFixed(0)}</td>
-                        <td class="text-right font-bold">${netArrearsPayable.toFixed(0)}</td>
-                    </tr>
-                `;
-            }
-        }
-
-        grandTotal += studentTotal;
+        // Calculate student's balance using cumulative ledger logic
+        const studentBalance = calculateStudentBalance(student, students, payments, unifiedBalance);
+        sumOfStudentBalances += studentBalance;
 
         studentRows += `
             <tr class="student-header">
@@ -143,10 +315,14 @@ async function buildReceiptHTML({ fatherName, fatherCNIC, fatherPhone, issueDate
             ${feeRows}
             <tr class="total-row bg-gray-100">
                 <td colspan="3" class="text-right"><strong>Total Payable of ${student.name}:</strong></td>
-                <td class="text-right"><strong>${studentTotal.toFixed(0)}</strong></td>
+                <td class="text-right"><strong>${studentBalance.toFixed(0)}</strong></td>
             </tr>
         `;
     });
+    
+    // Grand Total: Use unified balance (which should equal sum of individual balances)
+    // This ensures consistency with the ledger calculation
+    grandTotal = unifiedBalance;
 
     return `
 <!DOCTYPE html>
@@ -192,21 +368,36 @@ async function buildReceiptHTML({ fatherName, fatherCNIC, fatherPhone, issueDate
             </div>
         </div>
 
+        <!-- One receipt layout for both fee slip and payment: same table, ledger, summary -->
         <table class="receipt-table">
             <thead>
                 <tr>
                     <th style="width: 45%;">Particulars</th>
                     <th style="width: 15%;">Actual Fee</th>
                     <th style="width: 15%;">Discount</th>
-                    <th style="width: 25%;">Net Amount</th>
+                    <th style="width: 25%;">${paidFeesRows.length > 0 ? 'Amount Paid' : 'Remaining'}</th>
                 </tr>
             </thead>
             <tbody>
-                ${studentRows}
-                <tr class="grand-total-row">
-                    <td colspan="3" style="border-right: none;"><strong>Grand Total Payable:</strong></td>
-                    <td class="text-right" style="border-left: none;"><strong>${grandTotal.toFixed(0)}</strong></td>
-                </tr>
+                ${paidFeesRows.length > 0
+                    ? paidFeesRows.map(f => `
+                        <tr class="fee-row">
+                            <td>${f.feeType} (${f.month})</td>
+                            <td class="text-right">${f.actual.toFixed(0)}</td>
+                            <td class="text-right">${f.disc.toFixed(0)}</td>
+                            <td class="text-right font-bold">${f.amountPaid.toFixed(0)}</td>
+                        </tr>
+                    `).join('') + `
+                    <tr class="grand-total-row">
+                        <td colspan="3" style="border-right: none;"><strong>Total:</strong></td>
+                        <td class="text-right" style="border-left: none;"><strong>${totalPaidThisTransaction.toFixed(0)}</strong></td>
+                    </tr>`
+                    : `${studentRows}
+                    <tr class="grand-total-row">
+                        <td colspan="3" style="border-right: none;"><strong>Grand Total Payable:</strong></td>
+                        <td class="text-right" style="border-left: none;"><strong>${unifiedBalance.toFixed(0)}</strong></td>
+                    </tr>`
+                }
             </tbody>
         </table>
 
@@ -222,7 +413,6 @@ async function buildReceiptHTML({ fatherName, fatherCNIC, fatherPhone, issueDate
                         <th>O.Fee</th>
                         <th>M.Total</th>
                         <th>Payable</th>
-                        <th>Paid</th>
                         <th>Balance</th>
                         <th>Rec #</th>
                         <th style="width: 70px;">Entry Date</th>
@@ -234,8 +424,8 @@ async function buildReceiptHTML({ fatherName, fatherCNIC, fatherPhone, issueDate
             </table>
 
             <div class="payment-summary">
-                <div class="summary-field"><span>Fees Paid:</span> <span>${paymentInfo?.amountPaid || '_______'}</span></div>
-                <div class="summary-field"><span>Balance:</span> <span>${paymentInfo?.balance || '_______'}</span></div>
+                <div class="summary-field"><span>Paid</span> <span>${paidFeesRows.length > 0 ? totalPaidThisTransaction.toFixed(0) : '___________'}</span></div>
+                <div class="summary-field"><span>Balance</span> <span>${paidFeesRows.length > 0 ? unifiedBalance.toFixed(0) : '___________'}</span></div>
                 <div class="summary-field"><span>Date:</span> <span>${paymentInfo?.date || issueDate}</span></div>
                 <div class="summary-field"><span>Method:</span> <span>${paymentInfo?.method || 'Cash / Bank / Online'}</span></div>
                 <div class="summary-field"><span>Receipt No:</span> <span>${paymentInfo?.receiptNo || '_______'}</span></div>
@@ -258,14 +448,25 @@ async function buildReceiptHTML({ fatherName, fatherCNIC, fatherPhone, issueDate
 
     <script>
         window.updateCopyType = function(val) {
-            document.getElementById('copyLabel').textContent = val;
+            const label = document.getElementById('copyLabel');
+            if (label) label.textContent = val;
         };
         
-        window.onload = function() {
-            setTimeout(() => {
-                // window.print();
-            }, 500);
-        };
+        // Ensure content is fully loaded before allowing print
+        window.addEventListener('load', function() {
+            // Small delay to ensure all styles and content are rendered
+            setTimeout(function() {
+                // Auto-focus the window when loaded
+                window.focus();
+            }, 100);
+        }, { once: true });
+        
+        // Fallback for browsers that don't fire load event properly
+        if (document.readyState === 'complete') {
+            setTimeout(function() {
+                window.focus();
+            }, 100);
+        }
     </script>
 </body>
 </html>
@@ -297,7 +498,8 @@ function buildLedgerRows(students, payments) {
         m.disc += Number(fee.discount || 0);
         if (fee.fee_type === 'Tuition Fee') m.tuition += Number(fee.amount || 0);
         else m.others += Number(fee.amount || 0);
-        m.paid += Number(fee.paid_amount || 0);
+        const paidForThisFee = (payments || []).filter(p => p.fee_id === fee.id).reduce((sum, p) => sum + Number(p.amount_paid || 0), 0);
+        m.paid += paidForThisFee;
         m.total = m.actual - m.disc;
     });
 
@@ -325,7 +527,7 @@ function buildLedgerRows(students, payments) {
             ? monthPayments.map(p => p.receipt_no || p.id.toString().slice(-4).toUpperCase()).join(', ')
             : '-';
         const entryDate = monthPayments.length > 0
-            ? new Date(monthPayments[monthPayments.length - 1].payment_date).toLocaleDateString('en-GB')
+            ? (window.formatPaymentDateLocal || ((v) => new Date(v).toLocaleDateString('en-GB')))(monthPayments[monthPayments.length - 1].payment_date)
             : '-';
 
         processedRows.push({
@@ -367,16 +569,15 @@ function buildLedgerRows(students, payments) {
             <td>${row.others.toFixed(0)}</td>
             <td class="font-bold">${row.total.toFixed(0)}</td>
             <td class="font-bold" style="color: #444;">${row.payable.toFixed(0)}</td>
-            <td>${row.paid.toFixed(0)}</td>
             <td style="${balanceStyle}">${row.balance.toFixed(0)}</td>
             <td style="font-size: 7px; max-width: 60px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${row.recNo}</td>
             <td>${row.entryDate}</td>
         </tr>
     `}).join('');
 
-    // Add empty rows up to 6
+    // Add empty rows up to 6 (11 columns after removing Paid)
     for (let i = displayRows.length; i < 6; i++) {
-        html += `<tr>${'<td>&nbsp;</td>'.repeat(12)}</tr>`;
+        html += `<tr>${'<td>&nbsp;</td>'.repeat(11)}</tr>`;
     }
 
     return html;

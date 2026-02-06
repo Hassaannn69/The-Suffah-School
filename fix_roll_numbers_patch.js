@@ -8,7 +8,7 @@ async function fixAllRollNumbers() {
         'Phase 2: Set all to ST-XXX\n\n' +
         'Do you want to continue?';
 
-    if (!confirm(confirmMsg)) {
+    if (!await confirm(confirmMsg)) {
         return;
     }
 

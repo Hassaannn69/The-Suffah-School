@@ -90,7 +90,13 @@ async function initApp() {
         userAvatarEl.textContent = currentUser.email.charAt(0).toUpperCase();
 
         renderSidebar();
-        loadModule('dashboard'); // Load default module
+        startHeaderClock();
+        // Restore last opened page so reloads don't send you back to dashboard home
+        const lastModule = localStorage.getItem('suffah_last_module');
+        const allowedModules = ['dashboard', 'student-dashboard', 'students', 'teachers', 'assign_class', 'timetable', 'teacher_attendance', 'payroll', 'classes', 'fees', 'fee_generation', 'fee_structure', 'fee_reports', 'fee_discounts', 'expenses', 'staff', 'landing_page_editor', 'settings'];
+        const initialModule = (lastModule && allowedModules.includes(lastModule)) ? lastModule : 'dashboard';
+        loadModule(initialModule);
+        startUpdateCheck(); // Show "Website updated" banner when code changes — no auto-refresh
     } catch (err) {
         console.error('Error initializing app:', err);
         mainContent.innerHTML = `
@@ -142,6 +148,7 @@ const menuItems = [
     },
     { id: 'expenses', label: 'Expenses', icon: 'M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z', roles: ['admin', 'accountant'] },
     { id: 'staff', label: 'Staff & Users', icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z', roles: ['admin'] },
+    { id: 'landing_page_editor', label: 'Landing Page', icon: 'M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0h.5a2.5 2.5 0 001.5-4.065M3.055 11H3a2 2 0 00-2 2v2a2 2 0 002 2h2.945M21 12v.5a2.5 2.5 0 01-2.5 2.5h-.5a2 2 0 01-2-2v-1.055M21 12V10a2 2 0 00-2-2h-2.945', roles: ['admin'] },
     { id: 'settings', label: 'Settings', icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z', roles: ['admin'] }
 ];
 
@@ -229,9 +236,26 @@ function renderSidebar() {
     });
 }
 
+function startHeaderClock() {
+    const timeEl = document.getElementById('currentTime');
+    const dateEl = document.getElementById('currentDate');
+    if (!timeEl || !dateEl) return;
+    function update() {
+        const now = new Date();
+        timeEl.textContent = now.toLocaleTimeString('en-US', { hour12: true, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        dateEl.textContent = now.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+    }
+    update();
+    setInterval(update, 1000);
+}
 
 // Module Loader with Page Transitions
 async function loadModule(moduleId) {
+    // Persist so we can restore this page after a reload (avoids losing place when code updates)
+    try {
+        localStorage.setItem('suffah_last_module', moduleId);
+    } catch (e) { /* ignore */ }
+
     // Update active state in sidebar
     document.querySelectorAll('#navLinks a').forEach(el => {
         if (el.dataset.module === moduleId) {
@@ -263,6 +287,7 @@ async function loadModule(moduleId) {
         'fee_discounts': 'Discounts / Concessions',
         'expenses': 'Expenses',
         'staff': 'Staff Management',
+        'landing_page_editor': 'Landing Page Editor',
         'settings': 'Settings'
     };
     pageTitle.textContent = titleMap[moduleId] || moduleId.charAt(0).toUpperCase() + moduleId.slice(1);
@@ -334,6 +359,72 @@ async function loadModule(moduleId) {
 // Expose globally for cross-module navigation
 window.loadModule = loadModule;
 
+// --- Update check: show "Website updated" banner when new code is deployed; do NOT auto-refresh ---
+function getCurrentAppVersion() {
+    try {
+        const url = new URL(import.meta.url);
+        return url.searchParams.get('v') || '0';
+    } catch (e) {
+        const script = document.querySelector('script[src*="app.js"]');
+        const m = script && script.getAttribute('src') && script.getAttribute('src').match(/[?&]v=([^&]+)/);
+        return (m && m[1]) ? m[1] : '0';
+    }
+}
+
+function showUpdateBanner() {
+    if (document.getElementById('suffah-update-banner')) return;
+    const banner = document.createElement('div');
+    banner.id = 'suffah-update-banner';
+    banner.setAttribute('role', 'status');
+    banner.className = 'fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:max-w-sm z-[100] flex items-center justify-between gap-3 px-4 py-3 rounded-xl shadow-lg border bg-gray-900 dark:bg-gray-800 border-primary-500/50 text-white';
+    banner.innerHTML = `
+        <span class="text-sm font-medium">Website updated. Refresh to get the latest.</span>
+        <div class="flex items-center gap-2 shrink-0">
+            <button type="button" id="suffah-update-dismiss" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-gray-700 hover:bg-gray-600 transition-colors">Dismiss</button>
+            <button type="button" id="suffah-update-refresh" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-primary-600 hover:bg-primary-500 transition-colors">Refresh</button>
+        </div>
+    `;
+    document.body.appendChild(banner);
+    document.getElementById('suffah-update-dismiss').addEventListener('click', () => {
+        banner.remove();
+    });
+    document.getElementById('suffah-update-refresh').addEventListener('click', () => {
+        window.location.reload();
+    });
+}
+
+function startUpdateCheck() {
+    const currentVersion = getCurrentAppVersion();
+    let checkInterval;
+
+    function check() {
+        fetch(`version.json?t=${Date.now()}`, { cache: 'no-store' })
+            .then((r) => (r.ok ? r.json() : null))
+            .then((data) => {
+                if (data && data.version && String(data.version) !== String(currentVersion)) {
+                    showUpdateBanner();
+                    if (checkInterval) clearInterval(checkInterval);
+                }
+            })
+            .catch(() => {});
+    }
+
+    // Check when tab becomes visible (e.g. after switching back from editor)
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') check();
+    });
+    // Periodic check every 30 seconds
+    checkInterval = setInterval(check, 30000);
+    // First check after 2 seconds so updates are noticed sooner
+    setTimeout(check, 2000);
+
+    // Test: show banner on demand (e.g. in console: window.__showUpdateBanner())
+    window.__showUpdateBanner = showUpdateBanner;
+    // Test: open dashboard with ?testUpdate=1 to see the banner once
+    if (new URLSearchParams(window.location.search).get('testUpdate') === '1') {
+        setTimeout(showUpdateBanner, 1000);
+    }
+}
 
 // Logout Logic
 logoutBtn.addEventListener('click', async () => {

@@ -106,7 +106,7 @@ async function fetchClasses() {
 }
 
 window.deleteClass = async (id) => {
-    if (!confirm('Are you sure? This will not delete students in this class.')) return;
+    if (!await confirm('Are you sure? This will not delete students in this class.')) return;
 
     const { error } = await supabase.from('classes').delete().eq('id', id);
     if (error) {

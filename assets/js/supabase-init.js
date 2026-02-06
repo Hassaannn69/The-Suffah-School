@@ -36,6 +36,19 @@ window.formatCurrency = (amount) => {
     return `${window.currencySymbol} ${parseFloat(amount || 0).toLocaleString()}`;
 };
 
+// Format payment_date (YYYY-MM-DD) as local date to avoid timezone off-by-one in payment history
+window.formatPaymentDateLocal = (value, options = { day: '2-digit', month: 'short', year: 'numeric' }) => {
+    if (value == null || value === '') return '—';
+    const s = String(value).trim();
+    const match = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (match) {
+        const [, y, m, d] = match;
+        return new Date(Number(y), Number(m) - 1, Number(d)).toLocaleDateString('en-GB', options);
+    }
+    const d = new Date(s);
+    return isNaN(d.getTime()) ? '—' : d.toLocaleDateString('en-GB', options);
+};
+
 // Fetch currency setting immediately (silently fails if settings table doesn't exist)
 (async () => {
     try {

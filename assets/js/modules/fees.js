@@ -4,8 +4,11 @@ const supabase = window.supabase || (() => {
     throw new Error('Supabase client not initialized');
 })();
 
-// Import receipt generator
-import { generateReceipt } from './receipt-generator.js';
+// Import receipt generator and unified balance calculation
+import { generateReceipt, calculateUnifiedBalance } from './receipt-generator.js';
+
+// Source of truth: Paid amounts and outstanding in the UI come from fee_payments (and receipts).
+// fees.paid_amount is kept in sync by the DB trigger (on fee_payments) and by void-receipt logic.
 
 // State management
 let allFamilies = [];
@@ -124,7 +127,7 @@ function renderPaymentModalTemplate() {
                                         </div>
                                         <h4 class="font-bold text-white">Collective Payment</h4>
                                     </div>
-                                    <p class="text-xs text-slate-400 leading-relaxed">Enter total amount. System automatically distributes it proportionally across all unpaid fee types.</p>
+                                    <p class="text-xs text-slate-400 leading-relaxed">Enter total amount. System automatically distributes it equally across all unpaid fee types.</p>
                                 </div>
                             </label>
                             
@@ -146,11 +149,11 @@ function renderPaymentModalTemplate() {
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                              <div class="md:col-span-1">
                                 <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Payment Date</label>
-                                <input type="date" id="paymentDate" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-white outline-none focus:border-blue-500 transition-colors">
+                                <input type="date" id="paymentDate" required onkeydown="if(event.key==='Enter'){event.preventDefault();}" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-white outline-none focus:border-blue-500 transition-colors">
                             </div>
                             <div class="md:col-span-1">
                                 <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Payment Method</label>
-                                <select id="paymentMethod" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-white outline-none focus:border-blue-500 transition-colors">
+                                <select id="paymentMethod" required onkeydown="if(event.key==='Enter'){event.preventDefault();}" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-white outline-none focus:border-blue-500 transition-colors">
                                     <option value="Cash">Cash</option>
                                     <option value="Bank Transfer">Bank Transfer</option>
                                     <option value="EasyPaisa">EasyPaisa</option>
@@ -160,7 +163,7 @@ function renderPaymentModalTemplate() {
                             </div>
                             <div class="md:col-span-1">
                                 <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Total Amount (PKR)</label>
-                                <input type="number" id="paymentAmount" required min="1" oninput="window.updatePaymentPreview()" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-white outline-none focus:border-blue-500 transition-colors font-mono text-lg font-bold" placeholder="0">
+                                <input type="number" id="paymentAmount" required min="1" oninput="window.updatePaymentPreview()" onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('submitPaymentBtn')?.click();}" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-white outline-none focus:border-blue-500 transition-colors font-mono text-lg font-bold" placeholder="0">
                             </div>
                         </div>
 
@@ -192,8 +195,15 @@ function renderPaymentModalTemplate() {
 
 async function initializeData() {
     try {
-        const { data: feesData, error } = await supabase.from('fees').select('*, students(*)').order('issued_at', { ascending: false });
-        const { data: allPayments } = await supabase.from('fee_payments').select('*').order('payment_date', { ascending: false });
+        const { data: feesData, error } = await supabase.from('fees').select('*, students(*)').order('generated_at', { ascending: false });
+        let allPayments;
+        const { data: paymentsWithReceipts, error: payErr } = await supabase.from('fee_payments').select('*, receipts(receipt_number, payment_date, payment_method, total_paid)').order('payment_date', { ascending: false });
+        if (payErr) {
+            const { data: paymentsOnly } = await supabase.from('fee_payments').select('*').order('payment_date', { ascending: false });
+            allPayments = paymentsOnly || [];
+        } else {
+            allPayments = paymentsWithReceipts || [];
+        }
         if (error) throw error;
 
         const familiesMap = new Map();
@@ -233,28 +243,11 @@ async function initializeData() {
 
             const student = f.students.get(s.id);
             const net = Math.max(0, (fee.amount || 0) - (fee.discount || 0));
-            const paid = (fee.paid_amount || 0);
 
             student.totalFees += net;
-            student.paidAmount += paid;
-            student.outstanding = Math.max(0, student.totalFees - student.paidAmount);
             student.fees.push(fee);
             f.totalAssigned += net;
-            f.totalPaid += paid;
             f.allFees.push(fee);
-
-            if (net > paid) {
-                const dueDate = fee.due_date ? new Date(fee.due_date) : null;
-                const now = new Date();
-                if (dueDate && !isNaN(dueDate.getTime()) && now > dueDate) {
-                    const diff = now - dueDate;
-                    f.status = 'overdue';
-                    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-                    f.overdueDays = Math.max(f.overdueDays, days);
-                } else if (f.status !== 'overdue') {
-                    f.status = 'partial';
-                }
-            }
         });
 
         allFamilies = Array.from(familiesMap.values()).map(f => {
@@ -262,15 +255,54 @@ async function initializeData() {
             const familyStudentIds = Array.from(f.students.keys());
             const familyPayments = (allPayments || []).filter(p => familyStudentIds.includes(p.student_id));
 
+            // Paid amounts from ACTUAL payment transactions (not fees.paid_amount)
+            const familyTotalPaid = familyPayments.reduce((sum, p) => sum + Number(p.amount_paid || 0), 0);
+            f.totalPaid = familyTotalPaid;
+
             f.students.forEach(student => {
                 student.payments = familyPayments.filter(p => p.student_id === student.id);
+                const studentPaid = student.payments.reduce((sum, p) => sum + Number(p.amount_paid || 0), 0);
+                student.paidAmount = studentPaid;
+                // Use unified balance calculation for consistency (same as Total Family Dues)
+                const studentStudentsArray = [{ id: student.id, fees: student.fees || [] }];
+                student.outstanding = calculateUnifiedBalance(studentStudentsArray, student.payments);
             });
 
             if (familyPayments.length > 0) {
-                f.lastPayment = new Date(familyPayments[0].payment_date).toLocaleDateString('en-GB');
+                f.lastPayment = (window.formatPaymentDateLocal || ((v) => new Date(v).toLocaleDateString('en-GB')))(familyPayments[0].payment_date);
             }
 
-            f.totalDue = Math.max(0, f.totalAssigned - f.totalPaid);
+            // USE UNIFIED BALANCE CALCULATION - Single Source of Truth
+            const studentsArray = Array.from(f.students.values()).map(s => ({
+                id: s.id,
+                fees: s.fees || []
+            }));
+            f.totalDue = calculateUnifiedBalance(studentsArray, familyPayments);
+
+            // Status/overdue from actual outstanding (based on payments, not fee.paid_amount)
+            f.overdueDays = 0;
+            if (f.totalDue <= 0) {
+                f.status = 'paid';
+            } else {
+                f.status = 'partial';
+                f.students.forEach(student => {
+                    if (student.outstanding > 0 && student.fees) {
+                        student.fees.forEach(fee => {
+                            const net = (fee.amount || 0) - (fee.discount || 0);
+                            const paidForFee = student.payments.filter(p => p.fee_id === fee.id).reduce((s, p) => s + Number(p.amount_paid || 0), 0);
+                            if (net > paidForFee && fee.due_date) {
+                                const d = new Date(fee.due_date);
+                                if (!isNaN(d.getTime()) && new Date() > d) {
+                                    f.status = 'overdue';
+                                    const days = Math.floor((new Date() - d) / (1000 * 60 * 60 * 24));
+                                    f.overdueDays = Math.max(f.overdueDays, days);
+                                }
+                            }
+                        });
+                    }
+                });
+            }
+
             return f;
         }).sort((a, b) => b.totalAssigned - a.totalAssigned);
 
@@ -279,15 +311,24 @@ async function initializeData() {
         renderFamilyGrid();
         renderPagination();
 
+        // Attach form handler to prevent default submission
         const form = document.getElementById('paymentForm');
-        if (form) form.onsubmit = handlePaymentSubmit;
+        if (form) {
+            // Remove any existing handlers to avoid duplicates
+            form.onsubmit = null;
+            form.removeEventListener('submit', handlePaymentSubmit);
+            // Add handler
+            form.onsubmit = handlePaymentSubmit;
+            form.addEventListener('submit', handlePaymentSubmit, false);
+        }
     } catch (err) { console.error(err); }
 }
 
 function updateStats() {
     const assigned = allFamilies.reduce((s, f) => s + f.totalAssigned, 0);
     const paid = allFamilies.reduce((s, f) => s + f.totalPaid, 0);
-    const outstanding = Math.max(0, assigned - paid);
+    // Use unified balance (totalDue) for consistency - same calculation as Total Family Dues
+    const outstanding = allFamilies.reduce((s, f) => s + f.totalDue, 0);
     const hasDefaulters = allFamilies.some(f => f.status === 'overdue');
 
     document.getElementById('kpi-total-assigned').textContent = formatCompactCurrency(assigned);
@@ -324,10 +365,10 @@ function renderFamilyGrid() {
         const familyPhoto = Array.from(f.students.values()).find(s => s.photo_url)?.photo_url;
 
         return `
-            <div class="family-card ${isDefaulter ? 'defaulter-card' : ''} animate-fade-in shadow-xl shadow-black/20">
+            <div class="family-card animate-fade-in shadow-xl shadow-black/20">
                 ${isDefaulter ? '<span class="defaulter-tag">Defaulter</span>' : ''}
                 <div class="flex items-start gap-4">
-                    <div class="avatar-box ${isDefaulter ? 'bg-red-500' : 'bg-blue-600'} text-white font-bold overflow-hidden">
+                    <div class="avatar-box bg-slate-600 text-white font-bold overflow-hidden">
                         ${familyPhoto ? `<img src="${familyPhoto}" class="w-full h-full object-cover">` : initials}
                     </div>
                     <div class="flex-grow min-w-0">
@@ -351,7 +392,7 @@ function renderFamilyGrid() {
                     <p class="text-[10px] text-slate-500 font-medium">${overtext}</p>
                     <div class="flex items-center gap-2"><span class="status-dot ${isDefaulter ? 'dot-red' : (f.totalDue > 0 ? 'dot-orange' : 'dot-green')}"></span><span class="text-[10px] font-bold text-slate-300 uppercase">${isDefaulter ? 'Overdue' : (f.totalDue > 0 ? 'Partial' : 'Paid')}</span></div>
                 </div>
-                <button onclick="window.viewFamilyProfile('${f.key}')" class="view-profile-btn ${isDefaulter ? 'solid-red-btn' : 'ghost-btn-blue'}">
+                <button onclick="window.viewFamilyProfile('${f.key}')" class="view-profile-btn view-profile-btn-neutral">
                     <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
                     View Family Profile
                 </button>
@@ -447,24 +488,80 @@ window.renderStudentFinancials = async () => {
 
         // Ensure fees array exists
         const studentFees = student.fees || [];
-        const isOverdue = student.outstanding > 0 && studentFees.some(f => new Date(f.due_date) < new Date() && (f.amount - (f.discount || 0)) > (f.paid_amount || 0));
-
-        // Use pre-fetched payments from student object
+        // Use ACTUAL payment transactions as source of truth (not fees.paid_amount which can be wrong)
         const studentPayments = student.payments || [];
+        const actualPaidTotal = studentPayments.reduce((sum, p) => sum + Number(p.amount_paid || 0), 0);
+        
+        // Calculate student's unified balance (same as Total Family Dues logic) for consistency
+        const studentsArray = [{ id: student.id, fees: studentFees }];
+        const studentUnifiedBalance = calculateUnifiedBalance(studentsArray, studentPayments);
+        
+        const isOverdue = studentUnifiedBalance > 0 && studentFees.some(f => {
+            const net = f.amount - (f.discount || 0);
+            const paidForFee = studentPayments.filter(p => p.fee_id === f.id).reduce((s, p) => s + Number(p.amount_paid || 0), 0);
+            return new Date(f.due_date) < new Date() && net > paidForFee;
+        });
+
+        // Group payments by receipt (one row per receipt; legacy payments with no receipt_id = one row each)
+        const receiptGroups = (() => {
+            const groups = [];
+            const seenReceiptIds = new Set();
+            for (const p of studentPayments) {
+                if (p.receipt_id) {
+                    if (!seenReceiptIds.has(p.receipt_id)) {
+                        seenReceiptIds.add(p.receipt_id);
+                        const sameReceipt = studentPayments.filter(x => x.receipt_id === p.receipt_id);
+                        const rec = p.receipts || {};
+                        const total = rec.total_paid != null ? Number(rec.total_paid) : sameReceipt.reduce((s, x) => s + Number(x.amount_paid || 0), 0);
+                        const feeLabels = sameReceipt.map(x => {
+                            const f = studentFees.find(fee => fee.id === x.fee_id);
+                            return f ? `${f.fee_type} (${f.month || ''})` : 'Fee';
+                        });
+                        groups.push({
+                            receiptId: p.receipt_id,
+                            receiptNumber: rec.receipt_number || p.receipt_id.slice(0, 8),
+                            paymentDate: rec.payment_date || p.payment_date,
+                            paymentMethod: rec.payment_method || p.payment_method,
+                            totalPaid: total,
+                            payments: sameReceipt,
+                            feeTypesSummary: feeLabels.join(', ')
+                        });
+                    }
+                } else {
+                    const f = studentFees.find(fee => fee.id === p.fee_id);
+                    groups.push({
+                        receiptId: null,
+                        receiptNumber: '#' + (p.id || '').toString().slice(0, 4).toUpperCase(),
+                        paymentDate: p.payment_date,
+                        paymentMethod: p.payment_method,
+                        totalPaid: Number(p.amount_paid || 0),
+                        payments: [p],
+                        feeTypesSummary: f ? `${f.fee_type} (${f.month || ''})` : 'Fee'
+                    });
+                }
+            }
+            groups.sort((a, b) => new Date(b.paymentDate) - new Date(a.paymentDate));
+            return groups;
+        })();
 
         const timelineHTML = studentPayments.length > 0
-            ? studentPayments.slice(0, 3).map((p, i) => `
+            ? studentPayments.slice(0, 3).map((p, i) => {
+                const rec = p.receipts;
+                const recNo = rec && rec.receipt_number ? rec.receipt_number : ('#' + (p.id || '').toString().slice(0, 4).toUpperCase());
+                return `
                 <div class="timeline-item">
                     <span class="timeline-dot ${i === 0 ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]' : 'bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]'}"></span>
                     <p class="text-sm font-bold text-white">${i === 0 ? 'Payment Received' : (p.amount_paid < 1000 ? 'Partial Payment' : 'Payment Received')}</p>
-                    <p class="text-[10px] text-slate-500 mt-1 uppercase">${new Date(p.payment_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })} • Receipt #${p.id.slice(0, 4).toUpperCase()}</p>
+                    <p class="text-[10px] text-slate-500 mt-1 uppercase">${(window.formatPaymentDateLocal || ((v) => new Date(v).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })))(p.payment_date)} • Receipt ${recNo}</p>
                 </div>
-            `).join('')
+            `;
+            }).join('')
             : `<div class="timeline-item"><span class="timeline-dot bg-slate-600"></span><p class="text-sm font-bold text-slate-500">No recent payments</p></div>`;
 
         content.innerHTML = `
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div class="lg:col-span-2 space-y-8">
+                    <!-- Paid and Outstanding are derived from fee_payments (actual transactions) only -->
                     <div class="student-kpi-row">
                         <div class="kpi-card bg-[#1E293B]/60 backdrop-blur-sm">
                             <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Total Fees</p>
@@ -472,11 +569,11 @@ window.renderStudentFinancials = async () => {
                         </div>
                         <div class="kpi-card bg-[#1E293B]/60 backdrop-blur-sm">
                             <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Paid Amount</p>
-                            <h4 class="text-2xl font-black text-white mt-1">${window.formatCurrency(student.paidAmount)}</h4>
+                            <h4 class="text-2xl font-black text-white mt-1">${window.formatCurrency(actualPaidTotal)}</h4>
                         </div>
                         <div class="kpi-card bg-[#1E293B]/60 backdrop-blur-sm border-amber-500/30">
                             <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Outstanding</p>
-                            <h4 class="text-2xl font-black ${isOverdue ? 'text-red-500' : 'text-amber-500'} mt-1">${window.formatCurrency(student.outstanding)}</h4>
+                            <h4 class="text-2xl font-black ${isOverdue ? 'text-red-500' : 'text-amber-500'} mt-1">${window.formatCurrency(studentUnifiedBalance)}</h4>
                         </div>
                     </div>
 
@@ -500,10 +597,11 @@ window.renderStudentFinancials = async () => {
                                 <tbody>
                                     ${studentFees.sort((a, b) => (b.month || '').localeCompare(a.month || '')).map(f => {
             const net = Number(f.amount || 0) - Number(f.discount || 0);
-            const bal = Math.max(0, net - Number(f.paid_amount || 0));
-            const cls = bal <= 0 ? 'pill-paid' : (Number(f.paid_amount || 0) > 0 ? 'pill-partial' : 'pill-unpaid');
-            const lbl = bal <= 0 ? 'PAID' : (Number(f.paid_amount || 0) > 0 ? 'PARTIAL' : 'UNPAID');
-            return `<tr><td class="font-bold text-white">${f.fee_type} (${f.month || ''})</td><td class="font-medium text-slate-300">${net.toLocaleString()}</td><td class="text-amber-500 font-medium">${Number(f.discount || 0).toLocaleString()}</td><td class="text-emerald-400 font-medium">${Number(f.paid_amount || 0).toLocaleString()}</td><td class="font-black ${bal > 0 ? 'text-red-500' : 'text-slate-500'}">${bal.toLocaleString()}</td><td><span class="status-pill ${cls}">${lbl}</span></td></tr>`;
+            const paidForThisFee = studentPayments.filter(p => p.fee_id === f.id).reduce((s, p) => s + Number(p.amount_paid || 0), 0);
+            const bal = Math.max(0, net - paidForThisFee);
+            const cls = bal <= 0 ? 'pill-paid' : (paidForThisFee > 0 ? 'pill-partial' : 'pill-unpaid');
+            const lbl = bal <= 0 ? 'PAID' : (paidForThisFee > 0 ? 'PARTIAL' : 'UNPAID');
+            return `<tr><td class="font-bold text-white">${f.fee_type} (${f.month || ''})</td><td class="font-medium text-slate-300">${net.toLocaleString()}</td><td class="text-amber-500 font-medium">${Number(f.discount || 0).toLocaleString()}</td><td class="text-emerald-400 font-medium">${paidForThisFee.toLocaleString()}</td><td class="font-black ${bal > 0 ? 'text-red-500' : 'text-slate-500'}">${bal.toLocaleString()}</td><td><span class="status-pill ${cls}">${lbl}</span></td></tr>`;
         }).join('')}
                                 </tbody>
                             </table>
@@ -522,20 +620,27 @@ window.renderStudentFinancials = async () => {
                         </div>
                         <div class="overflow-x-auto">
                             <table class="ledger-table">
-                                <thead><tr><th>DATE</th><th>RECEIPT #</th><th>METHOD</th><th>AMOUNT</th><th>FEE TYPE/MONTH</th><th>ACTIONS</th></tr></thead>
+                                <thead><tr><th>DATE</th><th>RECEIPT #</th><th>METHOD</th><th>AMOUNT</th><th>FEE TYPES</th><th>ACTIONS</th></tr></thead>
                                 <tbody>
-                                    ${studentPayments && studentPayments.length > 0 ? studentPayments.slice(0, 5).map(p => {
-            const matchingFee = studentFees.find(f => f.id === p.fee_id);
+                                    ${receiptGroups.length > 0 ? receiptGroups.slice(0, 10).map(g => {
+            const dateStr = (window.formatPaymentDateLocal || ((v) => new Date(v).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })))(g.paymentDate);
+            const firstPaymentId = g.payments[0] && g.payments[0].id;
+            const printArg = g.receiptId ? `'${g.receiptId}'` : (firstPaymentId ? `null,'${firstPaymentId}'` : 'null');
+            const deleteArg = g.receiptId ? `'${g.receiptId}', null` : (firstPaymentId ? `null, '${firstPaymentId}'` : 'null, null');
+            const deleteTitle = g.receiptId ? 'Void receipt' : 'Delete transaction';
             return `
                                         <tr>
-                                            <td class="text-slate-300 font-medium">${new Date(p.payment_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
-                                            <td class="text-slate-500 font-mono">#${p.id.slice(0, 4).toUpperCase()}</td>
-                                            <td><span class="method-pill">${(p.payment_method || 'CASH').toUpperCase()}</span></td>
-                                            <td class="font-black text-emerald-400">PKR ${Number(p.amount_paid).toLocaleString()}</td>
-                                            <td class="text-slate-400 text-sm">${matchingFee ? matchingFee.fee_type : 'Fee Payment'} (${matchingFee ? matchingFee.month : '--'})</td>
-                                            <td>
-                                                <button onclick="window.printReceiptById('${p.id}')" class="text-slate-500 hover:text-white transition-colors">
+                                            <td class="text-slate-300 font-medium">${dateStr}</td>
+                                            <td class="text-slate-500 font-mono">${g.receiptNumber}</td>
+                                            <td><span class="method-pill">${(g.paymentMethod || 'CASH').toUpperCase()}</span></td>
+                                            <td class="font-black text-emerald-400">PKR ${Number(g.totalPaid).toLocaleString()}</td>
+                                            <td class="text-slate-400 text-sm max-w-[200px] truncate" title="${(g.feeTypesSummary || '').replace(/"/g, '&quot;')}">${g.feeTypesSummary || '—'}</td>
+                                            <td class="flex items-center gap-2">
+                                                <button onclick="window.printReceiptByReceiptOrPayment(${printArg})" class="text-slate-500 hover:text-white transition-colors" title="Print Receipt">
                                                     <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2-2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2-2v4h10z" /></svg>
+                                                </button>
+                                                <button onclick="window.voidReceiptOrDeleteTransaction(${deleteArg})" class="text-slate-500 hover:text-red-500 transition-colors" title="${deleteTitle}">
+                                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                                                 </button>
                                             </td>
                                         </tr>
@@ -544,7 +649,7 @@ window.renderStudentFinancials = async () => {
                                 </tbody>
                             </table>
                         </div>
-                        ${studentPayments && studentPayments.length > 5 ? `
+                        ${receiptGroups.length > 10 ? `
                         <div class="p-4 border-t border-slate-700/50 flex justify-center">
                             <button class="text-[11px] font-black text-blue-500 uppercase tracking-widest hover:text-blue-400 transition-colors">Load More History</button>
                         </div>
@@ -567,7 +672,7 @@ window.renderStudentFinancials = async () => {
                             <p class="text-[10px] font-black text-white/60 uppercase tracking-widest mb-1">Total Family Dues</p>
                             <h3 class="text-4xl font-black text-white mb-2">PKR ${currentFamily.totalDue.toLocaleString()}</h3>
                             <p class="text-[11px] text-white/50 leading-relaxed mb-8">Calculated for ${currentFamily.students.size} siblings including current balance</p>
-                            <button onclick="window.printParentReceipt(null, '${currentFamily.code}')" class="w-full bg-white text-blue-600 py-4 rounded-xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-xl hover:scale-[1.02] transition-all mb-8">
+                            <button onclick="window.printParentReceiptFromFamily('${currentFamily.key}')" class="w-full bg-white text-blue-600 py-4 rounded-xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-xl hover:scale-[1.02] transition-all mb-8">
                                     <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2-2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2-2v4h10z" /></svg>
                                     Print Consolidated Statement
                                 </button>
@@ -608,7 +713,8 @@ window.openPaymentModal = (key) => {
 
     document.getElementById('paymentTargetId').value = key;
     document.getElementById('paymentAmount').value = f.totalDue;
-    document.getElementById('paymentDate').valueAsDate = new Date();
+    const today = new Date();
+    document.getElementById('paymentDate').value = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
     document.getElementById('paymentModalSubtitle').textContent = `Recording payment for ${f.seniorMember} (${f.code})`;
 
     // Reset to collective mode by default
@@ -617,6 +723,54 @@ window.openPaymentModal = (key) => {
         collectiveRadio.checked = true;
         window.togglePaymentMode('collective'); // Triggers preview update
     }
+
+    // Ensure form handler is attached and prevent default submission
+    const form = document.getElementById('paymentForm');
+    if (form) {
+        form.onsubmit = handlePaymentSubmit;
+        // Also add event listener as backup
+        form.addEventListener('submit', handlePaymentSubmit);
+    }
+
+    // Prevent Enter key from submitting form inappropriately
+    // Allow Enter to submit only when clicking the submit button or when appropriate
+    const paymentAmountInput = document.getElementById('paymentAmount');
+    if (paymentAmountInput) {
+        paymentAmountInput.onkeydown = (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                // Trigger payment submission when Enter is pressed in amount field
+                const submitBtn = document.getElementById('submitPaymentBtn');
+                if (submitBtn && !submitBtn.disabled) {
+                    submitBtn.click();
+                }
+            }
+        };
+    }
+
+    // Prevent Enter in partial payment inputs from submitting form
+    setTimeout(() => {
+        const partialInputs = document.querySelectorAll('.partial-payment-input');
+        partialInputs.forEach(input => {
+            input.onkeydown = (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    // Move to next input or submit if last input
+                    const inputs = Array.from(document.querySelectorAll('.partial-payment-input'));
+                    const currentIndex = inputs.indexOf(input);
+                    if (currentIndex < inputs.length - 1) {
+                        inputs[currentIndex + 1].focus();
+                    } else {
+                        // Last input - submit payment
+                        const submitBtn = document.getElementById('submitPaymentBtn');
+                        if (submitBtn && !submitBtn.disabled) {
+                            submitBtn.click();
+                        }
+                    }
+                }
+            };
+        });
+    }, 100);
 
     document.getElementById('paymentModal').classList.remove('hidden');
     document.getElementById('paymentModal').classList.add('flex');
@@ -676,7 +830,8 @@ window.togglePaymentMode = (mode) => {
                             placeholder="0" 
                             min="0" 
                             max="${due}"
-                            oninput="window.recalculateAllocations()">
+                            oninput="window.recalculateAllocations()"
+                            onkeydown="if(event.key==='Enter'){event.preventDefault();const inputs=Array.from(document.querySelectorAll('.partial-payment-input'));const idx=inputs.indexOf(this);if(idx<inputs.length-1){inputs[idx+1].focus();}else{document.getElementById('submitPaymentBtn')?.click();}}">
                     </div>
                 </div>
             `;
@@ -704,36 +859,56 @@ window.updatePaymentPreview = () => {
     document.getElementById('totalAmountDisplay').textContent = totalPay.toLocaleString();
     document.getElementById('allocatedAmountDisplay').textContent = totalPay.toLocaleString();
 
-    if (!tbody || pendingFees.length === 0) return;
+    if (!tbody || pendingFees.length === 0) {
+        if (tbody) tbody.innerHTML = '<tr><td colspan="3" class="text-center py-4 text-slate-500 text-sm">No pending fees</td></tr>';
+        return;
+    }
 
-    // Calculate Total Outstanding
-    const totalOutstanding = pendingFees.reduce((sum, f) => {
-        const net = (f.amount || 0) - (f.discount || 0);
-        return sum + (net - (f.paid_amount || 0));
-    }, 0);
+    // EQUAL DISTRIBUTION: Divide payment equally across all fee types
+    const feeCount = pendingFees.length;
+    const equalAmount = Math.floor(totalPay / feeCount);
+    const remainder = totalPay % feeCount; // Handle rounding remainder
 
-    // Generate Rows with Proportional Logic
-    let remainingToDistribute = totalPay;
+    let totalAllocated = 0;
+    const allocations = [];
 
-    tbody.innerHTML = pendingFees.map((fee, index) => {
+    // First pass: assign equal amounts (capped at due amount)
+    pendingFees.forEach((fee, index) => {
         const net = (fee.amount || 0) - (fee.discount || 0);
         const due = net - (fee.paid_amount || 0);
+        
+        // Start with equal share, but cap at what's actually due
+        let allocation = Math.min(equalAmount, due);
+        allocations.push({ fee, due, allocation, index });
+        totalAllocated += allocation;
+    });
 
-        // Proportional Calculation: (Due / TotalOutstanding) * TotalPay
-        // For the last item, we might need to adjust for rounding, but let's keep it simple first
-        // Or better: use the logic requested: "Tuition Fee: 50% of total unpaid -> 1000 from 2000"
-
-        let allocation = 0;
-        if (totalOutstanding > 0) {
-            const proportion = due / totalOutstanding;
-            allocation = Math.floor(totalPay * proportion);
+    // Second pass: distribute remainder to fees that can still accept more
+    let remaining = totalPay - totalAllocated;
+    if (remaining > 0) {
+        // Sort by remaining capacity (due - allocated) descending
+        allocations.sort((a, b) => (b.due - b.allocation) - (a.due - a.allocation));
+        
+        for (let item of allocations) {
+            if (remaining <= 0) break;
+            const room = item.due - item.allocation;
+            if (room > 0) {
+                const add = Math.min(remaining, room);
+                item.allocation += add;
+                totalAllocated += add;
+                remaining -= add;
+            }
         }
+    }
 
-        // Simple cap to ensure we don't overpay a single fee if totalPay > totalOutstanding (though UI should prevent this ideally)
-        allocation = Math.min(allocation, due);
+    // Restore original order for display
+    allocations.sort((a, b) => a.index - b.index);
 
-        // Visual check
+    // Render the preview table
+    tbody.innerHTML = allocations.map((item) => {
+        const { fee, due, allocation } = item;
         const isFullyPaid = allocation >= due;
+        const isOverdue = allocation > due; // Shouldn't happen, but safety check
 
         return `
             <tr class="border-b border-slate-700/50 last:border-0">
@@ -746,6 +921,9 @@ window.updatePaymentPreview = () => {
             </tr>
         `;
     }).join('');
+
+    // Update allocated display to show actual allocated amount (may be less than totalPay if some fees are fully paid)
+    document.getElementById('allocatedAmountDisplay').textContent = totalAllocated.toLocaleString();
 };
 
 window.recalculateAllocations = () => {
@@ -771,16 +949,36 @@ window.recalculateAllocations = () => {
 };
 
 async function handlePaymentSubmit(e) {
-    e.preventDefault();
+    // Always prevent default form submission to avoid page reload
+    if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+    }
+    
+    // Prevent multiple submissions
     const btn = document.getElementById('submitPaymentBtn');
+    if (!btn) {
+        console.error('Submit button not found');
+        return false;
+    }
+    
+    if (btn.disabled) {
+        console.log('Payment already being processed');
+        return false;
+    }
+    
     const originalText = btn.innerHTML;
     btn.disabled = true;
     btn.innerHTML = '<svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Processing...';
-
+    
+    // Return false to prevent any form submission
     try {
         const mode = document.querySelector('input[name="paymentMode"]:checked').value;
         const familyKey = document.getElementById('paymentTargetId').value;
-        const date = document.getElementById('paymentDate').value;
+        // Use today's local date when recording so "just made" payments show today, not the date when modal was opened
+        const now = new Date();
+        const date = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
         const method = document.getElementById('paymentMethod').value;
 
         let paymentsToRecord = [];
@@ -788,64 +986,93 @@ async function handlePaymentSubmit(e) {
         if (mode === 'collective') {
             const totalPay = Number(document.getElementById('paymentAmount').value);
             const pendingFees = getPendingFees(familyKey);
-            const totalOutstanding = pendingFees.reduce((sum, f) => sum + ((f.amount - (f.discount || 0)) - (f.paid_amount || 0)), 0);
 
             if (totalPay <= 0) throw new Error("Please enter a valid amount.");
             if (pendingFees.length === 0) throw new Error("No pending fees to pay.");
 
-            // Distribute proportionally
-            let remaining = totalPay;
+            // EQUAL DISTRIBUTION: Divide payment equally across all fee types
+            const feeCount = pendingFees.length;
+            const equalAmount = Math.floor(totalPay / feeCount);
+            const remainder = totalPay % feeCount; // Handle rounding remainder
 
-            // We need two passes: 
-            // 1. Calculate ideal proportional amounts
-            // 2. Adjust for integer rounding errors to match totalPay exactly (if possible without overpaying)
+            let allocations = [];
+            let totalAllocated = 0;
 
-            let allocations = pendingFees.map(fee => {
+            // First pass: assign equal amounts (capped at due amount)
+            pendingFees.forEach((fee, index) => {
                 const net = (fee.amount || 0) - (fee.discount || 0);
                 const due = net - (fee.paid_amount || 0);
-                const proportion = totalOutstanding > 0 ? due / totalOutstanding : 0;
-                let allocated = Math.floor(totalPay * proportion);
-
-                // Cap at due
-                allocated = Math.min(allocated, due);
-
-                return { fee, due, allocated };
+                
+                // Start with equal share, but cap at what's actually due
+                let allocated = Math.min(equalAmount, due);
+                allocations.push({ fee, due, allocated, index });
+                totalAllocated += allocated;
             });
 
-            // Distribute any remainder (caused by floor) to the fees with remaining due, largest first
-            let allocatedSum = allocations.reduce((s, a) => s + a.allocated, 0);
-            let leftOver = totalPay - allocatedSum;
-
-            if (leftOver > 0) {
-                // Sort by due amount descending to absorb remainder
-                allocations.sort((a, b) => b.due - a.due);
-
+            // Second pass: distribute remainder to fees that can still accept more
+            let remaining = totalPay - totalAllocated;
+            if (remaining > 0) {
+                // Sort by remaining capacity (due - allocated) descending
+                allocations.sort((a, b) => (b.due - b.allocated) - (a.due - a.allocated));
+                
                 for (let item of allocations) {
-                    if (leftOver <= 0) break;
+                    if (remaining <= 0) break;
                     const room = item.due - item.allocated;
-                    const add = Math.min(leftOver, room);
-                    item.allocated += add;
-                    leftOver -= add;
+                    if (room > 0) {
+                        const add = Math.min(remaining, room);
+                        item.allocated += add;
+                        totalAllocated += add;
+                        remaining -= add;
+                    }
                 }
             }
 
-            paymentsToRecord = allocations.filter(a => a.allocated > 0).map(a => ({
-                fee_id: a.fee.id,
-                student_id: a.fee.student_id || a.fee.students?.id,
-                amount_paid: a.allocated,
-                payment_date: date,
-                payment_method: method
-            }));
+            // Validate: ensure we're not trying to allocate more than totalPay
+            if (totalAllocated > totalPay) {
+                throw new Error(`Calculation error: Allocated ${totalAllocated} exceeds payment ${totalPay}`);
+            }
+
+            // Filter out zero allocations and create payment records
+            paymentsToRecord = allocations
+                .filter(a => a.allocated > 0)
+                .map(a => ({
+                    fee_id: a.fee.id,
+                    student_id: a.fee.student_id || a.fee.students?.id,
+                    amount_paid: a.allocated,
+                    payment_date: date,
+                    payment_method: method
+                }));
+
+            // Final validation
+            const sumOfPayments = paymentsToRecord.reduce((sum, p) => sum + p.amount_paid, 0);
+            if (Math.abs(sumOfPayments - totalPay) > 0.01 && sumOfPayments < totalPay) {
+                // If there's a small rounding difference and we haven't allocated everything,
+                // it means some fees were capped. This is acceptable, but log it.
+                console.log(`Note: Allocated ${sumOfPayments} out of ${totalPay} due to fee caps`);
+            }
 
         } else {
-            // Partial Mode
+            // Partial Mode - Admin manually allocates amounts
             const inputs = document.querySelectorAll('.partial-payment-input');
+            let totalAllocated = 0;
+            
             inputs.forEach(input => {
-                const val = Number(input.value);
+                const val = Number(input.value) || 0;
+                const max = Number(input.dataset.max) || 0;
+                
+                // Validate: amount should be between 0 and max (due amount)
+                if (val < 0) {
+                    throw new Error(`Invalid amount: Cannot allocate negative amount for fee ${input.dataset.feeId}`);
+                }
+                if (val > max) {
+                    throw new Error(`Invalid amount: Cannot allocate ${val} when only ${max} is due for this fee.`);
+                }
+                
                 if (val > 0) {
+                    totalAllocated += val;
                     paymentsToRecord.push({
                         fee_id: input.dataset.feeId,
-                        student_id: getStudentIdFromFee(input.dataset.feeId, familyKey), // Helper needed or use map
+                        student_id: getStudentIdFromFee(input.dataset.feeId, familyKey),
                         amount_paid: val,
                         payment_date: date,
                         payment_method: method
@@ -853,20 +1080,53 @@ async function handlePaymentSubmit(e) {
                 }
             });
 
-            if (paymentsToRecord.length === 0) throw new Error("Please allocate an amount to at least one fee.");
+            if (paymentsToRecord.length === 0) {
+                throw new Error("Please allocate an amount to at least one fee type.");
+            }
+            
+            if (totalAllocated <= 0) {
+                throw new Error("Total allocated amount must be greater than zero.");
+            }
         }
 
-        // Execute Payments
+        // One receipt per payment action: create receipt first, then attach receipt_id to all fee_payments
+        const totalPaid = paymentsToRecord.reduce((sum, p) => sum + p.amount_paid, 0);
+        const paymentDate = paymentsToRecord[0].payment_date;
+        const paymentMethod = paymentsToRecord[0].payment_method;
+        let receipt = null;
+        const receiptNumber = await getNextReceiptNumber();
+        if (receiptNumber) {
+            const { data: insertedReceipt, error: receiptError } = await supabase.from('receipts').insert({
+                receipt_number: receiptNumber,
+                payment_date: paymentDate,
+                payment_method: paymentMethod,
+                total_paid: totalPaid
+            }).select().single();
+            if (!receiptError && insertedReceipt) receipt = insertedReceipt;
+        }
+
+        // Execute Payments and collect payment IDs
+        const createdPaymentIds = [];
+        const studentIds = [...new Set(paymentsToRecord.map(p => p.student_id))];
+        let totalAmountPaid = 0;
+
         for (const p of paymentsToRecord) {
-            // 1. Insert Payment Record
-            const { error: insertError } = await supabase.from('fee_payments').insert({
+            const insertPayload = {
                 fee_id: p.fee_id,
                 student_id: p.student_id,
                 amount_paid: p.amount_paid,
                 payment_date: p.payment_date,
                 payment_method: p.payment_method
-            });
+            };
+            if (receipt && receipt.id) insertPayload.receipt_id = receipt.id;
+
+            const { data: insertedPayment, error: insertError } = await supabase.from('fee_payments').insert(insertPayload).select().single();
+
             if (insertError) throw insertError;
+            if (insertedPayment) {
+                createdPaymentIds.push(insertedPayment.id);
+                totalAmountPaid += p.amount_paid;
+            }
 
             // 2. Update Fee Status
             // We need to fetch the latest state of this fee to ensure consistency
@@ -885,6 +1145,18 @@ async function handlePaymentSubmit(e) {
         }
 
         window.toast?.success(`Successfully recorded ${paymentsToRecord.length} payment(s).`);
+
+        // Generate single merged receipt for all payments in this transaction (one receipt number)
+        if (createdPaymentIds.length > 0 && studentIds.length > 0) {
+            await generateReceipt(studentIds, studentIds.length > 1, 'Office Copy', {
+                receiptNo: receipt && receipt.receipt_number ? receipt.receipt_number : createdPaymentIds.map(id => id.slice(0, 4).toUpperCase()).join('-'),
+                receiptId: receipt && receipt.id ? receipt.id : null,
+                date: (window.formatPaymentDateLocal || ((v) => new Date(v).toLocaleDateString('en-GB')))(paymentDate),
+                method: paymentMethod,
+                paymentIds: createdPaymentIds
+            });
+        }
+
         window.closePaymentModal();
         await initializeData();
 
@@ -899,11 +1171,16 @@ async function handlePaymentSubmit(e) {
 
     } catch (err) {
         console.error('Payment Processing Error:', err);
-        alert('Payment Failed: ' + err.message);
+        window.toast?.error('Payment Failed: ' + (err.message || 'Unknown error'));
     } finally {
-        btn.disabled = false;
-        btn.innerHTML = originalText;
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
     }
+    
+    // Always return false to prevent form submission and page reload
+    return false;
 }
 
 // Helper needed because partial inputs don't have student context directly attached easily without looking up
@@ -913,11 +1190,307 @@ function getStudentIdFromFee(feeId, familyKey) {
     return fee?.student_id || fee?.students?.id;
 }
 
-window.printStudentReceipt = sid => generateReceipt([sid]);
-window.printParentReceipt = (cnic, fcode) => {
-    supabase.from('students').select('id').or(`family_code.eq.${fcode},father_cnic.eq.${cnic}`).then(({ data }) => {
-        if (data && data.length) generateReceipt(data.map(s => s.id), true);
+/** Generate next receipt number (R-YYYY-NNNN). Returns null if receipts table not available. */
+async function getNextReceiptNumber() {
+    try {
+        const year = new Date().getFullYear();
+        const prefix = `R-${year}-`;
+        const { data: rows, error } = await supabase
+            .from('receipts')
+            .select('receipt_number')
+            .like('receipt_number', prefix + '%')
+            .order('receipt_number', { ascending: false })
+            .limit(1);
+        if (error) return null;
+        let nextNum = 1;
+        if (rows && rows.length > 0) {
+            const last = rows[0].receipt_number || '';
+            const numPart = last.replace(prefix, '').replace(/^\0+/, '');
+            const n = parseInt(numPart, 10);
+            if (!isNaN(n)) nextNum = n + 1;
+        }
+        return prefix + String(nextNum).padStart(4, '0');
+    } catch (e) {
+        return null;
+    }
+}
+
+window.printStudentReceipt = async (sid) => {
+    try {
+        await generateReceipt([sid]);
+    } catch (error) {
+        console.error('Error printing student receipt:', error);
+        window.toast?.error('Failed to print receipt: ' + (error.message || 'Unknown error'));
+    }
+};
+
+// Print receipt directly from current family (most reliable method)
+window.printParentReceiptFromFamily = async (familyKey) => {
+    try {
+        const family = allFamilies.find(f => f.key === familyKey);
+        if (!family) {
+            window.toast?.error('Family not found. Please refresh the page.');
+            return;
+        }
+
+        const studentIds = Array.from(family.students.keys());
+        if (studentIds.length === 0) {
+            window.toast?.error('No students found in this family.');
+            return;
+        }
+
+        await generateReceipt(studentIds, studentIds.length > 1, 'Office Copy');
+    } catch (error) {
+        console.error('Error printing parent receipt:', error);
+        window.toast?.error('Failed to print receipt: ' + (error.message || 'Unknown error'));
+    }
+};
+
+// Legacy function for backward compatibility - searches by family code or CNIC
+window.printParentReceipt = async (cnic, fcode) => {
+    try {
+        // If we have a current family and the code matches, use it directly
+        if (currentFamily && currentFamily.key) {
+            const family = allFamilies.find(f => f.key === currentFamily.key);
+            if (family) {
+                const studentIds = Array.from(family.students.keys());
+                if (studentIds.length > 0) {
+                    await generateReceipt(studentIds, studentIds.length > 1, 'Office Copy');
+                    return;
+                }
+            }
+        }
+
+        // Fallback: Query database if family not found in memory
+        let query = supabase.from('students').select('id');
+        
+        if (fcode && fcode !== 'null' && fcode !== 'undefined') {
+            // Try to match family_code first, then try as display code
+            query = query.or(`family_code.eq.${fcode},family_code.ilike.%${fcode}%`);
+        }
+        
+        if (cnic && cnic !== 'null' && cnic !== 'undefined') {
+            if (fcode) {
+                query = query.or(`family_code.eq.${fcode},father_cnic.eq.${cnic}`);
+            } else {
+                query = query.eq('father_cnic', cnic);
+            }
+        }
+        
+        const { data, error } = await query;
+        
+        if (error) throw error;
+        
+        if (data && data.length) {
+            await generateReceipt(data.map(s => s.id), data.length > 1, 'Office Copy');
+        } else {
+            window.toast?.error('No students found for this family code.');
+        }
+    } catch (error) {
+        console.error('Error printing parent receipt:', error);
+        window.toast?.error('Failed to print receipt: ' + (error.message || 'Unknown error'));
+    }
+};
+
+/** Print by receipt (full receipt) or by single payment (legacy). */
+window.printReceiptByReceiptOrPayment = async (receiptId, paymentId) => {
+    try {
+        if (receiptId) {
+            const { data: receipt, error: rErr } = await supabase.from('receipts').select('*').eq('id', receiptId).single();
+            if (rErr || !receipt) throw new Error('Receipt not found');
+            const { data: payments, error: pErr } = await supabase.from('fee_payments').select('id, student_id').eq('receipt_id', receiptId);
+            if (pErr || !payments || payments.length === 0) throw new Error('No payments found for this receipt');
+            const studentIds = [...new Set(payments.map(p => p.student_id))];
+            const paymentIds = payments.map(p => p.id);
+            await generateReceipt(studentIds, studentIds.length > 1, 'Office Copy', {
+                receiptNo: receipt.receipt_number,
+                receiptId: receipt.id,
+                date: (window.formatPaymentDateLocal || ((v) => new Date(v).toLocaleDateString('en-GB')))(receipt.payment_date),
+                method: receipt.payment_method,
+                paymentIds
+            });
+        } else if (paymentId) {
+            await window.printReceiptById(paymentId);
+        }
+    } catch (err) {
+        console.error('Print receipt error:', err);
+        window.toast?.error('Failed to print receipt: ' + (err.message || 'Unknown error'));
+    }
+};
+
+/** Void entire receipt or delete single payment (legacy). */
+window.voidReceiptOrDeleteTransaction = async (receiptId, paymentId) => {
+    if (receiptId) {
+        const confirmed = await window.confirmDialog?.show({
+            title: 'Void Receipt',
+            message: 'Void this receipt and reverse all payments? Fee balances will be updated. This cannot be undone.',
+            confirmText: 'Void',
+            cancelText: 'Cancel',
+            type: 'danger'
+        });
+        if (!confirmed) return;
+        window.loadingOverlay?.show('Voiding receipt and updating fee records...');
+        try {
+            const { data: payments, error: listErr } = await supabase.from('fee_payments').select('id, fee_id, amount_paid').eq('receipt_id', receiptId);
+            if (listErr || !payments || payments.length === 0) {
+                throw new Error('No payments found for this receipt');
+            }
+            for (const p of payments) {
+                const { data: fee } = await supabase.from('fees').select('paid_amount, amount, discount').eq('id', p.fee_id).single();
+                if (fee) {
+                    const newPaid = Math.max(0, Number(fee.paid_amount || 0) - Number(p.amount_paid || 0));
+                    const net = Number(fee.amount || 0) - Number(fee.discount || 0);
+                    const newStatus = newPaid >= net ? 'paid' : newPaid > 0 ? 'partial' : 'unpaid';
+                    await supabase.from('fees').update({ paid_amount: newPaid, status: newStatus }).eq('id', p.fee_id);
+                }
+                await supabase.from('fee_payments').delete().eq('id', p.id);
+            }
+            await supabase.from('receipts').delete().eq('id', receiptId);
+            window.toast?.success('Receipt voided. All payments reversed.');
+            await initializeData();
+            if (currentFamily) {
+                const fresh = allFamilies.find(f => f.key === currentFamily.key);
+                if (fresh) {
+                    window.viewFamilyProfile(fresh.key);
+                    if (currentStudentId) window.profileSelectStudent(currentStudentId);
+                }
+            }
+            window.dispatchEvent(new CustomEvent('paymentDeleted', { detail: { receiptId } }));
+        } catch (err) {
+            console.error('Void receipt error:', err);
+            window.toast?.error('Failed to void receipt: ' + (err.message || 'Unknown error'));
+        } finally {
+            window.loadingOverlay?.hide();
+        }
+        return;
+    }
+    if (paymentId) await window.deleteTransaction(paymentId);
+};
+
+window.deleteTransaction = async (paymentId) => {
+    // Use proper confirmation dialog
+    const confirmed = await window.confirmDialog?.show({
+        title: 'Delete Payment Transaction',
+        message: 'Are you sure you want to delete this payment record? This will update the student\'s fee balance and cannot be undone.',
+        confirmText: 'Delete',
+        cancelText: 'Cancel',
+        type: 'danger'
     });
+
+    if (!confirmed) return;
+
+    // Show loading overlay
+    window.loadingOverlay?.show('Deleting payment and updating fee records...');
+
+    try {
+        // 1. Fetch the payment record to know how much to subtract
+        const { data: payment, error: pError } = await supabase
+            .from('fee_payments')
+            .select('*, fees(*, students(*))')
+            .eq('id', paymentId)
+            .single();
+
+        if (pError || !payment) throw new Error('Payment record not found');
+
+        // 2. Fetch the current fee state (get latest to ensure consistency)
+        const { data: fee, error: fError } = await supabase
+            .from('fees')
+            .select('paid_amount, amount, discount, status, student_id')
+            .eq('id', payment.fee_id)
+            .single();
+
+        if (fError || !fee) throw new Error('Fee record not found');
+
+        // 3. Calculate new paid amount and status
+        const currentPaidAmount = Number(fee.paid_amount || 0);
+        const paymentAmount = Number(payment.amount_paid || 0);
+        const newPaidAmount = Math.max(0, currentPaidAmount - paymentAmount);
+        const netAmount = Number(fee.amount || 0) - Number(fee.discount || 0);
+        const newStatus = newPaidAmount >= netAmount ? 'paid' : (newPaidAmount > 0 ? 'partial' : 'unpaid');
+
+        // 4. Update the fee record
+        const { error: updateError } = await supabase
+            .from('fees')
+            .update({
+                paid_amount: newPaidAmount,
+                status: newStatus
+            })
+            .eq('id', payment.fee_id);
+
+        if (updateError) throw updateError;
+
+        // 5. Delete the payment record
+        const { error: deleteError } = await supabase
+            .from('fee_payments')
+            .delete()
+            .eq('id', paymentId);
+
+        if (deleteError) throw deleteError;
+
+        window.toast?.success(`Payment of PKR ${paymentAmount.toLocaleString()} deleted successfully. Fee balance updated.`);
+
+        // 6. Refresh all data and views
+        await initializeData(); // This refreshes family list, stats, and grid
+
+        // Refresh family profile view if currently viewing one
+        if (currentFamily) {
+            const fresh = allFamilies.find(f => f.key === currentFamily.key);
+            if (fresh) {
+                // Re-view the profile to update the UI
+                window.viewFamilyProfile(fresh.key);
+                // Re-select the student to update the ledger table and payment history
+                if (currentStudentId) {
+                    window.profileSelectStudent(currentStudentId);
+                }
+            }
+        }
+
+        // Trigger dashboard refresh if dashboard module is loaded
+        // This ensures dashboard stats update if user navigates back
+        if (window.loadModule && typeof window.loadModule === 'function') {
+            // Dashboard will auto-refresh when navigated to, but we can trigger a custom event
+            window.dispatchEvent(new CustomEvent('paymentDeleted', { 
+                detail: { paymentId, studentId: fee.student_id } 
+            }));
+        }
+
+    } catch (error) {
+        console.error('Delete transaction error:', error);
+        window.toast?.error('Failed to delete transaction: ' + (error.message || 'Unknown error'));
+    } finally {
+        window.loadingOverlay?.hide();
+    }
+};
+
+window.printReceiptById = async (paymentId) => {
+    try {
+        const { data: payment, error } = await supabase
+            .from('fee_payments')
+            .select('*, students(*), fees(*)')
+            .eq('id', paymentId)
+            .single();
+
+        if (error) throw error;
+        if (!payment) throw new Error('Payment not found');
+
+        // IMPORTANT: Only show THIS specific payment, not auto-group with others
+        // The receipt should match exactly what's shown in the transaction history
+        // If payments were made together, they should have been grouped at creation time
+        
+        // Generate receipt for ONLY this payment
+        await generateReceipt([payment.student_id], false, 'Office Copy', {
+            amountPaid: Number(payment.amount_paid || 0), // Exact amount from this payment
+            balance: 'N/A',
+            receiptNo: paymentId.slice(0, 4).toUpperCase(), // Receipt number from this payment
+            date: (window.formatPaymentDateLocal || ((v) => new Date(v).toLocaleDateString('en-GB')))(payment.payment_date),
+            method: payment.payment_method,
+            feeIds: [payment.fee_id], // Only the fee_id for this payment
+            paymentIds: [paymentId] // Only this payment ID
+        });
+    } catch (err) {
+        console.error('Print error:', err);
+        window.toast?.error('Failed to print receipt: ' + (err.message || 'Unknown error'));
+    }
 };
 window.feesModuleBulkPay = () => { const f = allFamilies.find(t => t.totalDue > 0); if (f) window.openPaymentModal(f.key); };
 

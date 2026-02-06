@@ -6,6 +6,13 @@ const supabase = window.supabase || (() => {
 
 let currentStaff = [];
 
+// Unified format: display and store EMP-XXX (legacy STF-XXX is normalized to EMP- everywhere)
+function formatEmployeeId(id) {
+    if (id == null || id === '') return '-';
+    const s = String(id).trim();
+    return s.replace(/^STF-/i, 'EMP-');
+}
+
 export async function render(container) {
     container.innerHTML = `
         <div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden transition-colors duration-200">
@@ -157,7 +164,7 @@ export async function render(container) {
                                             <label class="text-[10px] text-gray-500 uppercase">Current Password</label>
                                             <p id="profStaffPass" class="text-white text-sm font-mono"></p>
                                         </div>
-                                        <p class="text-[10px] text-gray-500 mt-2 italic">* Password is derived from Date of Birth (DDMMYYYY)</p>
+                                        <p class="text-[10px] text-gray-500 mt-2 italic">Format: Username <strong>EMP-XXX</strong>, Password <strong>DDMMYYYY</strong> (from Date of Birth)</p>
                                     </div>
                                 </div>
                             </div>
@@ -194,7 +201,7 @@ function renderStaffTable(staff) {
             <td class="p-4">
                 <div class="font-medium text-gray-900 dark:text-white capitalize">${s.name}</div>
             </td>
-            <td class="p-4 text-gray-600 dark:text-gray-400 font-mono text-sm">${s.employee_id}</td>
+            <td class="p-4 text-gray-600 dark:text-gray-400 font-mono text-sm">${formatEmployeeId(s.employee_id)}</td>
             <td class="p-4">
                 <span class="px-2 py-1 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 rounded text-xs font-medium uppercase">${s.role}</span>
             </td>
@@ -218,9 +225,9 @@ window.viewStaffProfile = (id) => {
     if (!s) return;
 
     document.getElementById('profStaffName').textContent = s.name;
-    document.getElementById('profStaffId').textContent = s.employee_id;
+    document.getElementById('profStaffId').textContent = formatEmployeeId(s.employee_id);
     document.getElementById('profStaffRole').textContent = s.role.toUpperCase();
-    document.getElementById('profStaffUser').textContent = s.employee_id;
+    document.getElementById('profStaffUser').textContent = formatEmployeeId(s.employee_id);
     document.getElementById('profStaffPass').textContent = s.date_of_birth ? s.date_of_birth.split('-').reverse().join('') : 'Not Set';
 
     document.getElementById('staffProfileModal').classList.remove('hidden');
@@ -234,7 +241,7 @@ window.editStaff = (id) => {
     document.getElementById('staffId').value = s.id;
     document.getElementById('staffName').value = s.name;
     document.getElementById('staffRole').value = s.role;
-    document.getElementById('staffEmployeeId').value = s.employee_id;
+    document.getElementById('staffEmployeeId').value = formatEmployeeId(s.employee_id);
     document.getElementById('staffDOB').value = s.date_of_birth;
     document.getElementById('staffEmail').value = s.email || '';
     document.getElementById('staffPhone').value = s.phone || '';
@@ -292,22 +299,28 @@ function setupEventListeners() {
     document.getElementById('searchStaffInput').oninput = (e) => {
         const term = e.target.value.toLowerCase();
         const filtered = currentStaff.filter(s =>
-            s.name.toLowerCase().includes(term) ||
-            s.employee_id.toLowerCase().includes(term) ||
+            (s.name || '').toLowerCase().includes(term) ||
+            (s.employee_id || '').toLowerCase().includes(term) ||
+            formatEmployeeId(s.employee_id).toLowerCase().includes(term) ||
             (s.email && s.email.toLowerCase().includes(term))
         );
         renderStaffTable(filtered);
     };
 }
 
+// Unified with teachers: same EMP-XXX format and credential style (username: EMP-002, password: DDMMYYYY)
 async function generateNextStaffId() {
-    const { data } = await supabase.from('staff').select('employee_id').order('created_at', { ascending: false }).limit(1);
+    const [staffRes, teachersRes] = await Promise.all([
+        supabase.from('staff').select('employee_id'),
+        supabase.from('teachers').select('employee_id')
+    ]);
+    const allIds = [...(staffRes.data || []).map(r => r.employee_id), ...(teachersRes.data || []).map(r => r.employee_id)];
     let nextNum = 1;
-    if (data && data.length > 0) {
-        const match = data[0].employee_id.match(/STF-(\d+)/);
-        if (match) nextNum = parseInt(match[1]) + 1;
+    for (const empId of allIds) {
+        const match = (empId || '').match(/(?:EMP|STF)-(\d+)/i);
+        if (match) nextNum = Math.max(nextNum, parseInt(match[1], 10) + 1);
     }
-    document.getElementById('staffEmployeeId').value = `STF-${nextNum.toString().padStart(3, '0')}`;
+    document.getElementById('staffEmployeeId').value = `EMP-${nextNum.toString().padStart(3, '0')}`;
 }
 
 async function handleStaffSubmit(e) {
@@ -315,7 +328,8 @@ async function handleStaffSubmit(e) {
     const id = document.getElementById('staffId').value;
     const name = document.getElementById('staffName').value;
     const role = document.getElementById('staffRole').value;
-    const employee_id = document.getElementById('staffEmployeeId').value;
+    let employee_id = (document.getElementById('staffEmployeeId').value || '').trim();
+    employee_id = (employee_id && formatEmployeeId(employee_id) !== '-') ? formatEmployeeId(employee_id) : employee_id;
     const dob = document.getElementById('staffDOB').value;
     const email = document.getElementById('staffEmail').value || null;
     const phone = document.getElementById('staffPhone').value || null;
@@ -343,14 +357,13 @@ async function handleStaffSubmit(e) {
     }
 }
 
+// Same credential format as teachers: username = EMP-XXX, password = DDMMYYYY (from date of birth)
 async function syncStaffAuth(staff) {
-    const password = staff.date_of_birth.split('-').reverse().join('');
-    // Use Employee ID as primary login, but Supabase Auth requires email
-    const authEmail = `${staff.employee_id.toLowerCase()}@staff.suffah.school`;
+    if (!staff.date_of_birth) return;
+    const password = staff.date_of_birth.split('-').reverse().join(''); // DDMMYYYY
+    const authEmail = `${(staff.employee_id || '').toLowerCase().trim()}@staff.suffah.school`;
 
     try {
-        // We use a helper from a central auth utility or recreate logic here
-        // For brevity and to ensure bypass of admin session, we use the tempClient approach
         const tempClient = window.SupabaseLib.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY, {
             auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
         });
@@ -363,7 +376,6 @@ async function syncStaffAuth(staff) {
 
         if (error && !error.message.includes('already registered')) throw error;
 
-        // Link auth_id back to staff table if just created
         if (data && data.user) {
             await supabase.from('staff').update({ auth_id: data.user.id }).eq('id', staff.id);
         }

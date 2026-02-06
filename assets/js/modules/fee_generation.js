@@ -747,17 +747,23 @@ async function handleGenerate(e) {
 
                 const finalAmount = Math.max(0, fee.amount - discountAmount);
 
-                feesToInsert.push({
+                const row = {
                     student_id: student.id,
                     fee_type: fee.fee_type,
                     month: month,
                     amount: fee.amount,
-                    discount: discountAmount, // Ensure column exists in DB logic or ignored if not
+                    discount: discountAmount,
                     final_amount: finalAmount,
                     paid_amount: 0,
-                    status: finalAmount === 0 ? 'paid' : 'unpaid', // Auto-mark fully discounted as paid? logic choice. Let's keep unpaid but 0 balance effectively. Or paid if 0.
+                    status: finalAmount === 0 ? 'paid' : 'unpaid',
                     generated_at: new Date().toISOString()
-                });
+                };
+                // So DB trigger calculate_final_amount_trigger computes same final_amount (it uses discount_type/discount_value only)
+                if (discountAmount > 0) {
+                    row.discount_type = 'fixed';
+                    row.discount_value = discountAmount;
+                }
+                feesToInsert.push(row);
             }
         }
 

@@ -321,7 +321,7 @@ async function handleSlotSubmit(e) {
 }
 
 window.deleteSlot = async (id) => {
-    if (!confirm('Delete this timetable slot?')) return;
+    if (!await confirm('Delete this timetable slot?')) return;
 
     const { error } = await supabase.from('timetable').delete().eq('id', id);
     if (error) {

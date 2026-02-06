@@ -1128,7 +1128,7 @@ window.editStudent = async (id) => {
 };
 
 window.deleteStudent = async (id) => {
-    if (!confirm('Are you sure you want to delete this student?')) return;
+    if (!await confirm('Are you sure you want to delete this student?')) return;
 
     const { error } = await supabase.from('students').delete().eq('id', id);
     if (error) {
@@ -1370,7 +1370,7 @@ async function handleResetPassword() {
         return;
     }
 
-    if (!confirm(`Reset password to DOB (${student.date_of_birth}) for ${student.name}?`)) {
+    if (!await confirm(`Reset password to DOB (${student.date_of_birth}) for ${student.name}?`)) {
         return;
     }
 
@@ -1653,7 +1653,7 @@ async function fixAllRollNumbers() {
         '- Use admission year from created_at if not set\n\n' +
         'Do you want to continue?';
 
-    if (!confirm(confirmMsg)) {
+    if (!await confirm(confirmMsg)) {
         return;
     }
 
@@ -2317,7 +2317,7 @@ async function handleBulkUpload() {
 
 // ========== FIX CLASS NAMES ==========
 async function fixClassNames() {
-    if (!confirm('This will update student class names to match the standard format (e.g., "7" -> "Class 7"). Continue?')) {
+    if (!await confirm('This will update student class names to match the standard format (e.g., "7" -> "Class 7"). Continue?')) {
         return;
     }
 
@@ -2390,7 +2390,7 @@ async function fixClassNames() {
 
 // ========== PORTAL SYNC SYSTEM ==========
 async function syncAllPortals() {
-    if (!confirm('This will create portal login access for all students. It may take a while if you have many students. Continue?')) {
+    if (!await confirm('This will create portal login access for all students. It may take a while if you have many students. Continue?')) {
         return;
     }
 

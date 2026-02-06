@@ -313,7 +313,7 @@ async function handleFeeTypeSubmit(e) {
 // Expose to window
 window.editFeeType = openFeeTypeModal;
 window.deleteFeeType = async (id) => {
-    if (!confirm('Are you sure? This will delete the fee type and remove it from all classes.')) return;
+    if (!await confirm('Are you sure? This will delete the fee type and remove it from all classes.')) return;
 
     const { error } = await supabase.from('fee_types').delete().eq('id', id);
     if (error) {
@@ -466,7 +466,7 @@ async function handleAssignFeeSubmit(e) {
 }
 
 window.deleteClassFee = async (id) => {
-    if (!confirm('Remove this fee from the class?')) return;
+    if (!await confirm('Remove this fee from the class?')) return;
 
     const { error } = await supabase.from('class_fees').delete().eq('id', id);
     if (error) {

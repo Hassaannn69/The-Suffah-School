@@ -64,6 +64,41 @@ function renderStudentDashboard(container, student, fees, family, attendance, no
     const paidFees = fees.reduce((sum, f) => sum + (f.paid_amount || 0), 0);
     const pendingFees = Math.max(0, totalFees - paidFees);
 
+    // Group payments by receipt (one card per receipt; legacy = one card per payment)
+    const receiptGroups = (() => {
+        const groups = [];
+        const seenReceiptIds = new Set();
+        for (const p of payments) {
+            if (p.receipt_id) {
+                if (!seenReceiptIds.has(p.receipt_id)) {
+                    seenReceiptIds.add(p.receipt_id);
+                    const sameReceipt = payments.filter(x => x.receipt_id === p.receipt_id);
+                    const rec = p.receipts || {};
+                    const total = rec.total_paid != null ? Number(rec.total_paid) : sameReceipt.reduce((s, x) => s + Number(x.amount_paid || 0), 0);
+                    groups.push({
+                        receiptId: p.receipt_id,
+                        receiptNumber: rec.receipt_number || p.receipt_id.toString().slice(0, 8),
+                        paymentDate: rec.payment_date || p.payment_date,
+                        paymentMethod: rec.payment_method || p.payment_method,
+                        totalPaid: total,
+                        payments: sameReceipt
+                    });
+                }
+            } else {
+                groups.push({
+                    receiptId: null,
+                    receiptNumber: '#' + (p.id || '').toString().slice(-6).toUpperCase(),
+                    paymentDate: p.payment_date,
+                    paymentMethod: p.payment_method,
+                    totalPaid: Number(p.amount_paid || 0),
+                    payments: [p]
+                });
+            }
+        }
+        groups.sort((a, b) => new Date(b.paymentDate) - new Date(a.paymentDate));
+        return groups;
+    })();
+
     let familyPending = pendingFees;
     family.forEach(member => {
         if (member.fees) {
@@ -307,28 +342,32 @@ function renderStudentDashboard(container, student, fees, family, attendance, no
                                 <div>
                                     <h4 class="stat-label mb-5 border-l-2 border-emerald-500 pl-3">Verified Receipts</h4>
                                     <div class="space-y-3 max-h-[400px] overflow-y-auto pr-2 no-scrollbar">
-                                        ${payments.length > 0 ? payments.map(p => `
+                                        ${receiptGroups.length > 0 ? receiptGroups.map(g => {
+                                            const recId = g.receiptId ? `'${g.receiptId}'` : 'null';
+                                            const payId = g.payments[0] && g.payments[0].id ? `'${g.payments[0].id}'` : 'null';
+                                            return `
                                             <div class="row-card group flex items-center justify-between">
                                                 <div class="flex items-center gap-4">
                                                     <div class="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-500">
                                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                                                     </div>
                                                     <div>
-                                                        <p class="text-[11px] font-black text-white uppercase tracking-tight">${new Date(p.payment_date).toLocaleDateString('en-GB')}</p>
-                                                        <p class="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-1">${p.payment_method}</p>
+                                                        <p class="text-[11px] font-black text-white uppercase tracking-tight">${(window.formatPaymentDateLocal || ((v) => new Date(v).toLocaleDateString('en-GB')))(g.paymentDate)}</p>
+                                                        <p class="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-1">${g.paymentMethod || 'CASH'}</p>
                                                     </div>
                                                 </div>
                                                 <div class="text-right flex items-center gap-4">
                                                     <div>
-                                                        <p class="text-[11px] font-black text-emerald-400">Rs ${p.amount_paid.toLocaleString()}</p>
-                                                        <p class="text-[8px] text-slate-600 font-black uppercase tracking-widest mt-1">${p.receipt_no || '#' + p.id.toString().slice(-6).toUpperCase()}</p>
+                                                        <p class="text-[11px] font-black text-emerald-400">Rs ${Number(g.totalPaid).toLocaleString()}</p>
+                                                        <p class="text-[8px] text-slate-600 font-black uppercase tracking-widest mt-1">${g.receiptNumber}</p>
                                                     </div>
-                                                    <button onclick="window.printTransactionReceipt('${p.id}', '${p.student_id}')" class="p-2 hidden group-hover:block bg-white/5 hover:bg-indigo-500/20 text-slate-400 hover:text-indigo-400 rounded-lg transition-all">
+                                                    <button onclick="window.printTransactionReceipt(${recId}, ${payId})" class="p-2 hidden group-hover:block bg-white/5 hover:bg-indigo-500/20 text-slate-400 hover:text-indigo-400 rounded-lg transition-all">
                                                         <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2-2v4a2 2 0 002 2h6z" /></svg>
                                                     </button>
                                                 </div>
                                             </div>
-                                        `).join('') : '<p class="text-[10px] text-slate-600 font-black text-center uppercase tracking-widest py-12">No transactions detected</p>'}
+                                        `;
+                                        }).join('') : '<p class="text-[10px] text-slate-600 font-black text-center uppercase tracking-widest py-12">No transactions detected</p>'}
                                     </div>
                                 </div>
                             </div>
@@ -375,25 +414,48 @@ function renderStudentDashboard(container, student, fees, family, attendance, no
     `;
 
     // Print logic
-    window.printTransactionReceipt = async (paymentId, studentId) => {
-        const btn = event.currentTarget;
-        const originalContent = btn.innerHTML;
-        btn.innerHTML = '<span class="animate-spin h-3 w-3 border-2 border-indigo-500 border-t-transparent rounded-full"></span>';
-        btn.disabled = true;
+    window.printTransactionReceipt = async (receiptId, paymentId) => {
+        const btn = event?.currentTarget;
+        const originalContent = btn?.innerHTML || '';
+        if (btn) {
+            btn.innerHTML = '<span class="animate-spin h-3 w-3 border-2 border-indigo-500 border-t-transparent rounded-full"></span>';
+            btn.disabled = true;
+        }
 
         try {
             const { generateReceipt } = await import('./receipt-generator.js');
             const familyIds = [student.id, ...(family || []).map(m => m.id)];
-            const { data: payment } = await supabase.from('fee_payments').select('*').eq('id', paymentId).single();
 
-            await generateReceipt(familyIds, familyIds.length > 1, 'Student Copy', {
-                amountPaid: payment.amount_paid,
-                receiptNo: payment.receipt_no || 'REC-' + payment.id.toString().slice(-6).toUpperCase(),
-                date: new Date(payment.payment_date).toLocaleDateString('en-GB')
-            });
+            if (receiptId) {
+                const { data: receipt, error: rErr } = await supabase.from('receipts').select('*').eq('id', receiptId).single();
+                if (rErr || !receipt) throw new Error('Receipt not found');
+                const { data: payments, error: pErr } = await supabase.from('fee_payments').select('id, student_id').eq('receipt_id', receiptId);
+                if (pErr || !payments || payments.length === 0) throw new Error('No payments for this receipt');
+                const studentIds = [...new Set(payments.map(p => p.student_id))];
+                const paymentIds = payments.map(p => p.id);
+                await generateReceipt(studentIds.length > 0 ? studentIds : familyIds, studentIds.length > 1, 'Student Copy', {
+                    receiptNo: receipt.receipt_number,
+                    receiptId: receipt.id,
+                    date: (window.formatPaymentDateLocal || ((v) => new Date(v).toLocaleDateString('en-GB')))(receipt.payment_date),
+                    method: receipt.payment_method,
+                    paymentIds
+                });
+            } else if (paymentId) {
+                const { data: payment, error } = await supabase.from('fee_payments').select('*, receipts(receipt_number)').eq('id', paymentId).single();
+                if (error) throw error;
+                if (!payment) throw new Error('Payment not found');
+                const rec = payment.receipts;
+                await generateReceipt(familyIds, familyIds.length > 1, 'Student Copy', {
+                    amountPaid: payment.amount_paid,
+                    receiptNo: rec && rec.receipt_number ? rec.receipt_number : 'REC-' + payment.id.toString().slice(-6).toUpperCase(),
+                    date: (window.formatPaymentDateLocal || ((v) => new Date(v).toLocaleDateString('en-GB')))(payment.payment_date),
+                    method: payment.payment_method,
+                    paymentIds: [paymentId]
+                });
+            }
         } catch (err) {
             console.error('Print Error:', err);
-            alert('Failed to generate receipt.');
+            alert('Failed to generate receipt: ' + (err.message || 'Unknown error'));
         } finally {
             if (btn) {
                 btn.innerHTML = originalContent;
@@ -453,9 +515,11 @@ async function fetchPaymentHistory(studentId, familyCode) {
             const { data: family } = await supabase.from('students').select('id').eq('family_code', familyCode);
             if (family) studentIds = family.map(s => s.id);
         }
-        const { data, error } = await supabase.from('fee_payments').select('*, students (name, roll_no), fees (fee_type, month)').in('student_id', studentIds).order('payment_date', { ascending: false });
+        const { data: withReceipts, error: err1 } = await supabase.from('fee_payments').select('*, students (name, roll_no), fees (fee_type, month), receipts(receipt_number, payment_date, payment_method, total_paid)').in('student_id', studentIds).order('payment_date', { ascending: false });
+        if (!err1 && withReceipts) return withReceipts;
+        const { data: withoutReceipts, error } = await supabase.from('fee_payments').select('*, students (name, roll_no), fees (fee_type, month)').in('student_id', studentIds).order('payment_date', { ascending: false });
         if (error) throw error;
-        return data || [];
+        return withoutReceipts || [];
     } catch (err) { console.error('Error fetching payments:', err); return []; }
 }
 

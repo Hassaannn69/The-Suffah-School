@@ -573,7 +573,7 @@ window.editTeacher = (id) => {
 };
 
 window.deleteTeacher = async (id) => {
-    if (!confirm('Are you sure you want to delete this teacher?')) return;
+    if (!await confirm('Are you sure you want to delete this teacher?')) return;
 
     const { error } = await supabase.from('teachers').delete().eq('id', id);
     if (error) {
@@ -592,7 +592,7 @@ window.toggleTeacherStatus = async () => {
     const newStatus = !teacher.is_active;
     const action = newStatus ? 'activate' : 'deactivate';
 
-    if (!confirm(`Are you sure you want to ${action} this teacher?`)) return;
+    if (!await confirm(`Are you sure you want to ${action} this teacher?`)) return;
 
     try {
         const { error } = await supabase

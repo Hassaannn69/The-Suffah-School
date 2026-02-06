@@ -1,6 +1,8 @@
 // Admin Dashboard Module - Modern FinTech Design
 const supabase = window.supabase;
 
+import { calculateUnifiedBalance } from './receipt-generator.js';
+
 // Ensure loadModule is accessible for tile clicks
 if (!window.loadModule) {
     window.loadModule = (moduleName) => {
@@ -11,19 +13,19 @@ if (!window.loadModule) {
 
 export async function render(container) {
     container.innerHTML = `
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div class="dashboard-root grid grid-cols-1 lg:grid-cols-12 gap-6">
             <!-- Main Content (Left Side) -->
             <div class="lg:col-span-9 space-y-6">
                 <!-- Top Stats Grid (6 Individual Tiles) -->
                 <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-6">
                     <!-- Tile 1: Total Students (Clickable) -->
-                    <div onclick="window.loadModule('students')" class="bg-white dark:bg-gray-800/50 backdrop-blur-xl rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700/50 p-4 relative overflow-hidden cursor-pointer group hover:border-indigo-500/50 hover:shadow-lg hover:shadow-indigo-500/10 transition-all">
+                    <div onclick="window.loadModule('students')" class="dashboard-stat-card glow-neutral p-4 relative overflow-hidden cursor-pointer group hover:shadow-lg transition-all">
                         <div class="absolute top-0 right-0 w-20 h-20 bg-indigo-500/5 rounded-full blur-2xl -mr-10 -mt-10 group-hover:bg-indigo-500/10 transition-all"></div>
-                        <p class="text-[9px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1.5">Total Students</p>
+                        <p class="dashboard-label text-[9px] text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1.5">Total Students</p>
                         <div class="flex items-center justify-between gap-2">
                             <div>
-                                <p class="text-2xl font-black text-gray-900 dark:text-white" id="statTotalStudents">...</p>
-                                <p class="text-[9px] font-black text-indigo-500 mt-1 flex items-center gap-1">
+                                <p class="dashboard-value text-2xl text-gray-900 dark:text-white" id="statTotalStudents">...</p>
+                                <p class="text-[9px] font-semibold text-indigo-500 mt-1 flex items-center gap-1">
                                     <span id="attendanceCount">0</span> Present
                                     <svg class="w-2 h-2 group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
                                 </p>
@@ -34,75 +36,75 @@ export async function render(container) {
                                     <circle id="attendanceCircle" cx="24" cy="24" r="20" stroke="currentColor" stroke-width="4" fill="none" class="text-indigo-500 transition-all duration-1000" stroke-dasharray="125.66" stroke-dashoffset="125.66" stroke-linecap="round" />
                                 </svg>
                                 <div class="absolute inset-0 flex items-center justify-center">
-                                    <span class="text-[9px] font-black text-gray-900 dark:text-white" id="attendanceGaugeText">0%</span>
+                                    <span class="text-[9px] font-bold text-gray-900 dark:text-white" id="attendanceGaugeText">0%</span>
                                 </div>
                             </div>
                         </div>
                     </div>
 
                     <!-- Tile 2: Monthly Fees (Current Period) -->
-                    <div class="bg-white dark:bg-gray-800/50 backdrop-blur-xl rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700/50 p-4 relative overflow-hidden group hover:border-indigo-500/30 transition-all">
+                    <div class="dashboard-stat-card glow-neutral p-4 relative overflow-hidden group transition-all">
                         <div class="absolute top-0 right-0 w-20 h-20 bg-indigo-500/5 rounded-full blur-2xl -mr-10 -mt-10 transition-all"></div>
-                        <p class="text-[9px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2" id="feesPeriodLabel">Monthly Fees</p>
-                        <p class="text-2xl font-black text-gray-900 dark:text-white" id="statFeesCollected">PKR 0</p>
+                        <p class="dashboard-label text-[9px] text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2" id="feesPeriodLabel">Monthly Fees</p>
+                        <p class="dashboard-value text-2xl text-gray-900 dark:text-white" id="statFeesCollected">PKR 0</p>
                         <div class="mt-3 flex items-center gap-2">
                             <div class="h-1 flex-1 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
                                 <div id="feeProgressBar" class="h-full bg-gradient-to-r from-indigo-400 to-indigo-600 rounded-full transition-all duration-1000" style="width: 0%"></div>
                             </div>
-                            <span class="text-[9px] font-black text-indigo-600 dark:text-indigo-400" id="feePercentage">0%</span>
+                            <span class="text-[9px] font-semibold text-indigo-600 dark:text-indigo-400" id="feePercentage">0%</span>
                         </div>
                     </div>
 
                     <!-- Tile 3: Monthly Expenses (Current Period) -->
-                    <div class="bg-white dark:bg-gray-800/50 backdrop-blur-xl rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700/50 p-4 relative overflow-hidden group hover:border-rose-500/30 transition-all">
+                    <div class="dashboard-stat-card glow-neutral p-4 relative overflow-hidden group transition-all">
                         <div class="absolute top-0 right-0 w-20 h-20 bg-rose-500/5 rounded-full blur-2xl -mr-10 -mt-10 transition-all"></div>
-                        <p class="text-[9px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2" id="expensesPeriodLabel">Monthly Expenses</p>
-                        <p class="text-2xl font-black text-gray-900 dark:text-white" id="statMonthlyExpenses">PKR 0</p>
-                        <p class="text-[9px] text-gray-400 mt-2 flex items-center gap-1">
+                        <p class="dashboard-label text-[9px] text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2" id="expensesPeriodLabel">Monthly Expenses</p>
+                        <p class="dashboard-value text-2xl text-gray-900 dark:text-white" id="statMonthlyExpenses">PKR 0</p>
+                        <p class="dashboard-caption text-[9px] text-gray-400 mt-2 flex items-center gap-1">
                             <svg class="w-2.5 h-2.5 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" /></svg>
                             Operational Costs
                         </p>
                     </div>
 
-                    <!-- Tile 4: Income Today -->
-                    <div class="bg-white dark:bg-gray-800/50 backdrop-blur-xl rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700/50 p-4 relative overflow-hidden group hover:border-emerald-500/30 transition-all">
+                    <!-- Tile 4: Income Today (positive glow) -->
+                    <div class="dashboard-stat-card glow-positive p-4 relative overflow-hidden group transition-all">
                         <div class="absolute top-0 right-0 w-20 h-20 bg-emerald-500/5 rounded-full blur-2xl -mr-10 -mt-10 transition-all"></div>
-                        <p class="text-[9px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Income Today</p>
-                        <p class="text-2xl font-black text-emerald-600 dark:text-emerald-400" id="statCollectedToday">PKR 0</p>
-                        <p class="text-[9px] text-emerald-500/60 mt-2 flex items-center gap-1">
+                        <p class="dashboard-label text-[9px] text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Income Today</p>
+                        <p class="dashboard-value text-2xl text-emerald-600 dark:text-emerald-400" id="statCollectedToday">PKR 0</p>
+                        <p class="dashboard-caption text-[9px] text-emerald-500/60 mt-2 flex items-center gap-1">
                             <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18" /></svg>
                             Direct Cashflow
                         </p>
                     </div>
 
-                    <!-- Tile 5: Expense Today -->
-                    <div class="bg-white dark:bg-gray-800/50 backdrop-blur-xl rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700/50 p-4 relative overflow-hidden group hover:border-rose-500/30 transition-all">
+                    <!-- Tile 5: Expense Today (negative glow) -->
+                    <div class="dashboard-stat-card glow-negative p-4 relative overflow-hidden group transition-all">
                         <div class="absolute top-0 right-0 w-20 h-20 bg-rose-500/5 rounded-full blur-2xl -mr-10 -mt-10 transition-all"></div>
-                        <p class="text-[9px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Expense Today</p>
-                        <p class="text-2xl font-black text-rose-600 dark:text-rose-400" id="statExpensesToday">PKR 0</p>
-                        <p class="text-[9px] text-rose-500/60 mt-2 flex items-center gap-1">
+                        <p class="dashboard-label text-[9px] text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Expense Today</p>
+                        <p class="dashboard-value text-2xl text-rose-600 dark:text-rose-400" id="statExpensesToday">PKR 0</p>
+                        <p class="dashboard-caption text-[9px] text-rose-500/60 mt-2 flex items-center gap-1">
                             <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>
                             Daily Spending
                         </p>
                     </div>
 
-                    <!-- Tile 6: Net Today -->
-                    <div class="bg-white dark:bg-gray-800/50 backdrop-blur-xl rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700/50 p-4 relative overflow-hidden group hover:border-indigo-500/30 transition-all">
+                    <!-- Tile 6: Net Today (glow set by JS) -->
+                    <div id="netTodayCard" class="dashboard-stat-card glow-neutral p-4 relative overflow-hidden group transition-all">
                         <div id="netTodayBg" class="absolute top-0 right-0 w-20 h-20 bg-indigo-500/5 rounded-full blur-2xl -mr-10 -mt-10 transition-all"></div>
-                        <p class="text-[9px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Net Today</p>
-                        <p class="text-2xl font-black transition-colors" id="statNetToday">PKR 0</p>
-                        <p class="text-[9px] text-gray-400 mt-2 flex items-center gap-1">
+                        <p class="dashboard-label text-[9px] text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Net Today</p>
+                        <p class="dashboard-value text-2xl transition-colors" id="statNetToday">PKR 0</p>
+                        <p class="dashboard-caption text-[9px] text-gray-400 mt-2 flex items-center gap-1">
                             <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
                             Daily Balance
                         </p>
                     </div>
                 </div>
 
-                <!-- Monthly Revenue Chart -->
-                <div class="bg-white dark:bg-gray-800/50 backdrop-blur-xl rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700/50 p-6">
+                <!-- Monthly Revenue Chart (Profit Margin Analysis) -->
+                <div class="dashboard-stat-card p-6">
                     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
                         <div>
-                            <h3 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                            <h3 class="dashboard-title text-lg text-gray-900 dark:text-white flex items-center gap-2">
                                 <svg class="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                                 </svg>
@@ -153,10 +155,10 @@ export async function render(container) {
                 </div>
 
                 <!-- Follow-Up List (Arrears Management) -->
-                <div class="bg-white dark:bg-gray-800/50 backdrop-blur-xl rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700/50 p-6">
+                <div class="dashboard-stat-card p-6">
                     <div class="flex items-center justify-between mb-6">
                         <div>
-                            <h3 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                            <h3 class="dashboard-title text-lg text-gray-900 dark:text-white flex items-center gap-2">
                                 <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                 </svg>
@@ -196,59 +198,58 @@ export async function render(container) {
 
             <!-- Right Sidebar -->
             <div class="lg:col-span-3 space-y-6">
-                <!-- Quick Actions -->
-                <div class="bg-gradient-to-br from-gray-900 to-gray-800 dark:from-gray-800 dark:to-gray-900 rounded-2xl shadow-xl border border-gray-700/50 p-6">
+                <!-- Quick Actions (semi-transparent tints, cohesive) -->
+                <div class="dashboard-stat-card p-6">
                     <div class="flex items-center gap-2 mb-6">
                         <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
                         </svg>
-                        <h3 class="text-lg font-bold text-white">Quick Actions</h3>
+                        <h3 class="dashboard-title text-lg text-gray-900 dark:text-white">Quick Actions</h3>
                     </div>
                     <div class="space-y-3">
-                        <button class="w-full flex items-center gap-3 px-4 py-3 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 rounded-xl transition-all group relative">
-                            <!-- Notification Dot -->
+                        <button class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all group relative bg-indigo-500/12 hover:bg-indigo-500/20 text-left">
                             <div class="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-gray-900 animate-pulse" id="smsNotificationDot" style="display: none;"></div>
-                            <div class="p-2 bg-indigo-500/20 rounded-lg group-hover:scale-110 transition-transform">
+                            <div class="p-2 rounded-lg bg-indigo-500/15 group-hover:bg-indigo-500/25 transition-colors">
                                 <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
                                 </svg>
                             </div>
-                            <div class="text-left flex-1">
-                                <p class="text-sm font-semibold text-white">Send SMS to Absentees</p>
-                                <p class="text-xs text-gray-400">Notify parents</p>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-semibold text-gray-900 dark:text-white">Send SMS to Absentees</p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">Notify parents</p>
                             </div>
                         </button>
 
-                        <button class="w-full flex items-center gap-3 px-4 py-3 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 rounded-xl transition-all group">
-                            <div class="p-2 bg-emerald-500/20 rounded-lg group-hover:scale-110 transition-transform">
+                        <button class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all group bg-emerald-500/12 hover:bg-emerald-500/20 text-left">
+                            <div class="p-2 rounded-lg bg-emerald-500/15 group-hover:bg-emerald-500/25 transition-colors">
                                 <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                 </svg>
                             </div>
-                            <div class="text-left flex-1">
-                                <p class="text-sm font-semibold text-white">Generate Bulk Fee Slips</p>
-                                <p class="text-xs text-gray-400">For all students</p>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-semibold text-gray-900 dark:text-white">Generate Bulk Fee Slips</p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">For all students</p>
                             </div>
                         </button>
 
-                        <button class="w-full flex items-center gap-3 px-4 py-3 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 rounded-xl transition-all group">
-                            <div class="p-2 bg-purple-500/20 rounded-lg group-hover:scale-110 transition-transform">
+                        <button class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all group bg-purple-500/12 hover:bg-purple-500/20 text-left">
+                            <div class="p-2 rounded-lg bg-purple-500/15 group-hover:bg-purple-500/25 transition-colors">
                                 <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
                                 </svg>
                             </div>
-                            <div class="text-left flex-1">
-                                <p class="text-sm font-semibold text-white">Assign New Class</p>
-                                <p class="text-xs text-gray-400">To teacher</p>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-semibold text-gray-900 dark:text-white">Assign New Class</p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">To teacher</p>
                             </div>
                         </button>
                     </div>
                 </div>
 
                 <!-- Recent Activity Feed -->
-                <div class="bg-white dark:bg-gray-800/50 backdrop-blur-xl rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700/50 p-6 flex flex-col">
+                <div class="dashboard-stat-card p-6 flex flex-col">
                     <div class="flex items-center justify-between mb-6">
-                        <h3 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                        <h3 class="dashboard-title text-lg text-gray-900 dark:text-white flex items-center gap-2">
                             <svg class="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
@@ -272,8 +273,8 @@ export async function render(container) {
                 </div>
 
                 <!-- Class Distribution Chart -->
-                <div class="bg-white dark:bg-gray-800/50 backdrop-blur-xl rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700/50 p-6">
-                    <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4">Class Distribution</h3>
+                <div class="dashboard-stat-card p-6">
+                    <h3 class="dashboard-title text-lg text-gray-900 dark:text-white mb-4">Class Distribution</h3>
                     <div style="height: 280px;">
                         <canvas id="classDistributionChart"></canvas>
                     </div>
@@ -321,7 +322,26 @@ export async function render(container) {
             loadDashboardStats(); // Also update stats
             loadUrgentFollowups(); // Update arrears
         })
+        .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'fee_payments' }, (payload) => {
+            console.log('Real-time Payment Deleted:', payload);
+            loadRecentActivity();
+            loadDashboardStats(); // Update stats when payment deleted
+            loadUrgentFollowups(); // Update arrears
+        })
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'fees' }, (payload) => {
+            console.log('Real-time Fee Updated:', payload);
+            loadDashboardStats(); // Update stats when fee status changes
+            loadUrgentFollowups(); // Update arrears
+        })
         .subscribe();
+
+    // Also listen for custom paymentDeleted event from fees module
+    window.addEventListener('paymentDeleted', () => {
+        console.log('Payment deleted event received, refreshing dashboard...');
+        loadDashboardStats();
+        loadUrgentFollowups();
+        loadRecentActivity();
+    });
 
     // Chart Timeframe Listeners
     const filterBtns = document.querySelectorAll('.chart-filter-btn');
@@ -531,15 +551,19 @@ async function loadDashboardStats(period = 'monthly', customStart = null, custom
         const netBg = document.getElementById('netTodayBg');
         netEl.textContent = 'PKR ' + netInFocus.toLocaleString('en-PK');
 
+        const netCard = document.getElementById('netTodayCard');
         if (netInFocus > 0) {
-            netEl.className = 'text-2xl font-black text-emerald-600 dark:text-emerald-400';
+            netEl.className = 'dashboard-value text-2xl text-emerald-600 dark:text-emerald-400';
             if (netBg) netBg.className = 'absolute top-0 right-0 w-20 h-20 bg-emerald-500/5 rounded-full blur-2xl -mr-10 -mt-10 transition-all';
+            if (netCard) { netCard.classList.remove('glow-negative', 'glow-neutral'); netCard.classList.add('glow-positive'); }
         } else if (netInFocus < 0) {
-            netEl.className = 'text-2xl font-black text-[#f43f5e] dark:text-[#f43f5e]'; // Rose Red for deficit
+            netEl.className = 'dashboard-value text-2xl text-rose-600 dark:text-rose-400';
             if (netBg) netBg.className = 'absolute top-0 right-0 w-20 h-20 bg-rose-500/5 rounded-full blur-2xl -mr-10 -mt-10 transition-all';
+            if (netCard) { netCard.classList.remove('glow-positive', 'glow-neutral'); netCard.classList.add('glow-negative'); }
         } else {
-            netEl.className = 'text-2xl font-black text-gray-900 dark:text-white';
+            netEl.className = 'dashboard-value text-2xl text-gray-900 dark:text-white';
             if (netBg) netBg.className = 'absolute top-0 right-0 w-20 h-20 bg-gray-500/5 rounded-full blur-2xl -mr-10 -mt-10 transition-all';
+            if (netCard) { netCard.classList.remove('glow-positive', 'glow-negative'); netCard.classList.add('glow-neutral'); }
         }
 
         document.getElementById('statTotalStudents').textContent = totalStudents;
@@ -577,9 +601,22 @@ async function loadCharts(period = 'monthly', customStart = null, customEnd = nu
         // Sync check: Ensure February (current month) matches the card if we are in monthly view
         // In this app, we refresh the dashboard when data changes, so it should stay synced.
 
-        const revenueCtx = document.getElementById('revenueChart').getContext('2d');
+        const canvas = document.getElementById('revenueChart');
+        if (!canvas) return;
+        const revenueCtx = canvas.getContext('2d');
         const existingChart = Chart.getChart(revenueCtx);
         if (existingChart) existingChart.destroy();
+
+        // Soft gradient fill beneath each line (use container height so chart always has valid fill)
+        const chartHeight = canvas.parentElement?.clientHeight || 250;
+        const revGradient = revenueCtx.createLinearGradient(0, 0, 0, chartHeight);
+        revGradient.addColorStop(0, 'rgba(99, 102, 241, 0.35)');
+        revGradient.addColorStop(0.5, 'rgba(99, 102, 241, 0.08)');
+        revGradient.addColorStop(1, 'rgba(99, 102, 241, 0)');
+        const expGradient = revenueCtx.createLinearGradient(0, 0, 0, chartHeight);
+        expGradient.addColorStop(0, 'rgba(244, 63, 94, 0.28)');
+        expGradient.addColorStop(0.5, 'rgba(244, 63, 94, 0.06)');
+        expGradient.addColorStop(1, 'rgba(244, 63, 94, 0)');
 
         new Chart(revenueCtx, {
             type: 'line',
@@ -589,31 +626,36 @@ async function loadCharts(period = 'monthly', customStart = null, customEnd = nu
                     label: 'Revenue',
                     data: revenue,
                     borderColor: '#6366f1',
-                    backgroundColor: 'rgba(99, 102, 241, 0.1)',
-                    tension: 0.4,
+                    backgroundColor: revGradient,
+                    borderWidth: 2,
+                    tension: 0.45,
                     fill: true,
                     pointBackgroundColor: '#6366f1',
                     pointBorderColor: '#fff',
+                    pointRadius: 3,
                     pointHoverRadius: 8,
-                    pointHoverBorderWidth: 4,
+                    pointHoverBorderWidth: 2,
                     spanGaps: true
                 }, {
                     label: 'Expenses',
                     data: expenses,
                     borderColor: '#f43f5e',
-                    backgroundColor: 'rgba(244, 63, 94, 0.1)',
-                    tension: 0.4,
+                    backgroundColor: expGradient,
+                    borderWidth: 2,
+                    tension: 0.45,
                     fill: true,
                     pointBackgroundColor: '#f43f5e',
                     pointBorderColor: '#fff',
+                    pointRadius: 3,
                     pointHoverRadius: 8,
-                    pointHoverBorderWidth: 4,
+                    pointHoverBorderWidth: 2,
                     spanGaps: true
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                devicePixelRatio: typeof window !== 'undefined' && window.devicePixelRatio ? Math.min(window.devicePixelRatio, 2) : 1,
                 animation: {
                     duration: 800,
                     easing: 'easeOutQuart'
@@ -656,9 +698,10 @@ async function loadCharts(period = 'monthly', customStart = null, customEnd = nu
                         max: 35000,
                         ticks: {
                             color: '#9ca3af',
+                            font: { size: 11 },
                             callback: v => v >= 1000 ? (v / 1000) + 'k' : v
                         },
-                        grid: { color: 'rgba(156, 163, 175, 0.1)', drawBorder: false }
+                        grid: { color: 'rgba(156, 163, 175, 0.12)', drawBorder: false }
                     },
                     x: {
                         ticks: { color: '#9ca3af', font: { size: 10 } },
@@ -883,81 +926,70 @@ async function loadClassChart() {
 
 async function loadUrgentFollowups() {
     try {
-        const { data: fees, error } = await supabase
-            .from('fees')
-            .select('*, students(name, class, phone)')
-            .order('paid_amount', { ascending: true });
+        const [{ data: fees, error: feesError }, { data: allPayments, error: payError }] = await Promise.all([
+            supabase.from('fees').select('*, students(name, class, phone)').order('generated_at', { ascending: false }),
+            supabase.from('fee_payments').select('id, student_id, fee_id, amount_paid')
+        ]);
 
-        if (error) {
-            console.error('Error fetching urgent followups:', error);
+        if (feesError) {
+            console.error('Error fetching urgent followups:', feesError);
             document.getElementById('urgentFollowups').innerHTML = '<tr><td colspan="5" class="py-12 text-center text-red-400">Error loading data</td></tr>';
             return;
         }
+        if (payError) console.warn('Urgent followups: fee_payments fetch failed, showing balances from fee rows only.', payError);
 
-        // Group fees by student and calculate total REMAINING balance
-        // Group fees by student and calculate total REMAINING balance
-        const studentBalances = {};
-        fees?.forEach(f => {
-            const studentId = f.student_id;
-            const totalFee = parseFloat(f.final_amount) || parseFloat(f.amount) || 0;
-            const paidAmount = parseFloat(f.paid_amount) || 0;
-            const remainingBalance = totalFee - paidAmount;
-
-            // Calculate Days Overdue (Precision Fix)
-            let daysOverdue = 0;
-            if (remainingBalance > 0) {
-                const now = new Date();
-                const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-
-                let targetDate;
-                if (f.due_date) {
-                    targetDate = new Date(f.due_date);
-                } else if (f.month) {
-                    // Business Logic: If specific due_date is missing, fee is due 10th of its month
-                    const [year, month] = f.month.split('-').map(Number);
-                    targetDate = new Date(year, month - 1, 10);
-                } else if (f.created_at) {
-                    targetDate = new Date(f.created_at);
-                } else {
-                    targetDate = new Date(today.getFullYear(), today.getMonth(), 10);
-                }
-
-                // Standardize targetDate to midnight
-                targetDate = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
-
-                if (today > targetDate) {
-                    const diffTime = today - targetDate;
-                    daysOverdue = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-                    if (daysOverdue < 0) daysOverdue = 0;
-                }
-            } else {
-                daysOverdue = 0;
-            }
-
-            if (!studentBalances[studentId]) {
-                studentBalances[studentId] = {
-                    student_id: studentId,
-                    name: f.students?.name || 'Unknown',
-                    class: f.students?.class || '-',
-                    phone: f.students?.phone || '',
-                    totalFee: 0,
-                    totalPaid: 0,
-                    totalRemaining: 0,
-                    maxDaysOverdue: 0
-                };
-            }
-            if (remainingBalance > 0) {
-                studentBalances[studentId].totalFee += totalFee;
-                studentBalances[studentId].totalPaid += paidAmount;
-                studentBalances[studentId].totalRemaining += remainingBalance;
-                if (daysOverdue > studentBalances[studentId].maxDaysOverdue) {
-                    studentBalances[studentId].maxDaysOverdue = daysOverdue;
-                }
-            }
+        const paymentsByStudent = new Map();
+        (allPayments || []).forEach(p => {
+            if (!paymentsByStudent.has(p.student_id)) paymentsByStudent.set(p.student_id, []);
+            paymentsByStudent.get(p.student_id).push(p);
         });
 
-        // Sort by balance descending
-        const urgentList = Object.values(studentBalances)
+        const feesByStudent = new Map();
+        (fees || []).forEach(f => {
+            if (!feesByStudent.has(f.student_id)) feesByStudent.set(f.student_id, { student: f.students, fees: [] });
+            feesByStudent.get(f.student_id).fees.push(f);
+        });
+
+        const studentBalances = [];
+        feesByStudent.forEach((data, studentId) => {
+            const studentFees = data.fees;
+            const studentPayments = paymentsByStudent.get(studentId) || [];
+            const totalRemaining = calculateUnifiedBalance([{ id: studentId, fees: studentFees }], studentPayments);
+            if (totalRemaining <= 0) return;
+
+            let maxDaysOverdue = 0;
+            studentFees.forEach(f => {
+                const net = (Number(f.amount) || 0) - (Number(f.discount) || 0);
+                const paidForFee = studentPayments.filter(p => p.fee_id === f.id).reduce((s, p) => s + Number(p.amount_paid || 0), 0);
+                const remaining = net - paidForFee;
+                if (remaining <= 0) return;
+                const now = new Date();
+                const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                let targetDate;
+                if (f.due_date) targetDate = new Date(f.due_date);
+                else if (f.month) {
+                    const [y, m] = f.month.split('-').map(Number);
+                    targetDate = new Date(y, m - 1, 10);
+                } else if (f.created_at) targetDate = new Date(f.created_at);
+                else targetDate = new Date(today.getFullYear(), today.getMonth(), 10);
+                targetDate = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
+                if (today > targetDate) {
+                    const days = Math.floor((today - targetDate) / (1000 * 60 * 60 * 24));
+                    if (days > maxDaysOverdue) maxDaysOverdue = days;
+                }
+            });
+
+            studentBalances.push({
+                student_id: studentId,
+                name: data.student?.name || 'Unknown',
+                class: data.student?.class || '-',
+                phone: data.student?.phone || '',
+                totalRemaining,
+                maxDaysOverdue
+            });
+        });
+
+        const urgentList = studentBalances
             .filter(s => s.totalRemaining > 0)
             .sort((a, b) => b.totalRemaining - a.totalRemaining)
             .slice(0, 10);
@@ -1022,12 +1054,12 @@ async function loadUrgentFollowups() {
 
 async function loadRecentActivity() {
     try {
-        // Fetch Parallel Data for the feed
+        // Fetch payments with receipt_id so we can group by receipt (one activity per receipt)
         const [paymentsRes, admissionsRes] = await Promise.all([
             supabase.from('fee_payments')
-                .select('id, amount_paid, payment_date, payment_method, created_at, student_id, students(name)')
+                .select('id, amount_paid, payment_date, payment_method, created_at, student_id, receipt_id, students(name)')
                 .order('created_at', { ascending: false })
-                .limit(10),
+                .limit(50),
             supabase.from('students')
                 .select('id, name, class, created_at, admission_date')
                 .order('created_at', { ascending: false })
@@ -1039,15 +1071,27 @@ async function loadRecentActivity() {
 
         const activities = [];
 
-        // Add Payments to activities
-        paymentsRes.data?.forEach(p => {
-            // Use created_at for the actual time the record was made, 
-            // fallback to payment_date if created_at is missing
-            const timestamp = p.created_at ? new Date(p.created_at) : new Date(p.payment_date);
+        // Group payments by receipt (same receipt = one activity line); legacy payments without receipt_id = one each
+        const paymentGroups = new Map();
+        (paymentsRes.data || []).forEach(p => {
+            const key = p.receipt_id || p.id;
+            if (!paymentGroups.has(key)) {
+                paymentGroups.set(key, []);
+            }
+            paymentGroups.get(key).push(p);
+        });
+
+        paymentGroups.forEach((payments) => {
+            const total = payments.reduce((sum, p) => sum + (parseFloat(p.amount_paid) || 0), 0);
+            const first = payments[0];
+            const timestamp = first.created_at ? new Date(first.created_at) : new Date(first.payment_date);
+            const method = first.payment_method || 'Cash';
+            const names = [...new Set(payments.map(p => p.students?.name || 'Student').filter(Boolean))];
+            const label = names.length === 1 ? names[0] : (names.length + ' students');
             activities.push({
                 type: 'payment',
                 title: 'Fee Payment Received',
-                description: `${p.students?.name || 'Student'} paid PKR ${(parseFloat(p.amount_paid) || 0).toLocaleString()} via ${p.payment_method || 'Cash'}`,
+                description: `${label} paid PKR ${total.toLocaleString()} via ${method}`,
                 timestamp: timestamp,
                 icon: `<div class="p-1.5 bg-emerald-500/10 rounded-full"><svg class="w-3.5 h-3.5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg></div>`
             });
