@@ -128,7 +128,15 @@
         const bgImage = state.heroSlides.length ? state.heroSlides[0].image_url : '';
         const currentSlide = state.heroSlides[0];
         el.innerHTML = `
-            <section class="landing-hero w-full" style="${bgImage ? `background-image: url(${bgImage})` : 'background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%)'}">
+            <section class="landing-hero w-full" style="${bgImage ? `background-image: url(${bgImage})` : ''}" ${bgImage ? 'data-has-hero-image="true"' : ''}>
+                <div id="hero-particles" class="landing-hero-particles" aria-hidden="true"></div>
+                <div class="landing-ambient" aria-hidden="true">
+                    <div class="landing-ambient-blob landing-ambient-blob--1"></div>
+                    <div class="landing-ambient-blob landing-ambient-blob--2"></div>
+                    <div class="landing-ambient-blob landing-ambient-blob--3"></div>
+                    <div class="landing-ambient-blob landing-ambient-blob--4"></div>
+                    <div class="landing-ambient-blob landing-ambient-blob--5"></div>
+                </div>
                 <div class="landing-hero-overlay"></div>
                 <div class="container mx-auto px-4 py-16 md:py-24">
                     <div class="landing-hero-content max-w-2xl">
@@ -281,11 +289,8 @@
                     </div>
                 </div>
             </section>
-            <div id="landing-lightbox" class="landing-lightbox hidden">
-                <button type="button" class="landing-lightbox-close" aria-label="Close">×</button>
-                <img src="" alt="">
-            </div>
         `;
+        ensureLightbox();
         el.querySelectorAll('.landing-gallery-item').forEach(item => {
             item.addEventListener('click', () => {
                 const src = item.dataset.src;
@@ -298,9 +303,21 @@
                 }
             });
         });
-        document.getElementById('landing-lightbox')?.addEventListener('click', function (e) {
-            if (e.target === this || e.target.classList.contains('landing-lightbox-close')) this.classList.add('hidden');
-        });
+    }
+
+    function ensureLightbox() {
+        let lb = document.getElementById('landing-lightbox');
+        if (!lb) {
+            lb = document.createElement('div');
+            lb.id = 'landing-lightbox';
+            lb.className = 'landing-lightbox hidden';
+            lb.innerHTML = '<img src="" alt="">';
+            lb.setAttribute('aria-label', 'Close');
+            document.body.appendChild(lb);
+            lb.addEventListener('click', function (e) {
+                if (e.target === this || e.target.tagName === 'IMG') this.classList.add('hidden');
+            });
+        }
     }
 
     function renderTestimonials() {
@@ -415,10 +432,29 @@
         document.querySelectorAll('.landing-fade-in').forEach(el => observer.observe(el));
     }
 
+    function setupAmbientInteractivity() {
+        const hero = document.querySelector('.landing-hero');
+        if (!hero) return;
+        const threshold = Math.min(200, window.innerHeight * 0.25);
+        let ticking = false;
+        function onScroll() {
+            if (!ticking) {
+                requestAnimationFrame(function () {
+                    document.body.classList.toggle('landing-ambient-scrolled', window.scrollY > threshold);
+                    ticking = false;
+                });
+                ticking = true;
+            }
+        }
+        window.addEventListener('scroll', onScroll, { passive: true });
+        onScroll();
+    }
+
     async function init() {
         await fetchAll();
         renderHeader();
         renderHero();
+        if (typeof window.initHeroParticles === 'function') window.initHeroParticles();
         renderAbout();
         renderStats();
         renderPrograms();
@@ -428,6 +464,7 @@
         renderCta();
         renderFooter();
         setupScrollFade();
+        setupAmbientInteractivity();
     }
 
     if (document.readyState === 'loading') {

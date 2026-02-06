@@ -9,20 +9,145 @@
   --landing-muted: #64748b;
 }
 
-/* Hero full-width */
+/* Hero full-width – gradient works behind particles */
 .landing-hero {
   min-height: 70vh;
   display: flex;
   align-items: center;
+  background: linear-gradient(180deg, #f0f4ff 0%, #ffffff 100%);
   background-size: cover;
   background-position: center;
   position: relative;
+}
+
+.landing-hero[data-has-hero-image="true"] {
+  background-size: cover;
+  background-position: center;
+}
+
+.landing-hero-particles {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+}
+
+/* Ambient – smooth wandering only, no mouse; bright theme colors */
+.landing-ambient {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.landing-ambient-blob {
+  position: absolute;
+  border-radius: 60%;
+  will-change: transform;
+  filter: blur(2px);
+}
+
+.landing-ambient-blob--1 {
+  width: clamp(90px, 16vw, 150px);
+  height: clamp(90px, 16vw, 150px);
+  top: 12%;
+  left: 70%;
+  background: rgba(99, 102, 241, 0.45);
+  animation: ambient-wander-1 28s ease-in-out infinite;
+}
+
+.landing-ambient-blob--2 {
+  width: clamp(110px, 20vw, 180px);
+  height: clamp(110px, 20vw, 180px);
+  top: 52%;
+  left: 76%;
+  background: rgba(129, 140, 248, 0.4);
+  animation: ambient-wander-2 32s ease-in-out infinite 3s;
+}
+
+.landing-ambient-blob--3 {
+  width: clamp(70px, 12vw, 110px);
+  height: clamp(70px, 12vw, 110px);
+  top: 32%;
+  right: 12%;
+  background: rgba(165, 180, 252, 0.5);
+  animation: ambient-wander-3 24s ease-in-out infinite 5s;
+}
+
+.landing-ambient-blob--4 {
+  width: clamp(80px, 14vw, 120px);
+  height: clamp(80px, 14vw, 120px);
+  top: 65%;
+  left: 80%;
+  background: rgba(255, 255, 255, 0.7);
+  animation: ambient-wander-4 26s ease-in-out infinite 1s;
+}
+
+.landing-ambient-blob--5 {
+  width: clamp(95px, 15vw, 135px);
+  height: clamp(95px, 15vw, 135px);
+  top: 22%;
+  right: 6%;
+  background: rgba(79, 70, 229, 0.4);
+  animation: ambient-wander-5 30s ease-in-out infinite 4s;
+}
+
+@keyframes ambient-wander-1 {
+  0%, 100% { transform: translate(0, 0) rotate(0deg) scale(1); }
+  20% { transform: translate(18px, -22px) rotate(3deg) scale(1.03); }
+  40% { transform: translate(-12px, -38px) rotate(-2deg) scale(0.98); }
+  60% { transform: translate(25px, -18px) rotate(2deg) scale(1.02); }
+  80% { transform: translate(-8px, -28px) rotate(-1deg) scale(1); }
+}
+
+@keyframes ambient-wander-2 {
+  0%, 100% { transform: translate(0, 0) rotate(0deg) scale(1); }
+  25% { transform: translate(-20px, -30px) rotate(-4deg) scale(1.02); }
+  50% { transform: translate(15px, -45px) rotate(2deg) scale(0.99); }
+  75% { transform: translate(-15px, -20px) rotate(3deg) scale(1.01); }
+}
+
+@keyframes ambient-wander-3 {
+  0%, 100% { transform: translate(0, 0) rotate(0deg) scale(1); }
+  33% { transform: translate(22px, -25px) rotate(4deg) scale(1.02); }
+  66% { transform: translate(-18px, -35px) rotate(-3deg) scale(0.98); }
+}
+
+@keyframes ambient-wander-4 {
+  0%, 100% { transform: translate(0, 0) rotate(0deg) scale(1); }
+  30% { transform: translate(-14px, -28px) rotate(-2deg) scale(1.01); }
+  70% { transform: translate(20px, -15px) rotate(2deg) scale(0.99); }
+}
+
+@keyframes ambient-wander-5 {
+  0%, 100% { transform: translate(0, 0) rotate(0deg) scale(1); }
+  40% { transform: translate(16px, -32px) rotate(3deg) scale(1.02); }
+  80% { transform: translate(-22px, -20px) rotate(-2deg) scale(0.98); }
+}
+
+/* Scroll: soften when past hero */
+.landing-ambient-scrolled .landing-ambient {
+  opacity: 0.5;
+  transition: opacity 0.6s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-ambient-blob {
+    animation: none !important;
+  }
 }
 
 .landing-hero-overlay {
   position: absolute;
   inset: 0;
   background: linear-gradient(to right, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.7) 60%, transparent 100%);
+  z-index: 1;
+}
+
+.landing-hero .container {
+  position: relative;
+  z-index: 2;
 }
 
 .landing-hero-content {
@@ -99,7 +224,7 @@
   transform: scale(1.05);
 }
 
-/* Lightbox */
+/* Lightbox – appended to body so fixed positioning is correct */
 .landing-lightbox {
   position: fixed;
   inset: 0;
@@ -109,32 +234,19 @@
   align-items: center;
   justify-content: center;
   padding: 2rem;
+  cursor: pointer;
+}
+
+.landing-lightbox.hidden {
+  display: none !important;
+  pointer-events: none;
 }
 
 .landing-lightbox img {
   max-width: 100%;
   max-height: 90vh;
   object-fit: contain;
-}
-
-.landing-lightbox-close {
-  position: absolute;
-  top: 1rem;
-  right: 1rem;
-  background: rgba(255,255,255,0.2);
-  color: white;
-  border: none;
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  cursor: pointer;
-  font-size: 1.5rem;
-  line-height: 1;
-  transition: background 0.2s;
-}
-
-.landing-lightbox-close:hover {
-  background: rgba(255,255,255,0.3);
+  pointer-events: none;
 }
 
 /* Carousel dots */
