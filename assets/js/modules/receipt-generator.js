@@ -64,13 +64,18 @@ async function buildReceiptHTML({ fatherName, fatherCNIC, fatherPhone, issueDate
         const allFees = student.fees || [];
 
         // Detailed Logic: Show details for Current Month AND Future Months
-        const detailedFees = allFees.filter(f => f.month >= currentMonth);
+        // Only include fees that have an outstanding balance
+        const detailedFees = allFees.filter(f => {
+            const balance = Number(f.amount || 0) - Number(f.discount || 0) - Number(f.paid_amount || 0);
+            return f.month >= currentMonth && balance > 0;
+        });
 
         // Arrears Logic: Show summary for PAST months
-        // We include ALL past fees that have a balance, to show the full history of debt vs payment if needed, 
-        // OR just the ones with outstanding balance. The user wants to see "Paid: 1000", which implies we need the fee that was paid.
-        // If a fee is fully paid in the past, it's usually history. But if it has a balance (13400), it's here.
-        const arrearsFees = allFees.filter(f => f.month < currentMonth && (Number(f.final_amount || 0) - Number(f.paid_amount || 0)) > 0);
+        // Only include items with outstanding balance
+        const arrearsFees = allFees.filter(f => {
+            const balance = Number(f.amount || 0) - Number(f.discount || 0) - Number(f.paid_amount || 0);
+            return f.month < currentMonth && balance > 0;
+        });
 
         let studentTotal = 0;
         let feeRows = '';
@@ -81,11 +86,11 @@ async function buildReceiptHTML({ fatherName, fatherCNIC, fatherPhone, issueDate
             const disc = Number(fee.discount || 0);
             const paid = Number(fee.paid_amount || 0);
 
-            // Net Payable for this specific fee (Amount Column)
-            // Logic: Actual - Discount - Paid = Net Payable
+            // Net Payable for this specific fee
+            // We "not include" the amount that has been paid by showing only the remaining balance
             const netPayable = Math.max(0, actual - disc - paid);
 
-            if (netPayable > 0 || paid > 0) { // Show if there's a balance OR if something was paid recently? Usually just payable.
+            if (netPayable > 0) {
                 studentTotal += netPayable;
 
                 feeRows += `
@@ -93,7 +98,6 @@ async function buildReceiptHTML({ fatherName, fatherCNIC, fatherPhone, issueDate
                         <td>${fee.fee_type} (${formatMonthStr(fee.month)})</td>
                         <td class="text-right">${actual.toFixed(0)}</td>
                         <td class="text-right">${disc.toFixed(0)}</td>
-                        <td class="text-right">${paid.toFixed(0)}</td>
                         <td class="text-right font-bold">${netPayable.toFixed(0)}</td>
                     </tr>
                 `;
@@ -105,38 +109,31 @@ async function buildReceiptHTML({ fatherName, fatherCNIC, fatherPhone, issueDate
             const months = [...new Set(arrearsFees.map(f => formatMonthStr(f.month)))].sort().join(', ');
 
             // Calculate Aggregates for Arrears
-            // We want to show: Total Actual of these arrears, Total Paid of these arrears, and Net Balance.
-            // Note: DB 'amount' is original fee.
             const totalArrearActual = arrearsFees.reduce((sum, f) => sum + Number(f.amount || 0), 0);
             const totalArrearDisc = arrearsFees.reduce((sum, f) => sum + Number(f.discount || 0), 0);
             const totalArrearPaid = arrearsFees.reduce((sum, f) => sum + Number(f.paid_amount || 0), 0);
 
-            // The "Actual Fee" column for Arrears should technically be "Amount - Discount" if we want to be clean, 
-            // OR we just put the raw Amount and separate Discount. Let's do Raw Amount.
-
-            // To match user's "Total Fees: 14400" (which corresponds to Actual 14400 in the image, or 13400+1000?)
-            // If Actual is 14400 and Paid is 1000, then Net is 13400.
-
             const netArrearsPayable = totalArrearActual - totalArrearDisc - totalArrearPaid;
 
-            studentTotal += netArrearsPayable;
+            if (netArrearsPayable > 0) {
+                studentTotal += netArrearsPayable;
 
-            feeRows += `
-                <tr class="fee-row">
-                    <td>Arrears (${months})</td>
-                    <td class="text-right">${totalArrearActual.toFixed(0)}</td>
-                    <td class="text-right">${totalArrearDisc.toFixed(0)}</td>
-                    <td class="text-right">${totalArrearPaid.toFixed(0)}</td>
-                    <td class="text-right font-bold">${netArrearsPayable.toFixed(0)}</td>
-                </tr>
-            `;
+                feeRows += `
+                    <tr class="fee-row">
+                        <td>Arrears (${months})</td>
+                        <td class="text-right">${totalArrearActual.toFixed(0)}</td>
+                        <td class="text-right">${totalArrearDisc.toFixed(0)}</td>
+                        <td class="text-right font-bold">${netArrearsPayable.toFixed(0)}</td>
+                    </tr>
+                `;
+            }
         }
 
         grandTotal += studentTotal;
 
         studentRows += `
             <tr class="student-header">
-                <td colspan="5">
+                <td colspan="4">
                     <strong>File No: ${student.roll_no || 'N/A'}</strong> &nbsp;&nbsp;
                     <strong>Name: ${student.name}</strong> &nbsp;&nbsp;
                     <strong>Class: ${student.class} ${student.section || ''}</strong> &nbsp;&nbsp;
@@ -145,7 +142,7 @@ async function buildReceiptHTML({ fatherName, fatherCNIC, fatherPhone, issueDate
             </tr>
             ${feeRows}
             <tr class="total-row bg-gray-100">
-                <td colspan="4" class="text-right"><strong>Total Payable of ${student.name}:</strong></td>
+                <td colspan="3" class="text-right"><strong>Total Payable of ${student.name}:</strong></td>
                 <td class="text-right"><strong>${studentTotal.toFixed(0)}</strong></td>
             </tr>
         `;
@@ -198,17 +195,16 @@ async function buildReceiptHTML({ fatherName, fatherCNIC, fatherPhone, issueDate
         <table class="receipt-table">
             <thead>
                 <tr>
-                    <th style="width: 40%;">Particulars</th>
+                    <th style="width: 45%;">Particulars</th>
                     <th style="width: 15%;">Actual Fee</th>
-                    <th style="width: 10%;">Discount</th>
-                    <th style="width: 15%;">Paid</th>
-                    <th style="width: 20%;">Net Amount</th>
+                    <th style="width: 15%;">Discount</th>
+                    <th style="width: 25%;">Net Amount</th>
                 </tr>
             </thead>
             <tbody>
                 ${studentRows}
                 <tr class="grand-total-row">
-                    <td colspan="4" style="border-right: none;"><strong>Grand Total Payable:</strong></td>
+                    <td colspan="3" style="border-right: none;"><strong>Grand Total Payable:</strong></td>
                     <td class="text-right" style="border-left: none;"><strong>${grandTotal.toFixed(0)}</strong></td>
                 </tr>
             </tbody>
