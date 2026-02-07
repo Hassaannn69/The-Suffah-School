@@ -22,6 +22,16 @@ const logoutBtn = document.getElementById('logoutBtn');
 const sidebar = document.getElementById('sidebar');
 const openSidebarBtn = document.getElementById('openSidebar');
 const closeSidebarBtn = document.getElementById('closeSidebar');
+const sidebarBackdrop = document.getElementById('sidebarBackdrop');
+
+function isMobileView() {
+    return window.matchMedia('(max-width: 767px)').matches;
+}
+
+function closeMobileSidebar() {
+    sidebar.classList.add('-translate-x-full');
+    if (sidebarBackdrop) sidebarBackdrop.classList.add('hidden');
+}
 
 // State
 let currentUser = null;
@@ -91,11 +101,16 @@ async function initApp() {
 
         renderSidebar();
         startHeaderClock();
+        // One-time migrations: backfill + normalize family codes
+        window.backfillFamilyCodes();
+        window.backfillFamilyCodesV2();
         // Restore last opened page so reloads don't send you back to dashboard home
         const lastModule = localStorage.getItem('suffah_last_module');
-        const allowedModules = ['dashboard', 'student-dashboard', 'students', 'teachers', 'assign_class', 'timetable', 'teacher_attendance', 'payroll', 'classes', 'fees', 'fee_generation', 'fee_structure', 'fee_reports', 'fee_discounts', 'expenses', 'staff', 'landing_page_editor', 'settings'];
+        const allowedModules = ['dashboard', 'student-dashboard', 'students', 'add_student', 'admissions', 'student_promotions', 'teachers', 'assign_class', 'timetable', 'teacher_attendance', 'payroll', 'classes', 'fees', 'fee_generation', 'fee_structure', 'fee_reports', 'fee_discounts', 'expenses', 'staff', 'landing_page_editor', 'settings'];
         const initialModule = (lastModule && allowedModules.includes(lastModule)) ? lastModule : 'dashboard';
         loadModule(initialModule);
+        // Auto-expand dropdown that contains the active sub-module
+        autoExpandDropdown(initialModule);
         startUpdateCheck(); // Show "Website updated" banner when code changes — no auto-refresh
     } catch (err) {
         console.error('Error initializing app:', err);
@@ -116,7 +131,19 @@ async function initApp() {
 // Sidebar Navigation Config
 const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: 'M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z', roles: ['admin', 'teacher', 'accountant', 'student'] },
-    { id: 'students', label: 'Students', icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z', roles: ['admin', 'teacher', 'accountant'] },
+    {
+        id: 'students-menu',
+        label: 'Students',
+        icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z',
+        roles: ['admin', 'teacher', 'accountant'],
+        isDropdown: true,
+        submenu: [
+            { id: 'add_student', label: 'Add a Student', icon: 'M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z', roles: ['admin'] },
+            { id: 'students', label: 'Student List', icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z', roles: ['admin', 'teacher', 'accountant'] },
+            { id: 'admissions', label: 'Online Admission', icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z', roles: ['admin'] },
+            { id: 'student_promotions', label: 'Student Promotions', icon: 'M13 7h8m0 0v8m0-8l-8 8-4-4-6 6', roles: ['admin'] }
+        ]
+    },
     {
         id: 'teachers-menu',
         label: 'Teachers',
@@ -194,9 +221,7 @@ function renderSidebar() {
                         sublink.addEventListener('click', (e) => {
                             e.preventDefault();
                             loadModule(subitem.id);
-                            if (window.innerWidth < 768) {
-                                sidebar.classList.add('-translate-x-full');
-                            }
+                            if (isMobileView()) closeMobileSidebar();
                         });
                         submenuContainer.appendChild(sublink);
                     }
@@ -225,10 +250,7 @@ function renderSidebar() {
                 link.addEventListener('click', (e) => {
                     e.preventDefault();
                     loadModule(item.id);
-                    // Close sidebar on mobile
-                    if (window.innerWidth < 768) {
-                        sidebar.classList.add('-translate-x-full');
-                    }
+                    if (isMobileView()) closeMobileSidebar();
                 });
                 navLinksContainer.appendChild(link);
             }
@@ -249,6 +271,19 @@ function startHeaderClock() {
     setInterval(update, 1000);
 }
 
+// Auto-expand the dropdown menu that contains the given sub-module
+function autoExpandDropdown(moduleId) {
+    const activeLink = document.querySelector(`#navLinks a[data-module="${moduleId}"]`);
+    if (activeLink) {
+        const submenuContainer = activeLink.closest('.hidden');
+        if (submenuContainer) {
+            submenuContainer.classList.remove('hidden');
+            const arrow = submenuContainer.previousElementSibling?.querySelector('.dropdown-arrow');
+            if (arrow) arrow.classList.add('rotate-180');
+        }
+    }
+}
+
 // Module Loader with Page Transitions
 async function loadModule(moduleId) {
     // Persist so we can restore this page after a reload (avoids losing place when code updates)
@@ -260,20 +295,24 @@ async function loadModule(moduleId) {
     document.querySelectorAll('#navLinks a').forEach(el => {
         if (el.dataset.module === moduleId) {
             el.classList.add('bg-gray-800', 'text-white', 'border-primary-500');
-            el.querySelector('svg').classList.remove('text-gray-500');
-            el.querySelector('svg').classList.add('text-primary-400');
+            el.querySelector('svg')?.classList.remove('text-gray-500');
+            el.querySelector('svg')?.classList.add('text-primary-400');
         } else {
             el.classList.remove('bg-gray-800', 'text-white', 'border-primary-500');
-            el.querySelector('svg').classList.add('text-gray-500');
-            el.querySelector('svg').classList.remove('text-primary-400');
+            el.querySelector('svg')?.classList.add('text-gray-500');
+            el.querySelector('svg')?.classList.remove('text-primary-400');
         }
     });
+    autoExpandDropdown(moduleId);
 
     // Update page title
     const titleMap = {
         'dashboard': 'Dashboard',
         'student-dashboard': 'My Dashboard',
-        'students': 'Students',
+        'students': 'Student List',
+        'add_student': 'Add a Student',
+        'admissions': 'Admissions Review',
+        'student_promotions': 'Student Promotions',
         'teachers': 'Teachers',
         'assign_class': 'Assign Class',
         'timetable': 'Timetable',
@@ -358,6 +397,188 @@ async function loadModule(moduleId) {
 
 // Expose globally for cross-module navigation
 window.loadModule = loadModule;
+// Dashboard KPI cards: open Fee Reports with a specific report pre-selected
+window.openDashboardReport = function (reportId) {
+    window.dashboardReportTarget = reportId;
+    loadModule('fee_reports');
+};
+
+// Global utility: sort class names in natural order (Play Group, Nursery, Prep, Class 1-11, etc.)
+window.sortClassesNatural = function(arr, key) {
+    const rank = (name) => {
+        if (!name) return 9999;
+        const n = name.toLowerCase().trim();
+        if (n === 'play group' || n === 'pg') return 0;
+        if (n === 'nursery') return 1;
+        if (n === 'prep') return 2;
+        const m = n.match(/(\d+)/);
+        return m ? parseInt(m[1]) + 2 : 9998;
+    };
+    return arr.sort((a, b) => {
+        const nameA = key ? a[key] : a;
+        const nameB = key ? b[key] : b;
+        return rank(nameA) - rank(nameB);
+    });
+};
+
+// ── One-time backfill: assign family codes to existing students ──
+window.backfillFamilyCodes = async function() {
+    const MIGRATION_KEY = 'suffah_family_code_backfill_v1';
+    if (localStorage.getItem(MIGRATION_KEY)) return;
+
+    try {
+        const sb = getSupabase();
+
+        // 1. Find the highest existing FAM-XXX code
+        const { data: maxData } = await sb
+            .from('students')
+            .select('family_code')
+            .not('family_code', 'is', null)
+            .ilike('family_code', 'FAM-%')
+            .order('family_code', { ascending: false })
+            .limit(1);
+
+        let nextNum = 1;
+        if (maxData && maxData.length > 0) {
+            const m = maxData[0].family_code.match(/^FAM-(\d+)$/i);
+            if (m) nextNum = parseInt(m[1]) + 1;
+        }
+
+        // 2. Fetch all students without a family code
+        const { data: students, error: fetchErr } = await sb
+            .from('students')
+            .select('id, father_cnic, father_name, family_code')
+            .or('family_code.is.null,family_code.eq.');
+
+        if (fetchErr) throw fetchErr;
+
+        if (!students || students.length === 0) {
+            localStorage.setItem(MIGRATION_KEY, Date.now().toString());
+            return;
+        }
+
+        // Show progress toast
+        const toast = document.createElement('div');
+        toast.className = 'fixed bottom-6 right-6 bg-blue-600 text-white px-6 py-3 rounded-xl shadow-2xl text-sm font-medium z-[9999] transform transition-all duration-300 translate-y-4 opacity-0';
+        toast.textContent = 'Assigning family codes to existing students...';
+        document.body.appendChild(toast);
+        requestAnimationFrame(() => toast.classList.remove('translate-y-4', 'opacity-0'));
+
+        // 3. Group by (father_cnic + father_name)
+        const groups = {};
+        for (const s of students) {
+            const cnic = (s.father_cnic || '').trim().toLowerCase();
+            const name = (s.father_name || '').trim().toLowerCase();
+            const key = cnic ? `${cnic}||${name}` : `__solo__${s.id}`;
+            if (!groups[key]) groups[key] = [];
+            groups[key].push(s.id);
+        }
+
+        // 4. Assign codes and update DB
+        for (const key of Object.keys(groups)) {
+            const code = `FAM-${nextNum.toString().padStart(3, '0')}`;
+            const ids = groups[key];
+            const { error: updateErr } = await sb
+                .from('students')
+                .update({ family_code: code })
+                .in('id', ids);
+            if (updateErr) console.error(`Backfill error for ${code}:`, updateErr);
+            nextNum++;
+        }
+
+        // 5. Mark as done
+        localStorage.setItem(MIGRATION_KEY, Date.now().toString());
+
+        toast.textContent = `Family codes assigned to ${students.length} student(s).`;
+        toast.classList.remove('bg-blue-600');
+        toast.classList.add('bg-green-600');
+        setTimeout(() => { toast.classList.add('translate-y-4', 'opacity-0'); setTimeout(() => toast.remove(), 300); }, 3000);
+
+    } catch (err) {
+        console.error('Family code backfill failed:', err);
+    }
+};
+
+// ── V2 backfill: normalize old-format family codes (e.g. "003") to FAM-XXX ──
+window.backfillFamilyCodesV2 = async function() {
+    const MIGRATION_KEY = 'suffah_family_code_backfill_v2';
+    if (localStorage.getItem(MIGRATION_KEY)) return;
+
+    try {
+        const sb = getSupabase();
+
+        // 1. Find the highest existing FAM-XXX code
+        const { data: maxData } = await sb
+            .from('students')
+            .select('family_code')
+            .not('family_code', 'is', null)
+            .ilike('family_code', 'FAM-%')
+            .order('family_code', { ascending: false })
+            .limit(1);
+
+        let nextNum = 1;
+        if (maxData && maxData.length > 0) {
+            const m = maxData[0].family_code.match(/^FAM-(\d+)$/i);
+            if (m) nextNum = parseInt(m[1]) + 1;
+        }
+
+        // 2. Fetch ALL students with a non-null family_code
+        const { data: allStudents, error: fetchErr } = await sb
+            .from('students')
+            .select('id, family_code');
+
+        if (fetchErr) throw fetchErr;
+
+        // 3. Filter to only those with non-FAM-pattern codes
+        const legacyStudents = (allStudents || []).filter(s => {
+            const fc = (s.family_code || '').trim();
+            return fc.length > 0 && !/^FAM-\d+$/i.test(fc);
+        });
+
+        if (legacyStudents.length === 0) {
+            localStorage.setItem(MIGRATION_KEY, Date.now().toString());
+            return;
+        }
+
+        // Show progress toast
+        const toast = document.createElement('div');
+        toast.className = 'fixed bottom-6 right-6 bg-blue-600 text-white px-6 py-3 rounded-xl shadow-2xl text-sm font-medium z-[9999] transform transition-all duration-300 translate-y-4 opacity-0';
+        toast.textContent = 'Normalizing legacy family codes...';
+        document.body.appendChild(toast);
+        requestAnimationFrame(() => toast.classList.remove('translate-y-4', 'opacity-0'));
+
+        // 4. Group by their existing family_code (students sharing the same old code = same family)
+        const groups = {};
+        for (const s of legacyStudents) {
+            const key = s.family_code.trim().toLowerCase();
+            if (!groups[key]) groups[key] = [];
+            groups[key].push(s.id);
+        }
+
+        // 5. Assign new FAM-XXX codes and update DB
+        for (const key of Object.keys(groups)) {
+            const code = `FAM-${nextNum.toString().padStart(3, '0')}`;
+            const ids = groups[key];
+            const { error: updateErr } = await sb
+                .from('students')
+                .update({ family_code: code })
+                .in('id', ids);
+            if (updateErr) console.error(`V2 backfill error for ${code}:`, updateErr);
+            nextNum++;
+        }
+
+        // 6. Mark as done
+        localStorage.setItem(MIGRATION_KEY, Date.now().toString());
+
+        toast.textContent = `Normalized ${legacyStudents.length} student(s) to FAM-XXX format.`;
+        toast.classList.remove('bg-blue-600');
+        toast.classList.add('bg-green-600');
+        setTimeout(() => { toast.classList.add('translate-y-4', 'opacity-0'); setTimeout(() => toast.remove(), 300); }, 3000);
+
+    } catch (err) {
+        console.error('Family code v2 backfill failed:', err);
+    }
+};
 
 // --- Update check: show "Website updated" banner when new code is deployed; do NOT auto-refresh ---
 function getCurrentAppVersion() {
@@ -453,9 +674,15 @@ logoutBtn.addEventListener('click', async () => {
     }
 });
 
-// Mobile Sidebar Toggle
-openSidebarBtn.addEventListener('click', () => sidebar.classList.remove('-translate-x-full'));
-closeSidebarBtn.addEventListener('click', () => sidebar.classList.add('-translate-x-full'));
+// Mobile Sidebar Toggle with backdrop
+openSidebarBtn.addEventListener('click', () => {
+    sidebar.classList.remove('-translate-x-full');
+    if (isMobileView() && sidebarBackdrop) sidebarBackdrop.classList.remove('hidden');
+});
+closeSidebarBtn.addEventListener('click', closeMobileSidebar);
+if (sidebarBackdrop) {
+    sidebarBackdrop.addEventListener('click', closeMobileSidebar);
+}
 
 // Theme Toggle Logic
 // Theme Toggle Logic

@@ -5,6 +5,12 @@ body {
   font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+/* Dashboard main content: flex child can shrink and become the scroll region */
+#mainContent {
+  min-height: 0;
 }
 
 /* Typography hierarchy – modern sans-serif, varied weights */

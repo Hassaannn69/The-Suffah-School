@@ -75,6 +75,8 @@ async function fetchClasses() {
         return;
     }
 
+    if (window.sortClassesNatural) window.sortClassesNatural(data, 'class_name');
+
     if (data.length === 0) {
         grid.innerHTML = `<div class="col-span-full text-center py-10 text-gray-400 dark:text-gray-500">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto mb-3 text-gray-300 dark:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">

@@ -215,11 +215,11 @@ async function buildReceiptHTML({ fatherName, fatherCNIC, fatherPhone, issueDate
                 paymentData.forEach(payment => {
                     if (processedPaymentIds.has(payment.id)) return;
                     processedPaymentIds.add(payment.id);
+                    const student = students.find(s => s.id === payment.student_id);
                     let paidFee = null;
-                    students.forEach(student => {
-                        const fee = (student.fees || []).find(f => f.id === payment.fee_id);
-                        if (fee) paidFee = fee;
-                    });
+                    if (student && (student.fees || []).length) {
+                        paidFee = (student.fees || []).find(f => f.id === payment.fee_id);
+                    }
                     if (!paidFee && payment.fees) paidFee = payment.fees;
                     if (paidFee) {
                         const actual = Number(paidFee.amount || 0);
@@ -227,6 +227,10 @@ async function buildReceiptHTML({ fatherName, fatherCNIC, fatherPhone, issueDate
                         const amountPaid = Number(payment.amount_paid || 0);
                         totalPaidThisTransaction += amountPaid;
                         paidFeesRows.push({
+                            studentId: payment.student_id,
+                            studentName: student ? student.name : 'Unknown',
+                            rollNo: student ? student.roll_no : 'N/A',
+                            studentClass: student ? `${student.class || ''} ${student.section || ''}`.trim() : 'N/A',
                             feeType: paidFee.fee_type,
                             month: formatMonthStr(paidFee.month),
                             actual,
@@ -289,11 +293,13 @@ async function buildReceiptHTML({ fatherName, fatherCNIC, fatherPhone, issueDate
             
             const remaining = Math.max(0, actual - disc - paidForThisFee);
 
+            const netTotal = actual - disc;
             feeRows += `
                 <tr class="fee-row">
                     <td>${fee.fee_type || 'Fee'} (${formatMonthStr(fee.month)})</td>
                     <td class="text-right">${actual.toFixed(0)}</td>
                     <td class="text-right">${disc.toFixed(0)}</td>
+                    <td class="text-right font-bold">${netTotal.toFixed(0)}</td>
                     <td class="text-right font-bold">${remaining.toFixed(0)}</td>
                 </tr>
             `;
@@ -305,7 +311,7 @@ async function buildReceiptHTML({ fatherName, fatherCNIC, fatherPhone, issueDate
 
         studentRows += `
             <tr class="student-header">
-                <td colspan="4">
+                <td colspan="5">
                     <strong>File No: ${student.roll_no || 'N/A'}</strong> &nbsp;&nbsp;
                     <strong>Name: ${student.name}</strong> &nbsp;&nbsp;
                     <strong>Class: ${student.class} ${student.section || ''}</strong> &nbsp;&nbsp;
@@ -314,7 +320,7 @@ async function buildReceiptHTML({ fatherName, fatherCNIC, fatherPhone, issueDate
             </tr>
             ${feeRows}
             <tr class="total-row bg-gray-100">
-                <td colspan="3" class="text-right"><strong>Total Payable of ${student.name}:</strong></td>
+                <td colspan="4" class="text-right"><strong>Total Payable of ${student.name}:</strong></td>
                 <td class="text-right"><strong>${studentBalance.toFixed(0)}</strong></td>
             </tr>
         `;
@@ -372,29 +378,58 @@ async function buildReceiptHTML({ fatherName, fatherCNIC, fatherPhone, issueDate
         <table class="receipt-table">
             <thead>
                 <tr>
-                    <th style="width: 45%;">Particulars</th>
-                    <th style="width: 15%;">Actual Fee</th>
-                    <th style="width: 15%;">Discount</th>
+                    <th style="width: 35%;">Particulars</th>
+                    <th style="width: 14%;">Actual Fee</th>
+                    <th style="width: 12%;">Discount</th>
+                    <th style="width: 14%;">Total</th>
                     <th style="width: 25%;">${paidFeesRows.length > 0 ? 'Amount Paid' : 'Remaining'}</th>
                 </tr>
             </thead>
             <tbody>
                 ${paidFeesRows.length > 0
-                    ? paidFeesRows.map(f => `
-                        <tr class="fee-row">
-                            <td>${f.feeType} (${f.month})</td>
-                            <td class="text-right">${f.actual.toFixed(0)}</td>
-                            <td class="text-right">${f.disc.toFixed(0)}</td>
-                            <td class="text-right font-bold">${f.amountPaid.toFixed(0)}</td>
-                        </tr>
-                    `).join('') + `
+                    ? (() => {
+                        const byStudent = new Map();
+                        paidFeesRows.forEach(row => {
+                            const key = row.studentId;
+                            if (!byStudent.has(key)) {
+                                byStudent.set(key, { studentName: row.studentName, rollNo: row.rollNo, studentClass: row.studentClass, rows: [] });
+                            }
+                            byStudent.get(key).rows.push(row);
+                        });
+                        let paymentTableBody = '';
+                        byStudent.forEach(({ studentName, rollNo, studentClass, rows }) => {
+                            const studentPaid = rows.reduce((s, r) => s + r.amountPaid, 0);
+                            paymentTableBody += `
+                            <tr class="student-header">
+                                <td colspan="5">
+                                    <strong>File No: ${rollNo}</strong> &nbsp;&nbsp;
+                                    <strong>Name: ${studentName}</strong> &nbsp;&nbsp;
+                                    <strong>Class: ${studentClass}</strong>
+                                </td>
+                            </tr>
+                            ${rows.map(f => `
+                                <tr class="fee-row">
+                                    <td>${f.feeType} (${f.month})</td>
+                                    <td class="text-right">${f.actual.toFixed(0)}</td>
+                                    <td class="text-right">${f.disc.toFixed(0)}</td>
+                                    <td class="text-right font-bold">${(f.actual - f.disc).toFixed(0)}</td>
+                                    <td class="text-right font-bold">${f.amountPaid.toFixed(0)}</td>
+                                </tr>
+                            `).join('')}
+                            <tr class="total-row bg-gray-100">
+                                <td colspan="4" class="text-right"><strong>Total for ${studentName}:</strong></td>
+                                <td class="text-right"><strong>${studentPaid.toFixed(0)}</strong></td>
+                            </tr>`;
+                        });
+                        return paymentTableBody + `
                     <tr class="grand-total-row">
-                        <td colspan="3" style="border-right: none;"><strong>Total:</strong></td>
+                        <td colspan="4" style="border-right: none;"><strong>Total Paid:</strong></td>
                         <td class="text-right" style="border-left: none;"><strong>${totalPaidThisTransaction.toFixed(0)}</strong></td>
-                    </tr>`
+                    </tr>`;
+                    })()
                     : `${studentRows}
                     <tr class="grand-total-row">
-                        <td colspan="3" style="border-right: none;"><strong>Grand Total Payable:</strong></td>
+                        <td colspan="4" style="border-right: none;"><strong>Grand Total Payable:</strong></td>
                         <td class="text-right" style="border-left: none;"><strong>${unifiedBalance.toFixed(0)}</strong></td>
                     </tr>`
                 }

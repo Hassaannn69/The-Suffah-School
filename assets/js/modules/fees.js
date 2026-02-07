@@ -321,6 +321,22 @@ async function initializeData() {
             form.onsubmit = handlePaymentSubmit;
             form.addEventListener('submit', handlePaymentSubmit, false);
         }
+        // Auto-open a specific student's family profile if redirected from student profile
+        const pendingTarget = sessionStorage.getItem('suffah_open_fee_student');
+        if (pendingTarget) {
+            sessionStorage.removeItem('suffah_open_fee_student');
+            try {
+                const { familyKey, studentId } = JSON.parse(pendingTarget);
+                const targetFamily = allFamilies.find(f => f.key === familyKey);
+                if (targetFamily) {
+                    window.viewFamilyProfile(targetFamily.key);
+                    if (studentId && window.profileSelectStudent) {
+                        window.profileSelectStudent(studentId);
+                    }
+                }
+            } catch (e) { console.warn('Auto-open fee profile failed:', e); }
+        }
+
     } catch (err) { console.error(err); }
 }
 
@@ -358,11 +374,20 @@ function renderFamilyGrid() {
 
     grid.innerHTML = pageItems.map((f, i) => {
         const isDefaulter = f.status === 'overdue';
-        const initials = f.seniorMember.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+        const displayName = f._searchMatchName || f.seniorMember;
+        const showSeniorNote = f._searchMatchName && f._searchMatchName !== f.seniorMember;
+        const initials = displayName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
         const overtext = isDefaulter ? `Payment Overdue: ${f.overdueDays} Days` : `Last Payment: ${f.lastPayment}`;
 
         // Find if any student in this family has a photo to use as the family representative
-        const familyPhoto = Array.from(f.students.values()).find(s => s.photo_url)?.photo_url;
+        // If search matched a specific student, prefer their photo
+        let familyPhoto;
+        if (f._searchMatchName) {
+            const matchedStudent = Array.from(f.students.values()).find(s => s.name === f._searchMatchName);
+            familyPhoto = matchedStudent?.photo_url || Array.from(f.students.values()).find(s => s.photo_url)?.photo_url;
+        } else {
+            familyPhoto = Array.from(f.students.values()).find(s => s.photo_url)?.photo_url;
+        }
 
         return `
             <div class="family-card animate-fade-in shadow-xl shadow-black/20">
@@ -373,9 +398,10 @@ function renderFamilyGrid() {
                     </div>
                     <div class="flex-grow min-w-0">
                         <div class="flex items-center gap-2">
-                            <h4 class="text-white font-bold truncate">${f.seniorMember}</h4>
+                            <h4 class="text-white font-bold truncate">${displayName}</h4>
                             <span class="text-[10px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded font-mono uppercase">${f.code}</span>
                         </div>
+                        ${showSeniorNote ? `<p class="text-[10px] text-indigo-400 mt-0.5">Family of: ${f.seniorMember}</p>` : ''}
                         <p class="text-xs text-slate-400 mt-0.5">Guardian: ${f.guardian}</p>
                         <div class="flex items-center gap-1.5 mt-2 text-blue-400 text-[11px] font-bold">
                             <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
@@ -412,7 +438,38 @@ function renderPagination() {
 }
 
 window.changePage = (p) => { if (p > 0 && p <= Math.ceil(filteredFamilies.length / itemsPerPage)) { currentPage = p; renderFamilyGrid(); renderPagination(); } };
-function handleSearch(e) { filteredFamilies = allFamilies.filter(f => f.seniorMember.toLowerCase().includes(e.target.value.toLowerCase()) || f.code.toLowerCase().includes(e.target.value.toLowerCase())); currentPage = 1; renderFamilyGrid(); renderPagination(); }
+function handleSearch(e) {
+    const query = e.target.value.trim().toLowerCase();
+    if (!query) {
+        filteredFamilies = [...allFamilies];
+        // Clear any search match annotations
+        allFamilies.forEach(f => delete f._searchMatchName);
+    } else {
+        filteredFamilies = allFamilies.filter(f => {
+            // Clear previous match
+            delete f._searchMatchName;
+
+            // Match on senior member name
+            if (f.seniorMember.toLowerCase().includes(query)) return true;
+            // Match on family code
+            if (f.code.toLowerCase().includes(query)) return true;
+            // Match on guardian name
+            if (f.guardian.toLowerCase().includes(query)) return true;
+
+            // Match on ANY student name in the family
+            for (const student of f.students.values()) {
+                if (student.name.toLowerCase().includes(query)) {
+                    f._searchMatchName = student.name; // Tag who matched
+                    return true;
+                }
+            }
+            return false;
+        });
+    }
+    currentPage = 1;
+    renderFamilyGrid();
+    renderPagination();
+}
 
 /**
  * Layer 2: Family Financial Profile
@@ -685,21 +742,29 @@ window.renderStudentFinancials = async () => {
         `;
     } catch (e) {
         console.error('Render Fatal Error:', e);
-        document.getElementById('studentProfileContent').innerHTML = `<div class="p-8 text-center text-red-500 font-bold">Error loading profile: ${e.message}</div>`;
+        const errEl = document.getElementById('studentProfileContent');
+        if (errEl) errEl.innerHTML = `<div class="p-8 text-center text-red-500 font-bold">Error loading profile: ${e.message}</div>`;
     }
 };
 
 // Window-level helpers
 window.feesModuleBackToList = () => { currentFamily = null; currentStudentId = null; renderFamilyList(); };
 window.profileSelectStudent = (sid) => { currentStudentId = sid; document.querySelectorAll('.sibling-card').forEach(c => c.classList.toggle('active', c.getAttribute('onclick').includes(sid))); window.renderStudentFinancials(); };
-// Helper to get pending fees for current target
+// Helper: due amount for a fee using actual payment transactions (not stale fee.paid_amount)
+function getFeeDue(fee, family) {
+    const net = Math.max(0, (fee.amount || 0) - (fee.discount || 0));
+    const student = family.students.get(fee.student_id);
+    const paid = student
+        ? student.payments.filter(p => p.fee_id === fee.id).reduce((s, p) => s + Number(p.amount_paid || 0), 0)
+        : 0;
+    return Math.max(0, net - paid);
+}
+
+// Helper to get pending fees for current target (only fees with remaining balance)
 function getPendingFees(familyKey) {
     const f = allFamilies.find(x => x.key === familyKey);
     if (!f) return [];
-    return f.allFees.filter(x => {
-        const net = (x.amount || 0) - (x.discount || 0);
-        return net > (x.paid_amount || 0);
-    });
+    return f.allFees.filter(fee => getFeeDue(fee, f) > 0);
 }
 
 window.closePaymentModal = () => {
@@ -806,44 +871,87 @@ window.togglePaymentMode = (mode) => {
 
     } else {
         const familyKey = document.getElementById('paymentTargetId').value;
+        const family = allFamilies.find(f => f.key === familyKey);
         const pendingFees = getPendingFees(familyKey);
 
-        const rows = pendingFees.map(fee => {
-            const net = (fee.amount || 0) - (fee.discount || 0);
-            const due = net - (fee.paid_amount || 0);
-            const student = fee.students;
+        if (!family) {
+            container.innerHTML = '<p class="text-slate-500 text-center py-4 bg-slate-900 rounded-lg italic">Family not found.</p>';
+            totalAmountInput.readOnly = true;
+            totalAmountInput.classList.add('opacity-50', 'cursor-not-allowed');
+            return;
+        }
+
+        // Group pending fees by student (student_id -> { studentName, fees[] })
+        const byStudent = new Map();
+        pendingFees.forEach(fee => {
+            const sid = fee.student_id;
+            const studentName = fee.students?.name || 'Unknown Student';
+            if (!byStudent.has(sid)) {
+                byStudent.set(sid, { studentName, fees: [] });
+            }
+            byStudent.get(sid).fees.push(fee);
+        });
+
+        const studentSections = Array.from(byStudent.entries()).map(([studentId, { studentName, fees }]) => {
+            const feeRows = fees.map(fee => {
+                const due = getFeeDue(fee, family);
+                return `
+                    <tr class="border-b border-slate-700/40 last:border-0 hover:bg-slate-800/40 transition-colors">
+                        <td class="py-2.5 pl-4 pr-2">
+                            <p class="font-medium text-white text-sm">${fee.fee_type}</p>
+                            <p class="text-[10px] text-slate-500 uppercase tracking-wider">${fee.month || 'N/A'}</p>
+                        </td>
+                        <td class="py-2.5 px-2 text-right font-mono text-sm font-bold text-amber-400">${due.toLocaleString()}</td>
+                        <td class="py-2.5 pl-2 pr-4 w-28">
+                            <input type="number"
+                                data-fee-id="${fee.id}"
+                                data-max="${due}"
+                                class="partial-payment-input w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white text-right font-mono text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/30 transition-colors"
+                                placeholder="0"
+                                min="0"
+                                max="${due}"
+                                oninput="window.recalculateAllocations()"
+                                onkeydown="if(event.key==='Enter'){event.preventDefault();const inputs=Array.from(document.querySelectorAll('.partial-payment-input'));const idx=inputs.indexOf(this);if(idx<inputs.length-1){inputs[idx+1].focus();}else{document.getElementById('submitPaymentBtn')?.click();}}">
+                        </td>
+                    </tr>
+                `;
+            }).join('');
 
             return `
-                <div class="grid grid-cols-12 gap-4 items-center p-3 bg-slate-800/30 rounded-lg border border-slate-700/50">
-                    <div class="col-span-5">
-                        <p class="font-bold text-white text-sm">${fee.fee_type}</p>
-                        <p class="text-[10px] text-slate-400 uppercase">${student ? student.name : 'Unknown Student'} • ${fee.month || 'N/A'}</p>
+                <div class="rounded-xl border border-slate-700 overflow-hidden bg-slate-800/40">
+                    <div class="px-4 py-3 bg-slate-800/80 border-b border-slate-700 flex items-center gap-2">
+                        <div class="w-8 h-8 rounded-full bg-indigo-500/30 text-indigo-300 flex items-center justify-center text-sm font-bold">
+                            ${studentName.charAt(0).toUpperCase()}
+                        </div>
+                        <h4 class="font-bold text-white">${studentName}</h4>
+                        <span class="text-[10px] text-slate-400 font-medium">${fees.length} fee type${fees.length !== 1 ? 's' : ''}</span>
                     </div>
-                    <div class="col-span-3 text-right">
-                        <p class="text-xs font-bold text-amber-500">Due: ${due.toLocaleString()}</p>
-                    </div>
-                    <div class="col-span-4">
-                        <input type="number" 
-                            data-fee-id="${fee.id}" 
-                            data-max="${due}" 
-                            class="partial-payment-input w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-white text-right font-mono text-sm outline-none focus:border-emerald-500 transition-colors" 
-                            placeholder="0" 
-                            min="0" 
-                            max="${due}"
-                            oninput="window.recalculateAllocations()"
-                            onkeydown="if(event.key==='Enter'){event.preventDefault();const inputs=Array.from(document.querySelectorAll('.partial-payment-input'));const idx=inputs.indexOf(this);if(idx<inputs.length-1){inputs[idx+1].focus();}else{document.getElementById('submitPaymentBtn')?.click();}}">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="text-[10px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-700/60">
+                                    <th class="py-2 pl-4 pr-2">Fee Type</th>
+                                    <th class="py-2 px-2 text-right">Due (PKR)</th>
+                                    <th class="py-2 pl-2 pr-4 text-right w-28">Pay</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${feeRows}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             `;
         }).join('');
 
         container.innerHTML = `
-            <div class="bg-slate-800/50 rounded-xl p-4 border border-slate-700 max-h-[300px] overflow-y-auto custom-scrollbar space-y-2">
-                ${rows.length > 0 ? rows : '<p class="text-slate-500 text-center py-4 bg-slate-900 rounded-lg italic">No pending fees to display.</p>'}
+            <div class="space-y-4 max-h-[380px] overflow-y-auto custom-scrollbar pr-1">
+                <p class="text-xs text-slate-400 font-medium uppercase tracking-wider">Allocate amount per fee — grouped by student</p>
+                ${studentSections.length > 0 ? studentSections : '<p class="text-slate-500 text-center py-8 bg-slate-900 rounded-xl italic border border-slate-700">No pending fees to display.</p>'}
             </div>
         `;
 
-        // In partial mode, total amount is derived from inputs, so we can make the main input read-only or just sync it
+        // In partial mode, total amount is derived from inputs, so we make the main input read-only
         totalAmountInput.readOnly = true;
         totalAmountInput.classList.add('opacity-50', 'cursor-not-allowed');
         window.recalculateAllocations();
@@ -853,13 +961,14 @@ window.togglePaymentMode = (mode) => {
 window.updatePaymentPreview = () => {
     const totalPay = Number(document.getElementById('paymentAmount').value) || 0;
     const familyKey = document.getElementById('paymentTargetId').value;
+    const family = allFamilies.find(f => f.key === familyKey);
     const pendingFees = getPendingFees(familyKey);
     const tbody = document.getElementById('collectivePreviewBody');
 
     document.getElementById('totalAmountDisplay').textContent = totalPay.toLocaleString();
     document.getElementById('allocatedAmountDisplay').textContent = totalPay.toLocaleString();
 
-    if (!tbody || pendingFees.length === 0) {
+    if (!tbody || pendingFees.length === 0 || !family) {
         if (tbody) tbody.innerHTML = '<tr><td colspan="3" class="text-center py-4 text-slate-500 text-sm">No pending fees</td></tr>';
         return;
     }
@@ -874,9 +983,8 @@ window.updatePaymentPreview = () => {
 
     // First pass: assign equal amounts (capped at due amount)
     pendingFees.forEach((fee, index) => {
-        const net = (fee.amount || 0) - (fee.discount || 0);
-        const due = net - (fee.paid_amount || 0);
-        
+        const due = getFeeDue(fee, family);
+
         // Start with equal share, but cap at what's actually due
         let allocation = Math.min(equalAmount, due);
         allocations.push({ fee, due, allocation, index });
@@ -985,10 +1093,12 @@ async function handlePaymentSubmit(e) {
 
         if (mode === 'collective') {
             const totalPay = Number(document.getElementById('paymentAmount').value);
+            const family = allFamilies.find(f => f.key === familyKey);
             const pendingFees = getPendingFees(familyKey);
 
             if (totalPay <= 0) throw new Error("Please enter a valid amount.");
             if (pendingFees.length === 0) throw new Error("No pending fees to pay.");
+            if (!family) throw new Error("Family not found.");
 
             // EQUAL DISTRIBUTION: Divide payment equally across all fee types
             const feeCount = pendingFees.length;
@@ -1000,9 +1110,8 @@ async function handlePaymentSubmit(e) {
 
             // First pass: assign equal amounts (capped at due amount)
             pendingFees.forEach((fee, index) => {
-                const net = (fee.amount || 0) - (fee.discount || 0);
-                const due = net - (fee.paid_amount || 0);
-                
+                const due = getFeeDue(fee, family);
+
                 // Start with equal share, but cap at what's actually due
                 let allocated = Math.min(equalAmount, due);
                 allocations.push({ fee, due, allocated, index });
@@ -1105,43 +1214,46 @@ async function handlePaymentSubmit(e) {
             if (!receiptError && insertedReceipt) receipt = insertedReceipt;
         }
 
-        // Execute Payments and collect payment IDs
-        const createdPaymentIds = [];
+        // Execute Payments — batch insert all at once (1 query instead of N)
         const studentIds = [...new Set(paymentsToRecord.map(p => p.student_id))];
-        let totalAmountPaid = 0;
+        const payloads = paymentsToRecord.map(p => ({
+            fee_id: p.fee_id,
+            student_id: p.student_id,
+            amount_paid: p.amount_paid,
+            payment_date: p.payment_date,
+            payment_method: p.payment_method,
+            ...(receipt && receipt.id ? { receipt_id: receipt.id } : {})
+        }));
 
-        for (const p of paymentsToRecord) {
-            const insertPayload = {
-                fee_id: p.fee_id,
-                student_id: p.student_id,
-                amount_paid: p.amount_paid,
-                payment_date: p.payment_date,
-                payment_method: p.payment_method
-            };
-            if (receipt && receipt.id) insertPayload.receipt_id = receipt.id;
+        const { data: insertedPayments, error: insertError } = await supabase
+            .from('fee_payments').insert(payloads).select();
+        if (insertError) throw insertError;
 
-            const { data: insertedPayment, error: insertError } = await supabase.from('fee_payments').insert(insertPayload).select().single();
+        const createdPaymentIds = (insertedPayments || []).map(p => p.id);
+        const totalAmountPaid = (insertedPayments || []).reduce((s, p) => s + Number(p.amount_paid || 0), 0);
 
-            if (insertError) throw insertError;
-            if (insertedPayment) {
-                createdPaymentIds.push(insertedPayment.id);
-                totalAmountPaid += p.amount_paid;
-            }
+        // Update Fee Statuses — batch fetch all affected fees (1 query), then update in parallel
+        const feeIds = [...new Set(paymentsToRecord.map(p => p.fee_id))];
+        const { data: latestFees } = await supabase
+            .from('fees').select('id, amount, discount, paid_amount').in('id', feeIds);
 
-            // 2. Update Fee Status
-            // We need to fetch the latest state of this fee to ensure consistency
-            const { data: latestFee } = await supabase.from('fees').select('amount, discount, paid_amount').eq('id', p.fee_id).single();
-            if (latestFee) {
-                const currentPaid = (latestFee.paid_amount || 0);
-                const newPaid = currentPaid + p.amount_paid;
-                const netMsg = (latestFee.amount || 0) - (latestFee.discount || 0);
-                const newStatus = newPaid >= netMsg ? 'paid' : 'partial';
+        if (latestFees && latestFees.length > 0) {
+            // Sum payments per fee_id
+            const paymentsByFee = {};
+            paymentsToRecord.forEach(p => {
+                paymentsByFee[p.fee_id] = (paymentsByFee[p.fee_id] || 0) + p.amount_paid;
+            });
 
-                await supabase.from('fees').update({
+            // Fire all fee updates in parallel (not sequential)
+            await Promise.all(latestFees.map(fee => {
+                const newPaid = (fee.paid_amount || 0) + (paymentsByFee[fee.id] || 0);
+                const net = (fee.amount || 0) - (fee.discount || 0);
+                const newStatus = newPaid >= net ? 'paid' : 'partial';
+                return supabase.from('fees').update({
                     paid_amount: newPaid,
                     status: newStatus
-                }).eq('id', p.fee_id);
-            }
+                }).eq('id', fee.id);
+            }));
         }
 
         window.toast?.success(`Successfully recorded ${paymentsToRecord.length} payment(s).`);

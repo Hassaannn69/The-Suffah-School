@@ -96,6 +96,7 @@ async function fetchAndPopulateData() {
 
         teachersData = teachersReq.data || [];
         classesData = classesReq.data || [];
+        if (window.sortClassesNatural) window.sortClassesNatural(classesData, 'class_name');
 
         populateDropdowns();
 

@@ -2,6 +2,7 @@
 // Matches the provided design and functional flow strictness
 
 const supabase = window.supabase || (() => { throw new Error('Supabase not init'); })();
+const toast = window.toast;
 
 // State Management
 let currentStudent = null;
@@ -567,6 +568,7 @@ export async function render(container) {
     };
 
     window.applyDiscount = handleApplyDiscount;
+    window.editDiscount = handleEditDiscount;
 
     // Listeners
     const searchInput = document.getElementById('disc_studentSearch');
@@ -711,7 +713,15 @@ function renderFeeTable(fees) {
                 </td>
                 <td class="text-right font-mono text-slate-400">Rs ${(fee.amount || 0).toLocaleString()}</td>
                 <td class="text-right font-mono text-indigo-400 font-bold" id="disc-val-${fee.id}">
-                    ${existingDisc > 0 ? `Rs ${existingDisc.toLocaleString()}` : '-'}
+                    ${existingDisc > 0
+                        ? `<span class="flex items-center justify-end gap-1.5">
+                            Rs ${existingDisc.toLocaleString()}
+                            <button onclick="event.stopPropagation(); window.editDiscount('${fee.id}')" 
+                                class="inline-flex items-center justify-center w-5 h-5 rounded bg-indigo-600/30 hover:bg-indigo-600/60 text-indigo-300 hover:text-white transition-colors" title="Edit Discount">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                            </button>
+                           </span>`
+                        : '-'}
                 </td>
                 <td class="text-right font-mono font-bold text-white" id="final-val-${fee.id}">Rs ${due.toLocaleString()}</td>
                 <td class="text-center">
@@ -793,111 +803,331 @@ function setCalcValues(original, discount, final) {
 }
 
 async function handleApplyDiscount() {
-    if (!currentStudent) return alert('No student selected');
-    if (!selectedFeeId) return alert('Please select a fee to discount');
+    if (!currentStudent) { toast.warning('No student selected'); return; }
+    if (!selectedFeeId) { toast.warning('Please select a fee to discount'); return; }
 
     const valueStr = document.getElementById('d_confValue').value;
     const remarks = document.getElementById('d_confRemarks').value.trim();
-    if (!valueStr || parseFloat(valueStr) <= 0) return alert('Enter a valid discount value');
+    if (!valueStr || parseFloat(valueStr) <= 0) { toast.warning('Enter a valid discount value'); return; }
 
     const fee = currentFees.find(f => f.id === selectedFeeId);
     if (!fee) return;
 
-    const currentDue = calculateDue(fee);
     const type = document.querySelector('.type-btn.active').dataset.type;
-    let actualDiscount = 0;
+    const discountInputValue = parseFloat(valueStr);
 
+    // Calculate discount for the selected fee (for preview/validation)
+    const currentDue = calculateDue(fee);
+    let previewDiscount = 0;
     if (type === 'percent') {
-        actualDiscount = (currentDue * parseFloat(valueStr)) / 100;
+        previewDiscount = (currentDue * discountInputValue) / 100;
     } else {
-        actualDiscount = parseFloat(valueStr);
+        previewDiscount = discountInputValue;
     }
 
-    if (actualDiscount > currentDue) return alert('Discount cannot exceed the due amount.');
+    if (previewDiscount > currentDue) { toast.error('Discount cannot exceed the due amount of the selected fee.'); return; }
 
-    // Determine new status
-    // If we discount the FULL remainder, is it 'paid'? 
-    // Usually discount reduces payable. If payable becomes 0, it's paid?
-    // Or it remains 'unpaid' / 'partial' but due is 0.
-    // prompt says: "Update Fee ledger, Remaining fee balance"
-    // We will update fee.discount += actualDiscount
-
-    const confirmMsg = `Apply discount of Rs ${actualDiscount.toLocaleString()} to ${fee.fee_type}?`;
-    if (!await confirm(confirmMsg)) return;
-
+    // Disable button immediately to prevent double-clicks
     const newBtn = document.getElementById('d_btnApply');
     const originalText = newBtn.innerHTML;
-    newBtn.innerHTML = 'Processing...';
+    newBtn.innerHTML = 'Fetching fees...';
     newBtn.disabled = true;
 
     try {
-        // 1. Update Fees Table
-        const newTotalDiscount = (parseFloat(fee.discount) || 0) + actualDiscount;
-        // Check if fully paid (if due becomes 0)
-        // const newStatus = (calculateDue(fee) - actualDiscount) <= 0 ? 'paid' : fee.status; 
-        // Logic: if remaining amount becomes 0, status is paid.
-        // Wait, calculateDue uses (amount - discount - paid). 
-        // If I increase discount, due decreases.
-
-        const remainingAfter = currentDue - actualDiscount;
-        const statusUpdate = remainingAfter <= 0 ? 'paid' : 'partial';
-
-        const { error: feeError } = await supabase
+        // Find ALL fees of the same fee_type for this student (across all months)
+        const { data: allFeesOfType, error: fetchErr } = await supabase
             .from('fees')
-            .update({
-                discount: newTotalDiscount,
-                status: (fee.status === 'unpaid' && statusUpdate === 'partial') ? 'partial' : (statusUpdate === 'paid' ? 'paid' : fee.status)
-                // If it was unpaid and now partial, update. If it becomes paid, update.
-            })
-            .eq('id', selectedFeeId);
+            .select('*')
+            .eq('student_id', currentStudent.id)
+            .eq('fee_type', fee.fee_type)
+            .neq('status', 'paid');
 
-        if (feeError) throw feeError;
+        if (fetchErr) {
+            toast.error('Error fetching fees: ' + fetchErr.message);
+            return;
+        }
 
-        // 2. Insert into Student Discounts Ledger
-        const { error: lgError } = await supabase
-            .from('student_discounts')
-            .insert({
-                student_id: currentStudent.id,
-                // fee_id: selectedFeeId,  // Assuming column exists based on requirement, if not this might fail. 
-                // Previous code didn't use fee_id. I Will store fee_type instead if fee_id fails? 
-                // Prompt asked to store Fee ID. I will try including it. If Schema doesn't have it, I should have checked.
-                // Reverting to safe mode: Store fee_type and add a json note with fee_id if strict schema isn't known.
-                // Actually, I'll assume standard design.
-                fee_type: fee.fee_type,
-                discount_type: type,
-                discount_value: parseFloat(valueStr),
-                // remarks: remarks // Assuming column exists
-            });
+        const eligibleFees = (allFeesOfType || []).filter(f => calculateDue(f) > 0);
+        const feeCount = eligibleFees.length;
 
-        // Since I can't verify columns for student_discounts, I will match the previous successful insert payload
-        // Previous payload: student_id, fee_type, discount_value, discount_type, start_month, end_month, is_automatic.
-        // I will stick to that to avoid "Column not found" errors, but I'll add the remarks to description if possible.
-        // Wait, user explicitly asked for "Fee ID". I will trust the user updated the schema or knows it.
-        // BUT, I must be safe. I will insert what worked before + remarks if possible.
+        if (feeCount === 0) {
+            toast.warning('No eligible unpaid fees found for this fee type.');
+            return;
+        }
+
+        // Restore button text before showing confirm dialog (so user doesn't see "Fetching fees...")
+        newBtn.innerHTML = originalText;
+        newBtn.disabled = false;
+
+        // Build confirmation message
+        const confirmMsg = feeCount === 1
+            ? `Apply discount of Rs ${previewDiscount.toLocaleString()} to ${fee.fee_type} (${fee.month})?`
+            : `Apply discount to ALL ${feeCount} unpaid "${fee.fee_type}" fees for this student? ` +
+              (type === 'percent'
+                ? `${discountInputValue}% will be calculated on each fee's due amount.`
+                : `Rs ${discountInputValue.toLocaleString()} will be subtracted from each fee.`) +
+              ` Months affected: ${eligibleFees.map(f => f.month).join(', ')}`;
+
+        // IMPORTANT: await the confirm dialog - window.confirm is async (custom dialog)
+        const confirmed = await window.confirmDialog.show({
+            title: 'Confirm Discount',
+            message: confirmMsg,
+            confirmText: 'Confirm',
+            cancelText: 'Cancel',
+            type: 'warning'
+        });
+
+        if (!confirmed) return; // User cancelled - do NOT apply discount
+
+        // NOW disable button and start processing (only after user confirmed)
+        newBtn.innerHTML = 'Processing...';
+        newBtn.disabled = true;
+
+        let updatedCount = 0;
+
+        // Update EACH fee of this type
+        for (const f of eligibleFees) {
+            const feeDue = calculateDue(f);
+            let actualDiscount = 0;
+
+            if (type === 'percent') {
+                actualDiscount = (feeDue * discountInputValue) / 100;
+            } else {
+                actualDiscount = discountInputValue;
+            }
+
+            // Cap discount at the due amount for this specific fee
+            if (actualDiscount > feeDue) actualDiscount = feeDue;
+            if (actualDiscount <= 0) continue;
+
+            const newTotalDiscount = (parseFloat(f.discount) || 0) + actualDiscount;
+            const remainingAfter = feeDue - actualDiscount;
+            let newStatus = f.status;
+            if (remainingAfter <= 0) {
+                newStatus = 'paid';
+            } else if (f.status === 'unpaid') {
+                newStatus = 'partial';
+            }
+
+            const { error: feeError } = await supabase
+                .from('fees')
+                .update({
+                    discount: newTotalDiscount,
+                    status: newStatus
+                })
+                .eq('id', f.id);
+
+            if (feeError) {
+                console.error(`Error updating fee ${f.id}:`, feeError);
+                throw feeError;
+            }
+            updatedCount++;
+        }
+
+        // Insert ONE record into student_discounts ledger
+        // discount_type must be 'percentage' or 'fixed' (DB check constraint)
+        const dbDiscountType = type === 'percent' ? 'percentage' : 'fixed';
 
         const payload = {
             student_id: currentStudent.id,
             fee_type: fee.fee_type + (remarks ? ` (${remarks})` : ''),
-            discount_type: type,
-            discount_value: parseFloat(valueStr),
-            start_month: new Date().toISOString().slice(0, 7), // YYYY-MM
-            end_month: new Date().toISOString().slice(0, 7),
+            discount_type: dbDiscountType,
+            discount_value: discountInputValue,
+            start_month: eligibleFees.reduce((min, f) => f.month < min ? f.month : min, eligibleFees[0].month),
+            end_month: eligibleFees.reduce((max, f) => f.month > max ? f.month : max, eligibleFees[0].month),
             is_automatic: false
         };
 
         const { error: insertError } = await supabase.from('student_discounts').insert(payload);
         if (insertError) throw insertError;
 
-        alert('Discount applied successfully!');
+        toast.success(`Discount applied successfully to ${updatedCount} fee(s)!`);
         window.resetDiscountForm();
         await loadUnpaidFees(currentStudent.id); // Refresh table
 
     } catch (err) {
         console.error('Apply Error:', err);
-        alert('Failed to apply discount: ' + err.message);
+        toast.error('Failed to apply discount: ' + err.message);
     } finally {
-        newBtn.innerHTML = originalText;
-        newBtn.disabled = false;
+        if (newBtn) {
+            newBtn.innerHTML = originalText;
+            newBtn.disabled = false;
+        }
+    }
+}
+
+async function handleEditDiscount(feeId) {
+    if (!currentStudent) { toast.warning('No student selected'); return; }
+
+    const fee = currentFees.find(f => f.id === feeId);
+    if (!fee) { toast.error('Fee not found'); return; }
+
+    const existingDisc = parseFloat(fee.discount) || 0;
+    if (existingDisc <= 0) { toast.warning('This fee has no discount to edit.'); return; }
+
+    // Show an edit dialog using the custom confirmDialog with an input
+    // We'll build a custom modal for this
+    const editModalId = 'editDiscountModal';
+    let existingModal = document.getElementById(editModalId);
+    if (existingModal) existingModal.remove();
+
+    const modal = document.createElement('div');
+    modal.id = editModalId;
+    modal.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);';
+    modal.innerHTML = `
+        <div style="background:#1e293b;border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:2rem;max-width:480px;width:90%;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);">
+            <div style="text-align:center;margin-bottom:1.5rem;">
+                <div style="width:48px;height:48px;margin:0 auto 1rem;background:rgba(99,102,241,0.15);border-radius:12px;display:flex;align-items:center;justify-content:center;">
+                    <svg style="width:24px;height:24px;color:#818cf8;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                </div>
+                <h3 style="font-size:1.25rem;font-weight:700;color:white;margin-bottom:0.25rem;">Edit Discount</h3>
+                <p style="font-size:0.85rem;color:#94a3b8;">${fee.fee_type} &mdash; Original: Rs ${(fee.amount || 0).toLocaleString()}</p>
+            </div>
+
+            <div style="margin-bottom:1rem;">
+                <label style="display:block;font-size:0.75rem;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;margin-bottom:0.5rem;">Discount Type</label>
+                <div style="display:flex;background:#0f172a;padding:4px;border-radius:8px;border:1px solid #334155;">
+                    <div id="ed_type_fixed" class="ed-type-btn" data-type="fixed" style="flex:1;padding:8px;text-align:center;border-radius:6px;font-size:0.875rem;color:white;cursor:pointer;background:#7c3aed;font-weight:600;">Fixed Amount</div>
+                    <div id="ed_type_percent" class="ed-type-btn" data-type="percent" style="flex:1;padding:8px;text-align:center;border-radius:6px;font-size:0.875rem;color:#94a3b8;cursor:pointer;">Percentage %</div>
+                </div>
+            </div>
+
+            <div style="margin-bottom:1rem;">
+                <label style="display:block;font-size:0.75rem;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;margin-bottom:0.5rem;">New Discount Value</label>
+                <input type="number" id="ed_newValue" value="${existingDisc}" min="0" step="0.01" 
+                    style="width:100%;background:#0f172a;border:1px solid #334155;color:white;padding:0.75rem;border-radius:8px;font-size:0.875rem;">
+                <p style="font-size:0.7rem;color:#64748b;margin-top:0.375rem;">Current discount on this fee: Rs ${existingDisc.toLocaleString()}. Enter the NEW total discount value (replaces the existing discount).</p>
+            </div>
+
+            <div style="margin-bottom:1.5rem;">
+                <label style="display:block;font-size:0.75rem;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;margin-bottom:0.5rem;">Apply to all "${fee.fee_type}" fees?</label>
+                <div style="display:flex;gap:0.75rem;">
+                    <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;color:#cbd5e1;font-size:0.85rem;">
+                        <input type="radio" name="ed_scope" value="all" checked style="accent-color:#7c3aed;"> Yes, update ALL unpaid "${fee.fee_type}" fees
+                    </label>
+                    <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;color:#cbd5e1;font-size:0.85rem;">
+                        <input type="radio" name="ed_scope" value="single"> Only this fee (${fee.month})
+                    </label>
+                </div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
+                <button id="ed_cancel" style="padding:0.75rem;border-radius:8px;border:1px solid #334155;background:transparent;color:#94a3b8;font-weight:600;cursor:pointer;font-size:0.9rem;">Cancel</button>
+                <button id="ed_save" style="padding:0.75rem;border-radius:8px;border:none;background:linear-gradient(135deg,#7c3aed,#6d28d9);color:white;font-weight:600;cursor:pointer;font-size:0.9rem;">Save Changes</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    // Toggle type buttons
+    const fixedBtn = document.getElementById('ed_type_fixed');
+    const percentBtn = document.getElementById('ed_type_percent');
+    fixedBtn.addEventListener('click', () => {
+        fixedBtn.style.background = '#7c3aed'; fixedBtn.style.color = 'white'; fixedBtn.style.fontWeight = '600';
+        percentBtn.style.background = 'transparent'; percentBtn.style.color = '#94a3b8'; percentBtn.style.fontWeight = 'normal';
+    });
+    percentBtn.addEventListener('click', () => {
+        percentBtn.style.background = '#7c3aed'; percentBtn.style.color = 'white'; percentBtn.style.fontWeight = '600';
+        fixedBtn.style.background = 'transparent'; fixedBtn.style.color = '#94a3b8'; fixedBtn.style.fontWeight = 'normal';
+    });
+
+    // Wait for user action
+    const result = await new Promise(resolve => {
+        document.getElementById('ed_cancel').addEventListener('click', () => resolve(null));
+        modal.addEventListener('click', (e) => { if (e.target === modal) resolve(null); });
+        document.getElementById('ed_save').addEventListener('click', () => {
+            const newValue = parseFloat(document.getElementById('ed_newValue').value);
+            const scope = document.querySelector('input[name="ed_scope"]:checked').value;
+            const editType = fixedBtn.style.background.includes('7c3aed') ? 'fixed' : 'percent';
+            resolve({ newValue, scope, editType });
+        });
+    });
+
+    modal.remove();
+
+    if (!result) return; // User cancelled
+
+    const { newValue, scope, editType } = result;
+    if (isNaN(newValue) || newValue < 0) { toast.warning('Please enter a valid discount value.'); return; }
+
+    // Confirm changes
+    let feesToUpdate = [];
+    if (scope === 'all') {
+        // Fetch all unpaid fees of same type
+        const { data: allFeesOfType, error: fetchErr } = await supabase
+            .from('fees')
+            .select('*')
+            .eq('student_id', currentStudent.id)
+            .eq('fee_type', fee.fee_type)
+            .neq('status', 'paid');
+
+        if (fetchErr) { toast.error('Error fetching fees: ' + fetchErr.message); return; }
+        feesToUpdate = allFeesOfType || [];
+    } else {
+        feesToUpdate = [fee];
+    }
+
+    if (feesToUpdate.length === 0) { toast.warning('No eligible fees found.'); return; }
+
+    // Confirm with the user
+    const scopeText = scope === 'all' ? `ALL ${feesToUpdate.length} unpaid "${fee.fee_type}" fees` : `only this fee (${fee.month})`;
+    const confirmed = await window.confirmDialog.show({
+        title: 'Confirm Edit Discount',
+        message: `Update discount to ${editType === 'percent' ? newValue + '%' : 'Rs ' + newValue.toLocaleString()} on ${scopeText}?`,
+        confirmText: 'Update',
+        cancelText: 'Cancel',
+        type: 'warning'
+    });
+
+    if (!confirmed) return;
+
+    try {
+        let updatedCount = 0;
+
+        for (const f of feesToUpdate) {
+            const feeAmount = parseFloat(f.amount) || 0;
+            const feePaid = parseFloat(f.paid_amount) || 0;
+            let newDiscount = 0;
+
+            if (editType === 'percent') {
+                newDiscount = (feeAmount * newValue) / 100;
+            } else {
+                newDiscount = newValue;
+            }
+
+            // Cap discount so fee doesn't go negative
+            const maxDiscount = Math.max(0, feeAmount - feePaid);
+            if (newDiscount > maxDiscount) newDiscount = maxDiscount;
+
+            // Determine new status
+            const remainingAfterEdit = feeAmount - newDiscount - feePaid;
+            let newStatus = 'unpaid';
+            if (remainingAfterEdit <= 0) {
+                newStatus = 'paid';
+            } else if (feePaid > 0 || newDiscount > 0) {
+                newStatus = 'partial';
+            }
+
+            const { error: updateErr } = await supabase
+                .from('fees')
+                .update({ discount: newDiscount, status: newStatus })
+                .eq('id', f.id);
+
+            if (updateErr) {
+                console.error(`Error updating fee ${f.id}:`, updateErr);
+                throw updateErr;
+            }
+            updatedCount++;
+        }
+
+        toast.success(`Discount updated on ${updatedCount} fee(s)!`);
+        await loadUnpaidFees(currentStudent.id); // Refresh table
+        window.resetDiscountForm();
+
+    } catch (err) {
+        console.error('Edit Discount Error:', err);
+        toast.error('Failed to update discount: ' + err.message);
     }
 }
 

@@ -10,7 +10,6 @@ if (!window.loadModule) {
         window.dispatchEvent(event);
     };
 }
-
 export async function render(container) {
     container.innerHTML = `
         <div class="dashboard-root grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -42,9 +41,9 @@ export async function render(container) {
                         </div>
                     </div>
 
-                    <!-- Tile 2: Monthly Fees (Current Period) -->
-                    <div class="dashboard-stat-card glow-neutral p-4 relative overflow-hidden group transition-all">
-                        <div class="absolute top-0 right-0 w-20 h-20 bg-indigo-500/5 rounded-full blur-2xl -mr-10 -mt-10 transition-all"></div>
+                    <!-- Tile 2: Monthly Fees (Current Period) - Click → Monthly Collection Report -->
+                    <div onclick="window.openDashboardReport && window.openDashboardReport('monthly_collection')" class="dashboard-stat-card glow-neutral p-4 relative overflow-hidden group transition-all cursor-pointer hover:shadow-lg transition-all">
+                        <div class="absolute top-0 right-0 w-20 h-20 bg-indigo-500/5 rounded-full blur-2xl -mr-10 -mt-10 group-hover:bg-indigo-500/10 transition-all"></div>
                         <p class="dashboard-label text-[9px] text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2" id="feesPeriodLabel">Monthly Fees</p>
                         <p class="dashboard-value text-2xl text-gray-900 dark:text-white" id="statFeesCollected">PKR 0</p>
                         <div class="mt-3 flex items-center gap-2">
@@ -53,6 +52,7 @@ export async function render(container) {
                             </div>
                             <span class="text-[9px] font-semibold text-indigo-600 dark:text-indigo-400" id="feePercentage">0%</span>
                         </div>
+                        <p class="text-[9px] text-indigo-500/80 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">Click for monthly income report</p>
                     </div>
 
                     <!-- Tile 3: Monthly Expenses (Current Period) -->
@@ -66,30 +66,32 @@ export async function render(container) {
                         </p>
                     </div>
 
-                    <!-- Tile 4: Income Today (positive glow) -->
-                    <div class="dashboard-stat-card glow-positive p-4 relative overflow-hidden group transition-all">
-                        <div class="absolute top-0 right-0 w-20 h-20 bg-emerald-500/5 rounded-full blur-2xl -mr-10 -mt-10 transition-all"></div>
+                    <!-- Tile 4: Income Today - Click → Daily Fee Collection Report -->
+                    <div onclick="window.openDashboardReport && window.openDashboardReport('daily_collection')" class="dashboard-stat-card glow-positive p-4 relative overflow-hidden group transition-all cursor-pointer hover:shadow-lg transition-all">
+                        <div class="absolute top-0 right-0 w-20 h-20 bg-emerald-500/5 rounded-full blur-2xl -mr-10 -mt-10 group-hover:bg-emerald-500/10 transition-all"></div>
                         <p class="dashboard-label text-[9px] text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Income Today</p>
                         <p class="dashboard-value text-2xl text-emerald-600 dark:text-emerald-400" id="statCollectedToday">PKR 0</p>
                         <p class="dashboard-caption text-[9px] text-emerald-500/60 mt-2 flex items-center gap-1">
                             <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18" /></svg>
                             Direct Cashflow
                         </p>
+                        <p class="text-[9px] text-emerald-500/80 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">Click for today's income report</p>
                     </div>
 
-                    <!-- Tile 5: Expense Today (negative glow) -->
-                    <div class="dashboard-stat-card glow-negative p-4 relative overflow-hidden group transition-all">
-                        <div class="absolute top-0 right-0 w-20 h-20 bg-rose-500/5 rounded-full blur-2xl -mr-10 -mt-10 transition-all"></div>
+                    <!-- Tile 5: Expense Today - Click → Income & Expense Today (Profit) Report -->
+                    <div onclick="window.openDashboardReport && window.openDashboardReport('daily_summary')" class="dashboard-stat-card glow-negative p-4 relative overflow-hidden group transition-all cursor-pointer hover:shadow-lg transition-all">
+                        <div class="absolute top-0 right-0 w-20 h-20 bg-rose-500/5 rounded-full blur-2xl -mr-10 -mt-10 group-hover:bg-rose-500/10 transition-all"></div>
                         <p class="dashboard-label text-[9px] text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Expense Today</p>
                         <p class="dashboard-value text-2xl text-rose-600 dark:text-rose-400" id="statExpensesToday">PKR 0</p>
                         <p class="dashboard-caption text-[9px] text-rose-500/60 mt-2 flex items-center gap-1">
                             <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>
                             Daily Spending
                         </p>
+                        <p class="text-[9px] text-rose-500/80 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">Click for today's expense report</p>
                     </div>
 
-                    <!-- Tile 6: Net Today (glow set by JS) -->
-                    <div id="netTodayCard" class="dashboard-stat-card glow-neutral p-4 relative overflow-hidden group transition-all">
+                    <!-- Tile 6: Net Today - Click → Profit Report (Income & Expense Today) -->
+                    <div id="netTodayCard" onclick="window.openDashboardReport && window.openDashboardReport('daily_summary')" class="dashboard-stat-card glow-neutral p-4 relative overflow-hidden group transition-all cursor-pointer hover:shadow-lg transition-all">
                         <div id="netTodayBg" class="absolute top-0 right-0 w-20 h-20 bg-indigo-500/5 rounded-full blur-2xl -mr-10 -mt-10 transition-all"></div>
                         <p class="dashboard-label text-[9px] text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Net Today</p>
                         <p class="dashboard-value text-2xl transition-colors" id="statNetToday">PKR 0</p>
@@ -97,6 +99,7 @@ export async function render(container) {
                             <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
                             Daily Balance
                         </p>
+                        <p class="text-[9px] text-gray-500 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">Click for profit report</p>
                     </div>
                 </div>
 

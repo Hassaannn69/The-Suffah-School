@@ -146,6 +146,7 @@ async function loadData() {
     // Load classes
     const { data: classes } = await supabase.from('classes').select('id, class_name').order('class_name');
     availableClasses = classes || [];
+    if (window.sortClassesNatural) window.sortClassesNatural(availableClasses, 'class_name');
 
     // Populate dropdowns
     const teacherSelect = document.getElementById('slotTeacher');

@@ -235,6 +235,7 @@ async function loadClasses() {
     const { data, error } = await supabase.from('classes').select('class_name').order('class_name');
 
     if (data) {
+        if (window.sortClassesNatural) window.sortClassesNatural(data, 'class_name');
         select.innerHTML = data.map(c => `<option value="${c.class_name}">${c.class_name}</option>`).join('');
     }
 }

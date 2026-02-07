@@ -1,4 +1,4 @@
-﻿// Use global Supabase client for production compatibility
+// Use global Supabase client for production compatibility
 const supabase = window.supabase || (() => {
     console.error('Supabase client not found on window object');
     throw new Error('Supabase client not initialized');
@@ -97,12 +97,13 @@ export async function render(container) {
                             <th class="p-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Student</th>
                             <th class="p-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Roll No</th>
                             <th class="p-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Class</th>
+                            <th class="p-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Family Code</th>
                             <th class="p-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Phone</th>
                             <th class="p-4 text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
                         </tr>
                     </thead>
                     <tbody id="studentsTableBody" class="divide-y divide-gray-200 dark:divide-gray-800">
-                        <tr><td colspan="5" class="p-4 text-center text-gray-500 dark:text-gray-400">Loading...</td></tr>
+                        <tr><td colspan="6" class="p-4 text-center text-gray-500 dark:text-gray-400">Loading...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -465,9 +466,19 @@ export async function render(container) {
 
                         </div>
 
-                        <!-- Right Column: Credentials & Actions -->
+                        <!-- Right Column: Siblings, Credentials & Actions -->
                         <div class="space-y-6">
 
+                            <!-- Linked Siblings -->
+                            <div class="bg-gray-900 rounded-lg border border-gray-800 p-5 shadow-sm">
+                                <h3 class="text-sm font-bold text-white uppercase tracking-wide mb-4 border-b border-gray-800 pb-2 flex items-center gap-2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                                    Linked Siblings
+                                </h3>
+                                <div id="profileSiblingsContainer">
+                                    <p class="text-xs text-gray-500">Loading...</p>
+                                </div>
+                            </div>
 
                             <!-- Actions -->
                             <div class="bg-gray-900 rounded-lg border border-gray-800 p-5 shadow-sm">
@@ -567,7 +578,7 @@ export async function render(container) {
                             </div>
                             
                             <div class="flex justify-end">
-                                <button class="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center shadow-lg shadow-primary-500/20">
+                                <button id="goToFeeProfileBtn" class="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center shadow-lg shadow-primary-500/20">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                                     </svg>
@@ -768,10 +779,12 @@ export async function render(container) {
         });
     }
 
-    // Single student modal
+    // Navigate to the new multi-step Add Student form
     addEvent('addSingleStudent', 'click', () => {
         if (dropdownMenu) dropdownMenu.classList.add('hidden');
-        openModal();
+        if (typeof window.loadModule === 'function') {
+            window.loadModule('add_student');
+        }
     });
 
     addEvent('closeModalBtn', 'click', closeModal);
@@ -839,6 +852,25 @@ export async function render(container) {
     });
     addEvent('profilePhotoInput', 'change', handlePhotoUpload);
 
+    // Go to Fee Profile button
+    addEvent('goToFeeProfileBtn', 'click', () => {
+        const studentId = document.getElementById('profileStudentId')?.value;
+        const student = currentStudents.find(s => s.id === studentId);
+        if (!student) return;
+
+        // Store the target student info so fees module can auto-open the family profile
+        const familyKey = student.family_code || student.father_cnic || student.id;
+        sessionStorage.setItem('suffah_open_fee_student', JSON.stringify({
+            familyKey: familyKey,
+            studentId: student.id
+        }));
+
+        closeProfileModal();
+        if (typeof window.loadModule === 'function') {
+            window.loadModule('fees');
+        }
+    });
+
     // Password Management Listeners
     addEvent('changePasswordBtn', 'click', openChangePasswordModal);
     addEvent('closeChangePasswordBtn', 'click', closeChangePasswordModal);
@@ -889,7 +921,7 @@ export async function render(container) {
 
 async function fetchStudents() {
     const tbody = document.getElementById('studentsTableBody');
-    tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-gray-400">Loading...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-gray-400">Loading...</td></tr>';
 
     const { data, error } = await supabase
         .from('students')
@@ -898,7 +930,7 @@ async function fetchStudents() {
 
     if (error) {
         console.error('Error fetching students:', error);
-        tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-red-400">Error loading students</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-red-400">Error loading students</td></tr>';
         return;
     }
 
@@ -910,7 +942,7 @@ function renderTable(students) {
     const tbody = document.getElementById('studentsTableBody');
 
     if (students.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-gray-500 dark:text-gray-400">No students found</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-gray-500 dark:text-gray-400">No students found</td></tr>';
         return;
     }
 
@@ -926,6 +958,11 @@ function renderTable(students) {
             <td class="p-4">
                 <span class="px-2 py-1 bg-indigo-50 dark:bg-primary-900/20 text-indigo-700 dark:text-primary-300 rounded-full text-xs font-medium border border-indigo-100 dark:border-primary-900/30">
                     ${student.class} ${student.section ? `(${student.section})` : ''}
+                </span>
+            </td>
+            <td class="p-4">
+                <span class="px-2 py-1 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 rounded-full text-xs font-medium border border-purple-100 dark:border-purple-900/30">
+                    ${student.family_code || '-'}
                 </span>
             </td>
             <td class="p-4 text-gray-600 dark:text-gray-300">${student.phone || '-'}</td>
@@ -1058,6 +1095,47 @@ window.viewProfile = async (id) => {
     setContent('profileFatherCNIC', student.father_cnic);
     setContent('profileFromSchool', student.from_which_school);
     setContent('profileFamilyCode', student.family_code);
+
+    // Fetch and render linked siblings
+    const siblingsContainer = document.getElementById('profileSiblingsContainer');
+    if (siblingsContainer) {
+        if (student.family_code) {
+            try {
+                const { data: siblings, error: sibErr } = await supabase
+                    .from('students')
+                    .select('name, class, section, roll_no')
+                    .eq('family_code', student.family_code)
+                    .neq('id', student.id)
+                    .order('name');
+
+                if (sibErr) throw sibErr;
+
+                if (siblings && siblings.length > 0) {
+                    siblingsContainer.innerHTML = `
+                        <div class="space-y-2">
+                            ${siblings.map(s => `
+                                <div class="flex items-center justify-between p-2.5 rounded-lg bg-gray-800/50 border border-gray-700/50">
+                                    <div>
+                                        <p class="text-sm font-medium text-white">${s.name}</p>
+                                        <p class="text-xs text-gray-400">${s.class}${s.section ? ' (' + s.section + ')' : ''}</p>
+                                    </div>
+                                    <span class="px-2 py-0.5 bg-purple-900/30 text-purple-300 rounded text-xs font-medium">${s.roll_no || '-'}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                        <p class="text-xs text-gray-500 mt-2">Family: <span class="text-purple-400 font-medium">${student.family_code}</span></p>
+                    `;
+                } else {
+                    siblingsContainer.innerHTML = '<p class="text-xs text-gray-500">No siblings linked to this family code.</p>';
+                }
+            } catch (err) {
+                console.error('Error fetching siblings:', err);
+                siblingsContainer.innerHTML = '<p class="text-xs text-red-400">Error loading siblings.</p>';
+            }
+        } else {
+            siblingsContainer.innerHTML = '<p class="text-xs text-gray-500">No family code assigned.</p>';
+        }
+    }
 
     // Photo Management
     const photoImg = document.getElementById('profilePhoto');
@@ -1475,10 +1553,10 @@ async function loadClassesIntoDropdown() {
     const { data, error } = await supabase.from('classes').select('class_name, sections').order('class_name');
 
     if (data && data.length > 0) {
-        availableClasses = data;
+        availableClasses = window.sortClassesNatural ? window.sortClassesNatural(data, 'class_name') : data;
         const currentValue = select.value;
         select.innerHTML = '<option value="">Select Class</option>' +
-            data.map(c => `<option value="${c.class_name}">${c.class_name}</option>`).join('');
+            availableClasses.map(c => `<option value="${c.class_name}">${c.class_name}</option>`).join('');
         if (currentValue) {
             select.value = currentValue;
         }
@@ -1659,7 +1737,7 @@ async function fixAllRollNumbers() {
 
     try {
         const tbody = document.getElementById('studentsTableBody');
-        tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-blue-600 font-bold">ðŸ“Š Loading students...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-blue-600 font-bold">ðŸ“Š Loading students...</td></tr>';
 
         const { data: students, error: fetchError } = await supabase
             .from('students')
@@ -1725,7 +1803,7 @@ async function fixAllRollNumbers() {
         });
 
         // PHASE: Assign new roll numbers to students that need conversion
-        tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-green-600 font-bold">âš™ï¸ Assigning roll numbers...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-green-600 font-bold">âš™ï¸ Assigning roll numbers...</td></tr>';
         console.log('âš¡ Assigning SUF format roll numbers...');
 
         let successCount = 0;
@@ -1785,7 +1863,7 @@ async function fixAllRollNumbers() {
 
                 // Update progress every 5 students
                 if (processedCount % 5 === 0 || processedCount === totalStudents) {
-                    tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-green-600 font-bold">âš™ï¸ Processing: ${processedCount}/${totalStudents} students...</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-green-600 font-bold">âš™ï¸ Processing: ${processedCount}/${totalStudents} students...</td></tr>`;
                 }
             }
         }
@@ -2027,7 +2105,8 @@ function handleSearch(e) {
     const term = e.target.value.toLowerCase();
     const filtered = currentStudents.filter(s =>
         s.name.toLowerCase().includes(term) ||
-        s.roll_no.toLowerCase().includes(term)
+        s.roll_no.toLowerCase().includes(term) ||
+        (s.family_code || '').toLowerCase().includes(term)
     );
     renderTable(filtered);
 }

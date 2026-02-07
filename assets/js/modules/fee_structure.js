@@ -344,6 +344,7 @@ async function fetchClasses() {
         return;
     }
 
+    if (window.sortClassesNatural) window.sortClassesNatural(data, 'class_name');
     container.innerHTML = data.map(cls => `
         <button onclick="window.selectClass('${cls.id}', '${cls.class_name}')" 
             class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors hover:bg-gray-100 dark:hover:bg-gray-700 ${selectedClassId === cls.id ? 'bg-indigo-50 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300' : 'text-gray-700 dark:text-gray-300'}">

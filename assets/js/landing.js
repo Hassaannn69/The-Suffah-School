@@ -130,21 +130,30 @@
         el.innerHTML = `
             <section class="landing-hero w-full" style="${bgImage ? `background-image: url(${bgImage})` : ''}" ${bgImage ? 'data-has-hero-image="true"' : ''}>
                 <div id="hero-particles" class="landing-hero-particles" aria-hidden="true"></div>
-                <div class="landing-ambient" aria-hidden="true">
-                    <div class="landing-ambient-blob landing-ambient-blob--1"></div>
-                    <div class="landing-ambient-blob landing-ambient-blob--2"></div>
-                    <div class="landing-ambient-blob landing-ambient-blob--3"></div>
-                    <div class="landing-ambient-blob landing-ambient-blob--4"></div>
-                    <div class="landing-ambient-blob landing-ambient-blob--5"></div>
+                <div class="landing-mat" aria-hidden="true">
+                    <div class="landing-mat-inner" id="landing-mat-inner">
+                        <div class="mat-panel-lg-back"></div>
+                        <div class="mat-panel-lg"></div>
+                        <div class="mat-dot-sm"></div>
+                        <div class="mat-circle-md"></div>
+                        <div class="mat-ring"></div>
+                        <div class="mat-arc"></div>
+                        <div class="mat-rect-bl"></div>
+                        <div class="mat-angular-bl"></div>
+                        <div class="mat-rect-ml"></div>
+                        <div class="mat-dot-tl"></div>
+                    </div>
                 </div>
                 <div class="landing-hero-overlay"></div>
                 <div class="container mx-auto px-4 py-16 md:py-24">
                     <div class="landing-hero-content max-w-2xl">
                         <p class="text-indigo-600 font-semibold text-sm uppercase tracking-wider mb-2">Excellence in Education</p>
-                        <h1 class="text-4xl md:text-5xl font-bold text-gray-900 mb-4">${escapeHtml(hero.headline || 'Welcome')}</h1>
-                        <p class="text-gray-600 text-lg mb-8">${escapeHtml(hero.subtext || '')}</p>
+                        <h1 class="landing-hero-title text-3xl md:text-4xl font-bold text-indigo-900 mb-4">${escapeHtml(hero.headline || 'Welcome')}</h1>
+                        <p class="landing-typewriter-line text-gray-600 text-xl md:text-2xl mb-8">
+                            <span class="landing-typewriter-anchor">Education is the foundation for a future built on </span><span id="landing-typewriter-word" class="landing-typewriter-word text-indigo-600 font-bold"></span><span class="landing-typewriter-cursor" aria-hidden="true">|</span>
+                        </p>
                         <div class="flex flex-wrap gap-4">
-                            <a href="${escapeAttr(hero.cta_url || '#programs')}" class="inline-flex items-center gap-2 bg-indigo-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-indigo-700 transition-colors">
+                            <a href="${escapeAttr(hero.cta_url || '#programs')}" class="landing-hero-cta inline-flex items-center gap-2 bg-indigo-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-indigo-700">
                                 ${escapeHtml(hero.cta_label || 'Explore Programs')}
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
                             </a>
@@ -170,6 +179,41 @@
                 setHeroSlide(el, idx);
             }, 5000);
         }
+        startTypewriter();
+        initHeroRevealAndParallax(el);
+    }
+
+    function initHeroRevealAndParallax(heroSection) {
+        if (!heroSection) return;
+        const content = heroSection.querySelector('.landing-hero-content');
+        const matInner = heroSection.querySelector('#landing-mat-inner');
+        /* Fade-in + slide-up */
+        if (content) {
+            requestAnimationFrame(function () {
+                requestAnimationFrame(function () { content.classList.add('landing-hero-revealed'); });
+            });
+        }
+        /* Subtle mouse parallax on the material layer */
+        if (!matInner || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+        const strength = 6;
+        let rafId = null;
+        function applyParallax(nx, ny) {
+            rafId = null;
+            matInner.style.transform = 'translate(' + (nx * strength) + 'px, ' + (ny * strength) + 'px)';
+        }
+        heroSection.addEventListener('mousemove', function (e) {
+            const r = heroSection.getBoundingClientRect();
+            let nx = ((e.clientX - r.left) / r.width - 0.5) * 2;
+            let ny = ((e.clientY - r.top) / r.height - 0.5) * 2;
+            nx = Math.max(-1, Math.min(1, nx));
+            ny = Math.max(-1, Math.min(1, ny));
+            if (rafId == null) rafId = requestAnimationFrame(function () { applyParallax(nx * 0.4, ny * 0.4); });
+        }, { passive: true });
+        heroSection.addEventListener('mouseleave', function () {
+            if (rafId != null) cancelAnimationFrame(rafId);
+            rafId = null;
+            matInner.style.transform = '';
+        });
     }
 
     function setHeroSlide(heroSection, index) {
@@ -177,6 +221,41 @@
         if (!slide) return;
         heroSection.style.backgroundImage = `url(${slide.image_url})`;
         heroSection.querySelectorAll('.landing-hero-dots button').forEach((b, i) => b.classList.toggle('active', i === index));
+    }
+
+    /* Typewriter: all 10 words – Purpose, Wisdom, Innovation, Faith, Leadership, Creativity, Character, Growth, Excellence, Community */
+    const TYPEWRITER_WORDS = ['Purpose', 'Wisdom', 'Innovation', 'Faith', 'Leadership', 'Creativity', 'Character', 'Growth', 'Excellence', 'Community'];
+    const TYPEWRITER_TYPE_MS = 60;
+    const TYPEWRITER_ERASE_MS = 40;
+    const TYPEWRITER_PAUSE_MS = 2000;
+
+    function startTypewriter() {
+        const wordEl = document.getElementById('landing-typewriter-word');
+        if (!wordEl) return;
+        let wordIndex = 0;
+        let timeoutId = null;
+
+        function typeNextChar(word, i) {
+            if (i <= word.length) {
+                wordEl.textContent = word.slice(0, i);
+                timeoutId = setTimeout(function () { typeNextChar(word, i + 1); }, TYPEWRITER_TYPE_MS);
+                return;
+            }
+            timeoutId = setTimeout(eraseWord, TYPEWRITER_PAUSE_MS);
+        }
+
+        function eraseWord() {
+            const current = wordEl.textContent;
+            if (current.length === 0) {
+                wordIndex = (wordIndex + 1) % TYPEWRITER_WORDS.length;
+                timeoutId = setTimeout(function () { typeNextChar(TYPEWRITER_WORDS[wordIndex], 0); }, TYPEWRITER_TYPE_MS);
+                return;
+            }
+            wordEl.textContent = current.slice(0, -1);
+            timeoutId = setTimeout(eraseWord, TYPEWRITER_ERASE_MS);
+        }
+
+        typeNextChar(TYPEWRITER_WORDS[0], 0);
     }
 
     function renderAbout() {
