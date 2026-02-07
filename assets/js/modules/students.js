@@ -19,11 +19,19 @@ export async function render(container) {
     });
 
     container.innerHTML = `
-        <div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden transition-colors duration-200">
-            <div class="p-6 border-b border-gray-200 dark:border-gray-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <h2 class="text-xl font-bold text-gray-900 dark:text-white">Students Directory</h2>
-                <div class="flex space-x-3">
-                    <input type="text" id="searchInput" placeholder="Search students..." class="px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 outline-none text-gray-900 dark:text-white placeholder-gray-500 transition-colors">
+        <div class="app-page-tile bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden transition-colors duration-200">
+            <nav class="app-bar px-6 py-3 flex items-center gap-2 text-sm">
+                <button type="button" class="text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 font-medium" data-nav="dashboard">Dashboard</button>
+                <span class="text-gray-400 dark:text-gray-500">/</span>
+                <span class="text-gray-900 dark:text-white font-medium">Students</span>
+            </nav>
+            <div class="app-bar p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Students Directory</h2>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">View and manage all enrolled students, roll numbers, and class assignments.</p>
+                </div>
+                <div class="flex flex-wrap items-center gap-3">
+                    <input type="text" id="searchInput" placeholder="Search students..." autocomplete="off" class="app-toolbar-input px-4 py-2 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none placeholder-gray-500 dark:placeholder-gray-400 min-w-[200px]">
                     
                     <!-- Dropdown Button -->
                     <div class="relative">
@@ -89,9 +97,11 @@ export async function render(container) {
                 </div>
             </div>
 
-            <!-- Student Table -->
-            <div class="overflow-x-auto">
-                <table class="w-full">
+            <!-- Student Table (tile) -->
+            <div class="px-6 pb-6">
+                <div class="app-table-tile rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+                    <div class="overflow-x-auto">
+                <table class="w-full text-sm">
                     <thead class="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
                         <tr>
                             <th class="p-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Student</th>
@@ -102,15 +112,17 @@ export async function render(container) {
                             <th class="p-4 text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
                         </tr>
                     </thead>
-                    <tbody id="studentsTableBody" class="divide-y divide-gray-200 dark:divide-gray-800">
+                    <tbody id="studentsTableBody" class="divide-y divide-gray-200 dark:divide-gray-700">
                         <tr><td colspan="6" class="p-4 text-center text-gray-500 dark:text-gray-400">Loading...</td></tr>
                     </tbody>
                 </table>
+                    </div>
+                </div>
             </div>
 
-            <!-- Pagination (Simple) -->
-            <div class="p-4 border-t border-gray-200 dark:border-gray-800 flex justify-end">
-                <span class="text-xs text-gray-500 dark:text-gray-500">Showing all records</span>
+            <!-- Pagination bar -->
+            <div class="app-bar px-6 py-4 flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
+                <span id="studentsPaginationText">Showing all records</span>
             </div>
         </div>
 
@@ -125,7 +137,7 @@ export async function render(container) {
                         </svg>
                     </button>
                 </div>
-                <form id="studentForm" class="p-6 space-y-4">
+                <form id="studentForm" class="p-6 space-y-4" autocomplete="off">
                     <input type="hidden" id="studentId">
                     
                     <!-- Personal Information Section -->
@@ -763,6 +775,10 @@ export async function render(container) {
         else console.warn(`Element ${id} not found`);
     };
 
+    container.querySelector('[data-nav="dashboard"]')?.addEventListener('click', () => {
+        if (typeof window.loadModule === 'function') window.loadModule('dashboard');
+    });
+
     // Dropdown toggle
     const dropdown = document.getElementById('addStudentDropdown');
     const dropdownMenu = document.getElementById('studentDropdownMenu');
@@ -985,9 +1001,8 @@ window.viewProfile = async (id) => {
     // Try to find student in current array first
     let student = currentStudents.find(s => s.id === id);
 
-    // If not found in array, fetch directly from database
+    // If not found in array, fetch directly from database so profile and all tabs load completely
     if (!student) {
-        console.warn('Student not found in currentStudents array, fetching from database...');
         try {
             const { data, error } = await supabase
                 .from('students')
@@ -999,7 +1014,10 @@ window.viewProfile = async (id) => {
 
             if (data) {
                 student = data;
-                console.log('Student fetched from database:', student);
+                // Keep currentStudents in sync so "Go to Fee Profile" and other actions work for this student
+                if (currentStudents && !currentStudents.find(s => s.id === student.id)) {
+                    currentStudents.unshift(student);
+                }
             } else {
                 console.error('Student not found in database');
                 alert('Error: Student not found. Please refresh the page.');
@@ -1010,8 +1028,6 @@ window.viewProfile = async (id) => {
             alert('Error loading student profile: ' + err.message);
             return;
         }
-    } else {
-        console.log('Student found in array:', student);
     }
 
     // Show modal immediately with basic info
@@ -1031,42 +1047,8 @@ window.viewProfile = async (id) => {
     modal.classList.remove('hidden');
     modal.classList.add('flex');
 
-    // Reset Tabs to Personal Info
-    try {
-        const tabBtns = modal.querySelectorAll('.tab-btn');
-        tabBtns.forEach(b => {
-            b.classList.remove('active-tab', 'border-primary-500', 'text-primary-400', 'border-indigo-500', 'text-indigo-600');
-            b.classList.add('border-transparent', 'text-gray-400');
-        });
-
-        const personalTabBtn = modal.querySelector('.tab-btn[data-tab="personal"]');
-        if (personalTabBtn) {
-            personalTabBtn.classList.add('active-tab', 'border-primary-500', 'text-primary-400');
-            personalTabBtn.classList.remove('border-transparent', 'text-gray-400');
-        }
-
-        modal.querySelectorAll('.tab-content').forEach(c => {
-            c.classList.add('hidden');
-            c.classList.remove('block');
-        });
-        const personalTab = modal.querySelector('#tab-personal');
-        if (personalTab) {
-            personalTab.classList.remove('hidden');
-            personalTab.classList.add('block');
-        }
-    } catch (err) {
-        console.warn('Error resetting profile tabs:', err);
-    }
-
-    // Animate In with tiny timeout to ensure display change reflects
-    setTimeout(() => {
-        if (content) {
-            content.classList.remove('opacity-0', 'scale-95', 'translate-y-4');
-            content.classList.add('opacity-100', 'scale-100', 'translate-y-0');
-        } else {
-            console.error('Profile modal content div not found');
-        }
-    }, 10);
+    const currentId = document.getElementById('profileStudentId')?.value;
+    const isSwitching = currentId && currentId !== student.id;
 
     // Safe Population Helpers
     const setContent = (id, text) => {
@@ -1079,90 +1061,137 @@ window.viewProfile = async (id) => {
         if (el) el.value = val || '';
     };
 
-    // Populate Basic Info
-    setVal('profileStudentId', student.id);
-    setContent('profileName', student.name);
-    setContent('profileClass', `${student.class || 'N/A'} (${student.section || 'N/A'})`);
-    setContent('profileRollNo', student.roll_no);
-    setContent('profileGender', student.gender);
-    setContent('profilePhone', student.phone);
-    setContent('profileEmail', student.email);
-    setContent('profileDate', student.admission_date || (student.created_at ? new Date(student.created_at).toLocaleDateString() : '-'));
+    const runPopulationSync = () => {
+        // Reset Tabs to Personal Info
+        try {
+            const tabBtns = modal.querySelectorAll('.tab-btn');
+            tabBtns.forEach(b => {
+                b.classList.remove('active-tab', 'border-primary-500', 'text-primary-400', 'border-indigo-500', 'text-indigo-600');
+                b.classList.add('border-transparent', 'text-gray-400');
+            });
 
-    // Populate additional fields
-    setContent('profileDOB', student.date_of_birth);
-    setContent('profileFatherName', student.father_name);
-    setContent('profileFatherCNIC', student.father_cnic);
-    setContent('profileFromSchool', student.from_which_school);
-    setContent('profileFamilyCode', student.family_code);
+            const personalTabBtn = modal.querySelector('.tab-btn[data-tab="personal"]');
+            if (personalTabBtn) {
+                personalTabBtn.classList.add('active-tab', 'border-primary-500', 'text-primary-400');
+                personalTabBtn.classList.remove('border-transparent', 'text-gray-400');
+            }
 
-    // Fetch and render linked siblings
-    const siblingsContainer = document.getElementById('profileSiblingsContainer');
-    if (siblingsContainer) {
-        if (student.family_code) {
-            try {
-                const { data: siblings, error: sibErr } = await supabase
-                    .from('students')
-                    .select('name, class, section, roll_no')
-                    .eq('family_code', student.family_code)
-                    .neq('id', student.id)
-                    .order('name');
+            modal.querySelectorAll('.tab-content').forEach(c => {
+                c.classList.add('hidden');
+                c.classList.remove('block');
+            });
+            const personalTab = modal.querySelector('#tab-personal');
+            if (personalTab) {
+                personalTab.classList.remove('hidden');
+                personalTab.classList.add('block');
+            }
+        } catch (err) {
+            console.warn('Error resetting profile tabs:', err);
+        }
 
-                if (sibErr) throw sibErr;
+        setVal('profileStudentId', student.id);
+        setContent('profileName', student.name);
+        setContent('profileClass', `${student.class || 'N/A'} (${student.section || 'N/A'})`);
+        setContent('profileRollNo', student.roll_no);
+        setContent('profileGender', student.gender);
+        setContent('profilePhone', student.phone);
+        setContent('profileEmail', student.email);
+        setContent('profileDate', student.admission_date || (student.created_at ? new Date(student.created_at).toLocaleDateString() : '-'));
 
-                if (siblings && siblings.length > 0) {
-                    siblingsContainer.innerHTML = `
+        setContent('profileDOB', student.date_of_birth);
+        setContent('profileFatherName', student.father_name);
+        setContent('profileFatherCNIC', student.father_cnic);
+        setContent('profileFromSchool', student.from_which_school);
+        setContent('profileFamilyCode', student.family_code);
+
+        const photoImg = document.getElementById('profilePhoto');
+        const placeholder = document.getElementById('profilePhotoPlaceholder');
+
+        if (photoImg && placeholder) {
+            if (student.photo_url) {
+                photoImg.src = student.photo_url;
+                photoImg.classList.remove('hidden');
+                placeholder.classList.add('hidden');
+            } else {
+                photoImg.classList.add('hidden');
+                placeholder.classList.remove('hidden');
+                placeholder.textContent = student.name ? student.name.charAt(0) : '?';
+            }
+        }
+
+        setContent('profileCredEmail', student.roll_no || 'Not assigned');
+        const dobPassword = student.date_of_birth ? student.date_of_birth.split('-').reverse().join('') : 'Not set';
+        setContent('profileCredPass', dobPassword);
+    };
+
+    const runPopulationAsync = async () => {
+        const siblingsContainer = document.getElementById('profileSiblingsContainer');
+        if (siblingsContainer) {
+            if (student.family_code) {
+                try {
+                    const { data: siblings, error: sibErr } = await supabase
+                        .from('students')
+                        .select('id, name, class, section, roll_no')
+                        .eq('family_code', student.family_code)
+                        .neq('id', student.id)
+                        .order('name');
+
+                    if (sibErr) throw sibErr;
+
+                    if (siblings && siblings.length > 0) {
+                        siblingsContainer.innerHTML = `
                         <div class="space-y-2">
                             ${siblings.map(s => `
-                                <div class="flex items-center justify-between p-2.5 rounded-lg bg-gray-800/50 border border-gray-700/50">
+                                <button type="button" onclick="window.viewProfile('${s.id}')" class="w-full text-left flex items-center justify-between p-2.5 rounded-lg bg-gray-800/50 border border-gray-700/50 hover:bg-gray-700/50 hover:border-gray-600 cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500/50">
                                     <div>
                                         <p class="text-sm font-medium text-white">${s.name}</p>
-                                        <p class="text-xs text-gray-400">${s.class}${s.section ? ' (' + s.section + ')' : ''}</p>
+                                        <p class="text-xs text-gray-400">${s.class || ''}${s.section ? ' (' + s.section + ')' : ''}</p>
                                     </div>
                                     <span class="px-2 py-0.5 bg-purple-900/30 text-purple-300 rounded text-xs font-medium">${s.roll_no || '-'}</span>
-                                </div>
+                                </button>
                             `).join('')}
                         </div>
                         <p class="text-xs text-gray-500 mt-2">Family: <span class="text-purple-400 font-medium">${student.family_code}</span></p>
                     `;
-                } else {
-                    siblingsContainer.innerHTML = '<p class="text-xs text-gray-500">No siblings linked to this family code.</p>';
+                    } else {
+                        siblingsContainer.innerHTML = '<p class="text-xs text-gray-500">No siblings linked to this family code.</p>';
+                    }
+                } catch (err) {
+                    console.error('Error fetching siblings:', err);
+                    siblingsContainer.innerHTML = '<p class="text-xs text-red-400">Error loading siblings.</p>';
                 }
-            } catch (err) {
-                console.error('Error fetching siblings:', err);
-                siblingsContainer.innerHTML = '<p class="text-xs text-red-400">Error loading siblings.</p>';
+            } else {
+                siblingsContainer.innerHTML = '<p class="text-xs text-gray-500">No family code assigned.</p>';
             }
-        } else {
-            siblingsContainer.innerHTML = '<p class="text-xs text-gray-500">No family code assigned.</p>';
         }
-    }
 
-    // Photo Management
-    const photoImg = document.getElementById('profilePhoto');
-    const placeholder = document.getElementById('profilePhotoPlaceholder');
-
-    if (photoImg && placeholder) {
-        if (student.photo_url) {
-            photoImg.src = student.photo_url;
-            photoImg.classList.remove('hidden');
-            placeholder.classList.add('hidden');
-        } else {
-            photoImg.classList.add('hidden');
-            placeholder.classList.remove('hidden');
-            placeholder.textContent = student.name ? student.name.charAt(0) : '?';
+        try {
+            await fetchStudentFees(student.id);
+        } catch (err) {
+            console.error('Secondary error in fee fetching:', err);
         }
-    }
+    };
 
-    // Credentials
-    setContent('profileCredEmail', student.roll_no || 'Not assigned');
-    const dobPassword = student.date_of_birth ? student.date_of_birth.split('-').reverse().join('') : 'Not set';
-    setContent('profileCredPass', dobPassword);
-
-    // Fetch Financial Data
-    try {
-        await fetchStudentFees(student.id);
-    } catch (err) {
-        console.error('Secondary error in fee fetching:', err);
+    if (isSwitching) {
+        // Fast fade: update sync data only, fade in immediately; load siblings/fees in background
+        if (content) {
+            content.style.transition = 'opacity 0.05s ease';
+            content.style.opacity = '0';
+        }
+        setTimeout(() => {
+            runPopulationSync();
+            if (content) content.style.opacity = '1';
+            runPopulationAsync();
+        }, 50);
+    } else {
+        setTimeout(() => {
+            if (content) {
+                content.classList.remove('opacity-0', 'scale-95', 'translate-y-4');
+                content.classList.add('opacity-100', 'scale-100', 'translate-y-0');
+            }
+        }, 10);
+        runPopulationSync();
+        await runPopulationAsync();
     }
 };
 

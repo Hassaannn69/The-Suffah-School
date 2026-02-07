@@ -101,6 +101,10 @@ async function initApp() {
 
         renderSidebar();
         startHeaderClock();
+        if (currentRole === 'admin') {
+            showAdminNotificationsContainer();
+            fetchAndUpdateAdminNotificationCount();
+        }
         // One-time migrations: backfill + normalize family codes
         window.backfillFamilyCodes();
         window.backfillFamilyCodesV2();
@@ -230,6 +234,7 @@ function renderSidebar() {
                 dropdownBtn.addEventListener('click', () => {
                     submenuContainer.classList.toggle('hidden');
                     dropdownBtn.querySelector('.dropdown-arrow').classList.toggle('rotate-180');
+                    if (typeof refreshAdminNotificationBadges === 'function') refreshAdminNotificationBadges();
                 });
 
                 dropdownContainer.appendChild(dropdownBtn);
@@ -271,6 +276,130 @@ function startHeaderClock() {
     setInterval(update, 1000);
 }
 
+// Admin notifications: header bell uses in-memory "seen"; sidebar Students/Online Admission badge uses DB (is_seen)
+let adminNotificationsLastSeenTotal = 0;
+let adminNotificationsCurrentTotal = 0;
+/** Admission unseen count from DB (online_applications where is_seen = false). Drives Students/Online Admission sidebar badge only. */
+let adminAdmissionUnseenCount = 0;
+
+function showAdminNotificationsContainer() {
+    const container = document.getElementById('adminNotificationsContainer');
+    if (container) container.classList.remove('hidden');
+    const btn = document.getElementById('adminNotificationsBtn');
+    const dropdown = document.getElementById('adminNotificationsDropdown');
+    if (btn && dropdown) {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const isOpening = dropdown.classList.contains('hidden');
+            dropdown.classList.toggle('hidden');
+            if (isOpening) {
+                adminNotificationsLastSeenTotal = adminNotificationsCurrentTotal;
+                refreshAdminNotificationBadges();
+            }
+        });
+        document.addEventListener('click', () => dropdown.classList.add('hidden'));
+        dropdown.addEventListener('click', (e) => e.stopPropagation());
+    }
+    const viewAll = document.getElementById('adminNotificationsViewAll');
+    if (viewAll) {
+        viewAll.addEventListener('click', (e) => {
+            e.preventDefault();
+            adminNotificationsLastSeenTotal = adminNotificationsCurrentTotal;
+            refreshAdminNotificationBadges();
+            loadModule('admissions');
+            document.getElementById('adminNotificationsDropdown')?.classList.add('hidden');
+            if (isMobileView()) closeMobileSidebar();
+        });
+    }
+}
+
+window.markAdminNotificationsSeen = function () {
+    adminNotificationsLastSeenTotal = adminNotificationsCurrentTotal;
+    refreshAdminNotificationBadges();
+};
+
+function refreshAdminNotificationBadges() {
+    const headerUnseen = Math.max(0, adminNotificationsCurrentTotal - adminNotificationsLastSeenTotal);
+    const badgeEl = document.getElementById('adminNotificationsBadge');
+    if (badgeEl) {
+        badgeEl.textContent = headerUnseen > 99 ? '99+' : headerUnseen;
+        badgeEl.classList.toggle('hidden', headerUnseen === 0);
+    }
+    // Sidebar Students / Online Admission badge: use DB-driven admission unseen count only (persists across refresh)
+    const admissionUnseen = adminAdmissionUnseenCount;
+    const admissionsLink = document.querySelector('#navLinks a[data-module="admissions"]');
+    if (!admissionsLink) return;
+    const submenuContainer = admissionsLink.parentElement;
+    const studentsBtn = submenuContainer?.previousElementSibling;
+    const isStudentsDropdownOpen = submenuContainer && !submenuContainer.classList.contains('hidden');
+
+    let sidebarBadge = admissionsLink.querySelector('.admissions-nav-badge');
+    if (admissionUnseen > 0) {
+        if (!sidebarBadge) {
+            sidebarBadge = document.createElement('span');
+            sidebarBadge.className = 'admissions-nav-badge ml-auto min-w-[20px] h-5 flex items-center justify-center rounded-full bg-red-500 text-white text-xs font-bold px-1.5';
+            admissionsLink.appendChild(sidebarBadge);
+        }
+        sidebarBadge.textContent = admissionUnseen > 99 ? '99+' : admissionUnseen;
+        sidebarBadge.classList.toggle('hidden', !isStudentsDropdownOpen);
+    } else if (sidebarBadge) {
+        sidebarBadge.classList.add('hidden');
+    }
+
+    if (studentsBtn) {
+        let studentsBadge = studentsBtn.querySelector('.admissions-nav-badge');
+        if (admissionUnseen > 0) {
+            if (!studentsBadge) {
+                studentsBadge = document.createElement('span');
+                studentsBadge.className = 'admissions-nav-badge ml-auto min-w-[20px] h-5 flex items-center justify-center rounded-full bg-red-500 text-white text-xs font-bold px-1.5';
+                studentsBtn.appendChild(studentsBadge);
+            }
+            studentsBadge.textContent = admissionUnseen > 99 ? '99+' : admissionUnseen;
+            studentsBadge.classList.toggle('hidden', isStudentsDropdownOpen);
+        } else if (studentsBadge) {
+            studentsBadge.classList.add('hidden');
+        }
+    }
+}
+
+async function fetchAndUpdateAdminNotificationCount() {
+    const supabaseClient = getSupabase();
+    let admissionUnseen = 0;
+    let pendingTeacher = 0;
+    try {
+        const [studentRes, teacherRes] = await Promise.all([
+            supabaseClient.from('online_applications').select('*', { count: 'exact', head: true }).eq('is_seen', false),
+            supabaseClient.from('teacher_applications').select('*', { count: 'exact', head: true }).eq('status', 'pending')
+        ]);
+        admissionUnseen = studentRes?.count ?? 0;
+        pendingTeacher = teacherRes?.count ?? 0;
+    } catch (e) {
+        console.warn('Could not fetch applications count:', e);
+    }
+    updateAdminNotificationUI(admissionUnseen, pendingTeacher);
+}
+window.fetchAndUpdateAdminNotificationCount = fetchAndUpdateAdminNotificationCount;
+
+function updateAdminNotificationUI(admissionUnseen, pendingTeacher) {
+    adminAdmissionUnseenCount = admissionUnseen;
+    const total = admissionUnseen + pendingTeacher;
+    adminNotificationsCurrentTotal = total;
+
+    const listEl = document.getElementById('adminNotificationsList');
+    if (listEl) {
+        if (total === 0) {
+            listEl.innerHTML = '<p class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">No new applications</p>';
+        } else {
+            const items = [];
+            if (admissionUnseen > 0) items.push(`<div class="px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700/50 flex items-center gap-3"><span class="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 text-sm font-bold">${admissionUnseen}</span><span class="text-sm text-gray-700 dark:text-gray-300">New student application${admissionUnseen !== 1 ? 's' : ''}</span></div>`);
+            if (pendingTeacher > 0) items.push(`<div class="px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700/50 flex items-center gap-3"><span class="w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-600 dark:text-green-400 text-sm font-bold">${pendingTeacher}</span><span class="text-sm text-gray-700 dark:text-gray-300">New teacher application${pendingTeacher !== 1 ? 's' : ''}</span></div>`);
+            listEl.innerHTML = items.join('');
+        }
+    }
+
+    refreshAdminNotificationBadges();
+}
+
 // Auto-expand the dropdown menu that contains the given sub-module
 function autoExpandDropdown(moduleId) {
     const activeLink = document.querySelector(`#navLinks a[data-module="${moduleId}"]`);
@@ -282,6 +411,14 @@ function autoExpandDropdown(moduleId) {
             if (arrow) arrow.classList.add('rotate-180');
         }
     }
+}
+
+// Prevent browser autocomplete suggestion popups site-wide (dashboard content only)
+function disableAutocompleteSuggestions(container) {
+    if (!container) return;
+    container.querySelectorAll('form').forEach(form => form.setAttribute('autocomplete', 'off'));
+    container.querySelectorAll('input:not([type="password"]):not([type="hidden"])').forEach(input => input.setAttribute('autocomplete', 'off'));
+    container.querySelectorAll('textarea').forEach(el => el.setAttribute('autocomplete', 'off'));
 }
 
 // Module Loader with Page Transitions
@@ -361,10 +498,11 @@ async function loadModule(moduleId) {
                 actualModuleId = 'student-dashboard';
             }
 
-            const APP_VERSION = '1.0.3'; // Increment this when modules change
+            const APP_VERSION = '1.0.4'; // Increment this when modules change
             const module = await import(`./modules/${actualModuleId}.js?v=${APP_VERSION}`);
             if (module && module.render) {
                 await module.render(mainContent);
+                disableAutocompleteSuggestions(mainContent);
             } else {
                 mainContent.innerHTML = `
                     <div class="text-center py-10">

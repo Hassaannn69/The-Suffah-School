@@ -7,7 +7,20 @@
   to = "/assets/:splat"
   status = 200
   force = true
-  
+
+# Serve brochure and apply pages (must come before SPA catch-all)
+[[redirects]]
+  from = "/brochure.html"
+  to = "/brochure.html"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/apply.html"
+  to = "/apply.html"
+  status = 200
+  force = true
+
 # SPA fallback - redirect all other routes to index.html
 [[redirects]]
   from = "/*"

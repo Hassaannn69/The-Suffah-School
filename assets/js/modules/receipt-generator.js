@@ -278,29 +278,57 @@ async function buildReceiptHTML({ fatherName, fatherCNIC, fatherPhone, issueDate
             return (a.fee_type || '').localeCompare(b.fee_type || '');
         });
 
-        let feeRows = '';
-
-        // Render EVERY individual fee entry as its own row (including duplicates)
-        // Show REMAINING balance using actual payment transactions
+        // Arrears: total remaining from months before the latest month (one row, Actual and Discount empty, Final only)
+        const monthsWithBalance = [...new Set(feesWithBalance.map(f => f.month))].sort();
+        const latestMonth = monthsWithBalance.length ? monthsWithBalance[monthsWithBalance.length - 1] : null;
+        const arrearsMonths = latestMonth ? monthsWithBalance.filter(m => m < latestMonth) : monthsWithBalance;
+        let arrearsTotal = 0;
+        const feesCurrentMonth = [];
+        const feesArrears = [];
         feesWithBalance.forEach(fee => {
             const actual = Number(fee.amount || 0);
             const disc = Number(fee.discount || 0);
-            
-            // Use ACTUAL payment transactions for this specific fee (not fee.paid_amount)
             const paidForThisFee = studentPayments
                 .filter(p => p.fee_id === fee.id)
                 .reduce((sum, p) => sum + Number(p.amount_paid || 0), 0);
-            
             const remaining = Math.max(0, actual - disc - paidForThisFee);
+            if (latestMonth && fee.month < latestMonth) {
+                arrearsTotal += remaining;
+                feesArrears.push({ fee, actual, disc, paidForThisFee, remaining });
+            } else {
+                feesCurrentMonth.push({ fee, actual, disc, paidForThisFee, remaining });
+            }
+        });
 
-            const netTotal = actual - disc;
+        let feeRows = '';
+
+        // 1. Arrears row: Actual = remaining (arrears total), Discount empty, Final = arrears total
+        if (arrearsTotal > 0) {
+            const arrearsMonthLabel = formatMonthListForArrears(arrearsMonths);
+            feeRows += `
+                <tr class="fee-row">
+                    <td>Arrears (${arrearsMonthLabel})</td>
+                    <td class="text-right">${arrearsTotal.toFixed(0)}</td>
+                    <td class="text-right"></td>
+                    <td class="text-right font-bold">${arrearsTotal.toFixed(0)}</td>
+                </tr>
+            `;
+        }
+
+        // 2. Current/month fee rows:
+        // - No payment yet (original fee): Actual = full amount, Discount = discount, Final = (actual - discount)
+        // - Payment made on this fee: Actual = remaining only, Discount = empty, Final = remaining (discount applied only to original)
+        feesCurrentMonth.forEach(({ fee, actual, disc, paidForThisFee, remaining }) => {
+            const noPaymentYet = paidForThisFee === 0;
+            const actualDisplay = noPaymentYet ? actual.toFixed(0) : remaining.toFixed(0);
+            const discountDisplay = noPaymentYet ? disc.toFixed(0) : '';
+            const finalDisplay = remaining.toFixed(0);
             feeRows += `
                 <tr class="fee-row">
                     <td>${fee.fee_type || 'Fee'} (${formatMonthStr(fee.month)})</td>
-                    <td class="text-right">${actual.toFixed(0)}</td>
-                    <td class="text-right">${disc.toFixed(0)}</td>
-                    <td class="text-right font-bold">${netTotal.toFixed(0)}</td>
-                    <td class="text-right font-bold">${remaining.toFixed(0)}</td>
+                    <td class="text-right">${actualDisplay}</td>
+                    <td class="text-right">${discountDisplay}</td>
+                    <td class="text-right font-bold">${finalDisplay}</td>
                 </tr>
             `;
         });
@@ -311,7 +339,7 @@ async function buildReceiptHTML({ fatherName, fatherCNIC, fatherPhone, issueDate
 
         studentRows += `
             <tr class="student-header">
-                <td colspan="5">
+                <td colspan="4">
                     <strong>File No: ${student.roll_no || 'N/A'}</strong> &nbsp;&nbsp;
                     <strong>Name: ${student.name}</strong> &nbsp;&nbsp;
                     <strong>Class: ${student.class} ${student.section || ''}</strong> &nbsp;&nbsp;
@@ -320,7 +348,7 @@ async function buildReceiptHTML({ fatherName, fatherCNIC, fatherPhone, issueDate
             </tr>
             ${feeRows}
             <tr class="total-row bg-gray-100">
-                <td colspan="4" class="text-right"><strong>Total Payable of ${student.name}:</strong></td>
+                <td colspan="3" class="text-right"><strong>Total Payable of ${student.name}:</strong></td>
                 <td class="text-right"><strong>${studentBalance.toFixed(0)}</strong></td>
             </tr>
         `;
@@ -378,11 +406,10 @@ async function buildReceiptHTML({ fatherName, fatherCNIC, fatherPhone, issueDate
         <table class="receipt-table">
             <thead>
                 <tr>
-                    <th style="width: 35%;">Particulars</th>
-                    <th style="width: 14%;">Actual Fee</th>
-                    <th style="width: 12%;">Discount</th>
-                    <th style="width: 14%;">Total</th>
-                    <th style="width: 25%;">${paidFeesRows.length > 0 ? 'Amount Paid' : 'Remaining'}</th>
+                    <th style="width: 40%;">Particulars</th>
+                    <th style="width: 18%;">Actual Fee</th>
+                    <th style="width: 14%;">Discount</th>
+                    ${paidFeesRows.length > 0 ? '<th style="width: 14%;">Total Amount</th><th style="width: 14%;">Amount Paid</th>' : '<th style="width: 28%;">Final Amount</th>'}
                 </tr>
             </thead>
             <tbody>
@@ -407,17 +434,20 @@ async function buildReceiptHTML({ fatherName, fatherCNIC, fatherPhone, issueDate
                                     <strong>Class: ${studentClass}</strong>
                                 </td>
                             </tr>
-                            ${rows.map(f => `
+                            ${rows.map(f => {
+                                const totalAmount = f.actual - f.disc;
+                                return `
                                 <tr class="fee-row">
                                     <td>${f.feeType} (${f.month})</td>
                                     <td class="text-right">${f.actual.toFixed(0)}</td>
                                     <td class="text-right">${f.disc.toFixed(0)}</td>
-                                    <td class="text-right font-bold">${(f.actual - f.disc).toFixed(0)}</td>
+                                    <td class="text-right">${totalAmount.toFixed(0)}</td>
                                     <td class="text-right font-bold">${f.amountPaid.toFixed(0)}</td>
                                 </tr>
-                            `).join('')}
+                            `;
+                            }).join('')}
                             <tr class="total-row bg-gray-100">
-                                <td colspan="4" class="text-right"><strong>Total for ${studentName}:</strong></td>
+                                <td colspan="4" class="text-right"><strong>Total Paid for ${studentName}:</strong></td>
                                 <td class="text-right"><strong>${studentPaid.toFixed(0)}</strong></td>
                             </tr>`;
                         });
@@ -429,7 +459,7 @@ async function buildReceiptHTML({ fatherName, fatherCNIC, fatherPhone, issueDate
                     })()
                     : `${studentRows}
                     <tr class="grand-total-row">
-                        <td colspan="4" style="border-right: none;"><strong>Grand Total Payable:</strong></td>
+                        <td colspan="3" style="border-right: none;"><strong>Grand Total Payable:</strong></td>
                         <td class="text-right" style="border-left: none;"><strong>${unifiedBalance.toFixed(0)}</strong></td>
                     </tr>`
                 }
@@ -618,15 +648,24 @@ function buildLedgerRows(students, payments) {
     return html;
 }
 
+/** Format single month as short name e.g. 'Dec' (used in "Tuition Fee (Dec)") */
 function formatMonthStr(monthStr) {
     if (!monthStr) return '';
-    // monthStr is expected to be 'YYYY-MM'
-    const [year, month] = monthStr.split('-');
-    const date = new Date(parseInt(year), parseInt(month) - 1, 1);
+    const [year, month] = String(monthStr).split('-');
+    const date = new Date(parseInt(year, 10), parseInt(month, 10) - 1, 1);
     if (isNaN(date.getTime())) return monthStr;
+    return date.toLocaleString('default', { month: 'short' });
+}
 
-    // Format to 'MMM-YYYY' e.g., 'Feb-2026'
-    return date.toLocaleString('default', { month: 'short' }) + '-' + year;
+/** Format multiple months for arrears line e.g. "Oct, Nov, Dec, Jan" */
+function formatMonthListForArrears(monthStrs) {
+    if (!monthStrs || monthStrs.length === 0) return '';
+    const names = monthStrs.map(m => {
+        const [y, mo] = String(m).split('-');
+        const d = new Date(parseInt(y, 10), parseInt(mo, 10) - 1, 1);
+        return isNaN(d.getTime()) ? m : d.toLocaleString('default', { month: 'short' });
+    });
+    return names.join(', ');
 }
 
 function getInlineStyles() {

@@ -1,0 +1,129 @@
+/* Apply / Admission form – match landing form design */
+
+.apply-header .container,
+.apply-main,
+.apply-footer .container {
+    max-width: 1200px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.apply-card {
+    background: #ffffff;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.08);
+}
+
+/* Form inputs – light grey bg, thin border */
+.apply-input {
+    background-color: #f9fafb;
+    border: 1px solid #d1d5db;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.apply-input:focus {
+    border-color: #6366f1;
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+}
+
+.apply-input::placeholder {
+    color: #9ca3af;
+}
+
+/* Primary button – purple */
+.apply-btn-primary {
+    background-color: #6366f1;
+    color: white;
+    transition: background-color 0.2s, transform 0.05s;
+}
+
+.apply-btn-primary:hover {
+    background-color: #4f46e5;
+}
+
+.apply-btn-primary:active {
+    transform: scale(0.98);
+}
+
+/* Secondary button – light gray */
+.apply-btn-secondary {
+    background-color: #e5e7eb;
+    color: #374151;
+    transition: background-color 0.2s, color 0.2s, transform 0.05s;
+}
+
+.apply-btn-secondary:hover {
+    background-color: #d1d5db;
+    color: #1f2937;
+}
+
+.apply-btn-secondary:active {
+    transform: scale(0.98);
+}
+
+/* Progress steps – active = purple, inactive = gray */
+.apply-step-num.active {
+    background-color: #6366f1 !important;
+    color: white !important;
+}
+
+.apply-step-label.active {
+    color: #6366f1 !important;
+    font-weight: 600;
+}
+
+.apply-step-line.completed {
+    background-color: #6366f1;
+}
+
+/* Section icons */
+.apply-section-icon {
+    flex-shrink: 0;
+}
+
+/* Choice buttons */
+.apply-choice-btn:focus {
+    outline: none;
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+}
+
+/* Review content blocks */
+.apply-review-content .review-block h3 {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #6b7280;
+    margin-bottom: 0.5rem;
+}
+
+.apply-review-content .review-block p {
+    font-size: 0.875rem;
+    color: #374151;
+}
+
+.apply-review-content .review-block .review-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem 1.5rem;
+}
+
+@media (max-width: 640px) {
+    .apply-review-content .review-block .review-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* File input styling */
+input[type="file"].apply-input {
+    padding: 0.5rem 0;
+}
+
+/* Ensure select has down arrow (browser default or custom) */
+select.apply-input {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+    background-position: right 0.5rem center;
+    background-repeat: no-repeat;
+    background-size: 1.5em 1.5em;
+    padding-right: 2.5rem;
+}

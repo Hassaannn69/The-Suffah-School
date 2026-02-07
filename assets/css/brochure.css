@@ -1,0 +1,118 @@
+/* Brochure / Fee Schedule page */
+
+.brochure-header {
+    font-family: inherit;
+}
+
+.brochure-main {
+    min-height: 60vh;
+}
+
+.brochure-content {
+    font-family: inherit;
+}
+
+.brochure-table {
+    font-size: 0.875rem;
+}
+
+.brochure-th {
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.brochure-bg-green { background-color: #dcfce7; }
+.brochure-bg-green\/30 { background-color: rgba(220, 252, 231, 0.6); }
+.brochure-bg-orange { background-color: #ffedd5; }
+.brochure-bg-blue { background-color: #dbeafe; }
+.brochure-bg-gray { background-color: #f1f5f9; }
+.brochure-bg-red { background-color: #fee2e2; }
+
+.brochure-stage-row td.brochure-stage {
+    font-size: 0.8125rem;
+    letter-spacing: 0.02em;
+}
+
+.brochure-btn-pdf:active {
+    transform: scale(0.98);
+}
+
+/* Title inside PDF content: hidden on page, shown only when generating PDF */
+#brochure-pdf-content .brochure-pdf-title {
+    display: none;
+}
+
+/* Compact layout when generating single-page PDF (keeps content small so scale:2 fits one page) */
+body.brochure-pdf-one-page #brochure-pdf-content {
+    font-size: 10px;
+    line-height: 1.15;
+}
+body.brochure-pdf-one-page #brochure-pdf-content .brochure-pdf-title {
+    padding: 8px 12px 4px !important;
+    display: block !important;
+}
+body.brochure-pdf-one-page #brochure-pdf-content .brochure-pdf-title h1 {
+    font-size: 1.1rem !important;
+}
+body.brochure-pdf-one-page #brochure-pdf-content .brochure-pdf-title p,
+body.brochure-pdf-one-page #brochure-pdf-content .brochure-pdf-title span {
+    font-size: 0.65rem !important;
+    margin-top: 1px !important;
+}
+body.brochure-pdf-one-page #brochure-pdf-content .p-6,
+body.brochure-pdf-one-page #brochure-pdf-content .p-8 {
+    padding: 6px 10px !important;
+}
+body.brochure-pdf-one-page #brochure-pdf-content .brochure-table {
+    font-size: 0.6rem;
+}
+body.brochure-pdf-one-page #brochure-pdf-content .py-2\.5,
+body.brochure-pdf-one-page #brochure-pdf-content .py-3 {
+    padding-top: 2px !important;
+    padding-bottom: 2px !important;
+}
+body.brochure-pdf-one-page #brochure-pdf-content .px-3 {
+    padding-left: 4px !important;
+    padding-right: 4px !important;
+}
+body.brochure-pdf-one-page #brochure-pdf-content .brochure-stage-row td {
+    padding: 2px 4px !important;
+}
+body.brochure-pdf-one-page #brochure-pdf-content .grid.gap-6 {
+    gap: 6px !important;
+}
+body.brochure-pdf-one-page #brochure-pdf-content .brochure-card-notes,
+body.brochure-pdf-one-page #brochure-pdf-content .brochure-card-psc {
+    padding: 6px 8px !important;
+}
+body.brochure-pdf-one-page #brochure-pdf-content .brochure-card-notes p,
+body.brochure-pdf-one-page #brochure-pdf-content .brochure-card-psc ul {
+    font-size: 0.55rem !important;
+}
+body.brochure-pdf-one-page #brochure-pdf-content .space-y-2 li {
+    margin-bottom: 0 !important;
+}
+
+/* Print: hide header/footer/nav and show only brochure content */
+@media print {
+    .brochure-header,
+    .brochure-btn-pdf,
+    .brochure-cta,
+    .brochure-main > .brochure-content .brochure-top button,
+    .brochure-main > .brochure-content .brochure-top a[href="apply.html"] {
+        display: none !important;
+    }
+
+    .brochure-main {
+        padding: 0;
+    }
+
+    .brochure-content {
+        box-shadow: none;
+        border-radius: 0;
+    }
+
+    body {
+        background: #fff;
+    }
+}

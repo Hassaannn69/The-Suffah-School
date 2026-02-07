@@ -5,7 +5,9 @@
     "dev": "serve .",
     "start": "serve .",
     "build": "node build.js && node update_cache_buster.js",
-    "migrate-legacy-receipts": "node scripts/migrate-legacy-receipts.js"
+    "migrate-legacy-receipts": "node scripts/migrate-legacy-receipts.js",
+    "setup-apply-storage": "node scripts/setup-apply-storage.js",
+    "setup-apply": "node scripts/setup-apply-everything.js"
   },
   "devDependencies": {
     "serve": "^14.2.4",
@@ -17,6 +19,7 @@
     "tailwindcss": "^4.1.17"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.45.0"
+    "@supabase/supabase-js": "^2.45.0",
+    "pg": "^8.11.0"
   }
 }

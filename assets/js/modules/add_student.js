@@ -742,11 +742,42 @@ async function handleSubmit(container, btn) {
             admission_year: new Date().getFullYear()
         };
 
+        // Apply active fee structure at admission (version + snapshot; discounts applied once)
+        let feeResult = null;
+        try {
+            const { applyFeeStructureAtAdmission } = await import('./fee_admission.js');
+            feeResult = await applyFeeStructureAtAdmission(supabase, {
+                className: d.class,
+                familyCode: d.family_code || null,
+                isStaffChild: false,
+                earlyAdmission: false
+            });
+        } catch (e) {
+            console.warn('Fee structure at admission:', e);
+        }
+        if (feeResult) {
+            studentData.fee_structure_version_id = feeResult.versionId;
+            if (feeResult.tuition_fee != null) studentData.tuition_fee = feeResult.tuition_fee;
+            if (feeResult.admission_fee != null) studentData.admission_fee = feeResult.admission_fee;
+        }
+
         const result = await supabase.from('students').insert([studentData]).select();
         if (result.error) throw result.error;
 
-        // Auth sync
         const student = result.data ? result.data[0] : null;
+        if (student && feeResult) {
+            try {
+                const { saveStudentFeeSnapshot } = await import('./fee_admission.js');
+                await saveStudentFeeSnapshot(supabase, student.id, feeResult, {
+                    tuition_fee: feeResult.tuition_fee,
+                    admission_fee: feeResult.admission_fee
+                });
+            } catch (e) {
+                console.warn('Save fee snapshot:', e);
+            }
+        }
+
+        // Auth sync
         if (student && student.date_of_birth) {
             await syncStudentAuth(student);
         }

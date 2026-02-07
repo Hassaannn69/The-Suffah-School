@@ -85,8 +85,11 @@ export async function render(container) {
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                             Enter Family Code
                         </label>
-                        <input type="text" id="familyCodeInput" placeholder="e.g., FAM001" 
-                            class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                        <div class="flex rounded-lg overflow-hidden border border-gray-300 dark:border-gray-600 focus-within:ring-2 focus-within:ring-indigo-500">
+                            <span class="inline-flex items-center px-4 py-2 border-r border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 text-sm font-bold text-gray-700 dark:text-gray-300 select-none">FAM-</span>
+                            <input type="text" id="familyCodeInput" placeholder="e.g. 001" inputmode="numeric" maxlength="10"
+                                class="flex-1 min-w-0 px-4 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none">
+                        </div>
                         <button type="button" id="searchFamilyBtn" class="mt-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm">Find Family Members</button>
                         <div id="familyMembersDisplay" class="mt-2 hidden"></div>
                     </div>
@@ -103,6 +106,7 @@ export async function render(container) {
                                     <option value="Fine">Fine</option>
                                     <option value="Admission Fee">Admission Fee</option>
                                     <option value="Tuition Fee">Tuition Fee</option>
+                                    <option value="Exam Fee">Exam Fee</option>
                                     <option value="Annual Fee">Annual Fee</option>
                                     <option value="custom">Custom (Type below)</option>
                                 </select>
@@ -112,7 +116,7 @@ export async function render(container) {
                                     class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
                             </div>
                             <div>
-                                <input type="number" id="manualFeeAmount" placeholder="Amount" min="0" step="0.01"
+                                <input type="number" id="manualFeeAmount" placeholder="0" min="0" step="0.01"
                                     class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
                             </div>
                         </div>
@@ -190,26 +194,39 @@ export async function render(container) {
     document.getElementById('studentSearch').addEventListener('input', debounce(handleStudentSearch, 300));
     document.getElementById('clearStudentBtn').addEventListener('click', clearSelectedStudent);
 
-    // Family search listener
+    // Family search listener (FAM- is fixed prefix; input is digits only)
     document.getElementById('searchFamilyBtn').addEventListener('click', handleFamilySearch);
+    document.getElementById('familyCodeInput').addEventListener('input', function () {
+        this.value = (this.value || '').replace(/\D/g, '');
+    });
 
-    // Manual fee type toggle
-    document.getElementById('manualFeeTypeSelect').addEventListener('change', (e) => {
+    // Manual fee type toggle + pre-fill amount from Fee Structure when Admission/Tuition/Exam selected
+    document.getElementById('manualFeeTypeSelect').addEventListener('change', async (e) => {
         const container = document.getElementById('customFeeNameContainer');
         if (e.target.value === 'custom') {
             container.classList.remove('hidden');
         } else {
             container.classList.add('hidden');
         }
+        const feeType = e.target.value;
+        if (['Admission Fee', 'Tuition Fee', 'Exam Fee'].indexOf(feeType) !== -1) {
+            const amount = await getFeeStructureAmountForCurrentContext(feeType);
+            if (amount != null && amount >= 0) {
+                document.getElementById('manualFeeAmount').value = amount;
+            }
+        }
     });
 
-    // Assignment mode toggle
+    // Assignment mode toggle – refresh preview so "this much fee" updates
     document.getElementById('feeAssignmentMode').addEventListener('change', (e) => {
         const container = document.getElementById('manualFeeContainer');
         if (e.target.value === 'structure') {
             container.classList.add('opacity-50', 'pointer-events-none');
         } else {
             container.classList.remove('opacity-50', 'pointer-events-none');
+        }
+        if (!document.getElementById('previewSection').classList.contains('hidden')) {
+            handlePreview();
         }
     });
 
@@ -317,14 +334,39 @@ function clearSelectedStudent() {
     document.getElementById('selectedStudentDisplay').classList.add('hidden');
 }
 
+/** Get current class from Generate For target (student / family / class). Returns null if "All" or no selection. */
+function getCurrentClassForFeeContext() {
+    const target = document.getElementById('generateTarget').value;
+    if (target === 'student' && selectedStudent) return selectedStudent.class;
+    if (target === 'family' && familyStudents.length > 0) return familyStudents[0].class;
+    if (target === 'class') return document.getElementById('classSelect').value || null;
+    return null;
+}
+
+/** Fetch from Fee Structure (active version) the amount for a fee type and the current context class. User can still edit. */
+async function getFeeStructureAmountForCurrentContext(feeType) {
+    const className = getCurrentClassForFeeContext();
+    if (!className) return null;
+    const { data: activeVersion } = await supabase.from('fee_structure_versions').select('id').eq('is_active', true).maybeSingle();
+    if (!activeVersion) return null;
+    const { data: row } = await supabase.from('fee_structure_classes').select('base_monthly_fee, admission_fee, exam_fee, misc_charges').eq('fee_structure_version_id', activeVersion.id).eq('class_name', className).maybeSingle();
+    if (!row) return null;
+    if (feeType === 'Admission Fee') return Number(row.admission_fee) || 0;
+    if (feeType === 'Tuition Fee') return Number(row.base_monthly_fee) || 0;
+    if (feeType === 'Exam Fee') return Number(row.exam_fee) || 0;
+    return null;
+}
+
 async function handleFamilySearch() {
-    const familyCode = document.getElementById('familyCodeInput').value.trim();
+    const digits = (document.getElementById('familyCodeInput').value || '').replace(/\D/g, '').trim();
     const displayContainer = document.getElementById('familyMembersDisplay');
 
-    if (!familyCode) {
-        toast.warning('Please enter a family code');
+    if (!digits) {
+        toast.warning('Please enter the family number');
         return;
     }
+
+    const familyCode = 'FAM-' + digits;
 
     const { data: students, error } = await supabase
         .from('students')
@@ -387,7 +429,7 @@ async function handlePreview() {
         students = familyStudents;
     } else {
         // All or specific class
-        let studentsQuery = supabase.from('students').select('id, name, roll_no, class');
+        let studentsQuery = supabase.from('students').select('id, name, roll_no, class, fee_structure_version_id');
         if (target === 'class') {
             studentsQuery = studentsQuery.eq('class', className);
         }
@@ -404,7 +446,30 @@ async function handlePreview() {
         return;
     }
 
-    // Fetch all classes with their fees
+    const studentIds = students.map(s => s.id);
+    const snapshotMap = {};
+    const { data: snapshots } = await supabase
+        .from('student_fee_snapshots')
+        .select('student_id, final_base_monthly')
+        .in('student_id', studentIds);
+    (snapshots || []).forEach(s => { snapshotMap[s.student_id] = s; });
+
+    if (target === 'student' || target === 'family') {
+        const { data: extra } = await supabase.from('students').select('id, fee_structure_version_id').in('id', studentIds);
+        const versionMap = {};
+        (extra || []).forEach(r => { versionMap[r.id] = r.fee_structure_version_id; });
+        students.forEach(s => { s.fee_structure_version_id = versionMap[s.id]; });
+    }
+
+    // Versioned fee structure (Fee Structure module): active version's per-class base monthly fee
+    let versionedFeeByClass = {};
+    const { data: activeVersion } = await supabase.from('fee_structure_versions').select('id').eq('is_active', true).maybeSingle();
+    if (activeVersion) {
+        const { data: versionedClasses } = await supabase.from('fee_structure_classes').select('class_name, base_monthly_fee').eq('fee_structure_version_id', activeVersion.id);
+        (versionedClasses || []).forEach(r => { versionedFeeByClass[r.class_name] = Number(r.base_monthly_fee) || 0; });
+    }
+
+    // Fetch all classes with their fees (for legacy students without snapshot and without versioned fee)
     const { data: classes } = await supabase
         .from('classes')
         .select(`
@@ -417,7 +482,7 @@ async function handlePreview() {
         `);
 
     const classFeesMap = {};
-    classes.forEach(cls => {
+    (classes || []).forEach(cls => {
         classFeesMap[cls.class_name] = cls.class_fees || [];
     });
 
@@ -426,7 +491,6 @@ async function handlePreview() {
     const manualFeeAmount = parseFloat(document.getElementById('manualFeeAmount').value) || 0;
 
     // Fetch existing/historical fees for these students
-    const studentIds = students.map(s => s.id);
     const { data: allStudentFees } = await supabase
         .from('fees')
         .select('*')
@@ -455,7 +519,7 @@ async function handlePreview() {
 
     // Build preview data
     const previewData = students.map(student => {
-        let classFees = classFeesMap[student.class] || [];
+        const snapshot = snapshotMap[student.id];
         const studentExistingFees = studentFeesMap[student.id] || [];
         const mode = document.getElementById('feeAssignmentMode').value;
         const feeTypeSelect = document.getElementById('manualFeeTypeSelect').value;
@@ -466,20 +530,39 @@ async function handlePreview() {
         let newFees = [];
         let newTotal = 0;
 
-        // 1. Class Fee Structure (Only if mode is 'both' or 'structure')
-        if (mode !== 'manual' && classFees.length > 0) {
-            classFees.forEach(cf => {
-                const isDuplicate = existingFeeKeys.has(`${student.id}-${cf.fee_types.name}`);
-                if (!isDuplicate) {
-                    newFees.push({
-                        name: cf.fee_types.name,
-                        amount: Number(cf.amount),
-                        month: month,
-                        type: 'new'
-                    });
-                    newTotal += Number(cf.amount);
+        // 1. Fee source: snapshot (locked at admission) -> else versioned Fee Structure (per class) -> else legacy class_fees
+        if (mode !== 'manual') {
+            if (snapshot) {
+                const amt = Number(snapshot.final_base_monthly) || 0;
+                const isDuplicate = existingFeeKeys.has(`${student.id}-Tuition Fee`);
+                if (!isDuplicate && amt > 0) {
+                    newFees.push({ name: 'Tuition Fee', amount: amt, month: month, type: 'new' });
+                    newTotal += amt;
                 }
-            });
+            } else if (versionedFeeByClass[student.class] != null && versionedFeeByClass[student.class] > 0) {
+                const amt = versionedFeeByClass[student.class];
+                const isDuplicate = existingFeeKeys.has(`${student.id}-Tuition Fee`);
+                if (!isDuplicate) {
+                    newFees.push({ name: 'Tuition Fee', amount: amt, month: month, type: 'new' });
+                    newTotal += amt;
+                }
+            } else {
+                const classFees = classFeesMap[student.class] || [];
+                if (classFees.length > 0) {
+                    classFees.forEach(cf => {
+                        const isDuplicate = existingFeeKeys.has(`${student.id}-${cf.fee_types.name}`);
+                        if (!isDuplicate) {
+                            newFees.push({
+                                name: cf.fee_types.name,
+                                amount: Number(cf.amount),
+                                month: month,
+                                type: 'new'
+                            });
+                            newTotal += Number(cf.amount);
+                        }
+                    });
+                }
+            }
         }
 
         // 2. Manual Fee (Only if mode is 'both' or 'manual')
@@ -504,27 +587,30 @@ async function handlePreview() {
 
         const hasAnyExisting = studentExistingFees.some(f => f.month === month);
 
+        const hasVersionedFee = !snapshot && (versionedFeeByClass[student.class] != null && versionedFeeByClass[student.class] > 0);
         return {
             student,
             newFees,
             existingFees: studentExistingFees,
-            classFeesLength: classFees.length,
+            classFeesLength: snapshot ? 1 : (hasVersionedFee ? 1 : (classFeesMap[student.class] || []).length),
             grandTotal,
             hasAnyExisting
         };
     });
 
+    // When "Regenerate" is checked, default all rows to checked so user can generate for everyone
+    const regenerateChecked = document.getElementById('regenerateExisting').checked;
     // Render preview with checkboxes
     tbody.innerHTML = previewData.map(item => {
         // Format Fee List
         // Combined list: New first (Green), then Existing (Gray)
 
         const newFeesHtml = item.newFees.map(f =>
-            `<div class="text-green-600 dark:text-green-400 font-medium">+ ${f.name} (${formatMonth(f.month)})</div>`
+            `<div class="text-green-600 dark:text-green-400 font-medium">+ ${f.name}: Rs ${Number(f.amount).toFixed(2)} (${formatMonth(f.month)})</div>`
         ).join('');
 
         const existingFeesHtml = item.existingFees.map(f =>
-            `<div class="text-gray-500 dark:text-gray-400 text-xs">${f.fee_type} (${formatMonth(f.month)})</div>`
+            `<div class="text-gray-500 dark:text-gray-400 text-xs">${f.fee_type}: Rs ${Number(f.final_amount || f.amount).toFixed(2)} (${formatMonth(f.month)})</div>`
         ).join('');
 
         return `
@@ -533,7 +619,7 @@ async function handlePreview() {
                 <input type="checkbox" class="student-checkbox w-4 h-4 text-indigo-600 rounded" 
                     data-student-id="${item.student.id}" 
                     data-student-class="${item.student.class}"
-                    ${!item.hasAnyExisting ? 'checked' : ''}>
+                    ${(!item.hasAnyExisting || regenerateChecked) ? 'checked' : ''}>
             </td>
             <td class="p-4 align-top">
                 <div class="font-medium text-gray-900 dark:text-white">${item.student.name}</div>
@@ -549,7 +635,7 @@ async function handlePreview() {
                 </div>
             </td>
             <td class="p-4 align-top font-bold text-gray-800 dark:text-gray-200">
-                $${item.grandTotal.toFixed(2)}
+                Rs ${item.grandTotal.toFixed(2)}
             </td>
             <td class="p-4 align-top">
                 ${item.hasAnyExisting
@@ -618,10 +704,10 @@ async function handleGenerate(e) {
     btn.innerHTML = '<div class="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>';
 
     try {
-        // Fetch only the selected students
+        // Fetch only the selected students (include fee_structure_version_id for snapshot path)
         const { data: students, error: studentsError } = await supabase
             .from('students')
-            .select('id, name, class')
+            .select('id, name, class, fee_structure_version_id')
             .in('id', selectedStudentIds);
 
         if (studentsError) throw studentsError;
@@ -632,7 +718,22 @@ async function handleGenerate(e) {
             return;
         }
 
-        // Fetch all classes with their fees
+        const snapshotMap = {};
+        const { data: snapshots } = await supabase
+            .from('student_fee_snapshots')
+            .select('student_id, final_base_monthly')
+            .in('student_id', selectedStudentIds);
+        (snapshots || []).forEach(s => { snapshotMap[s.student_id] = s; });
+
+        // Versioned fee structure (Fee Structure module): active version's per-class base monthly fee
+        let versionedFeeByClass = {};
+        const { data: activeVersion } = await supabase.from('fee_structure_versions').select('id').eq('is_active', true).maybeSingle();
+        if (activeVersion) {
+            const { data: versionedClasses } = await supabase.from('fee_structure_classes').select('class_name, base_monthly_fee').eq('fee_structure_version_id', activeVersion.id);
+            (versionedClasses || []).forEach(r => { versionedFeeByClass[r.class_name] = Number(r.base_monthly_fee) || 0; });
+        }
+
+        // Fetch all classes with their fees (for legacy students without snapshot)
         const { data: classes } = await supabase
             .from('classes')
             .select(`
@@ -645,7 +746,7 @@ async function handleGenerate(e) {
             `);
 
         const classFeesMap = {};
-        classes.forEach(cls => {
+        (classes || []).forEach(cls => {
             classFeesMap[cls.class_name] = cls.class_fees || [];
         });
 
@@ -698,17 +799,32 @@ async function handleGenerate(e) {
             : feeTypeSelect;
 
         for (const student of students) {
-            const classFees = classFeesMap[student.class] || [];
+            const snapshot = snapshotMap[student.id];
             let feesForInitialProcessing = [];
 
-            // 1. Add Class Structure Fees
-            if (mode !== 'manual' && classFees.length > 0) {
-                classFees.forEach(cf => {
+            // 1. Fee source: snapshot -> else versioned Fee Structure (per class) -> else legacy class_fees
+            if (mode !== 'manual') {
+                if (snapshot) {
+                    const amt = Number(snapshot.final_base_monthly) || 0;
+                    if (amt > 0) {
+                        feesForInitialProcessing.push({ fee_type: 'Tuition Fee', amount: amt });
+                    }
+                } else if (versionedFeeByClass[student.class] != null && versionedFeeByClass[student.class] > 0) {
                     feesForInitialProcessing.push({
-                        fee_type: cf.fee_types.name,
-                        amount: Number(cf.amount)
+                        fee_type: 'Tuition Fee',
+                        amount: versionedFeeByClass[student.class]
                     });
-                });
+                } else {
+                    const classFees = classFeesMap[student.class] || [];
+                    if (classFees.length > 0) {
+                        classFees.forEach(cf => {
+                            feesForInitialProcessing.push({
+                                fee_type: cf.fee_types.name,
+                                amount: Number(cf.amount)
+                            });
+                        });
+                    }
+                }
             }
 
             // 2. Add Manual Fee
@@ -769,7 +885,11 @@ async function handleGenerate(e) {
         }
 
         if (feesToInsert.length === 0) {
-            toast.info('No fees to generate. All students already have fees for this month.');
+            if (regenerate) {
+                toast.warning('No fee structure or manual fee configured for the selected students. Add fees in Fee Structure (per class) or use a Manual Fee below.');
+            } else {
+                toast.info('No fees to generate. All students already have fees for this month.');
+            }
             btn.disabled = false;
             btn.innerHTML = originalText;
             return;

@@ -9,11 +9,19 @@ let parsedTeachers = []; // For bulk upload
 
 export async function render(container) {
     container.innerHTML = `
-        <div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden transition-colors duration-200">
-            <div class="p-6 border-b border-gray-200 dark:border-gray-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <h2 class="text-xl font-bold text-gray-900 dark:text-white">Teachers Directory</h2>
-                <div class="flex space-x-3">
-                    <input type="text" id="searchTeacherInput" placeholder="Search teachers..." class="px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 outline-none text-gray-900 dark:text-white placeholder-gray-500 transition-colors">
+        <div class="app-page-tile bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden transition-colors duration-200">
+            <nav class="app-bar px-6 py-3 flex items-center gap-2 text-sm">
+                <button type="button" class="text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 font-medium" data-nav="dashboard">Dashboard</button>
+                <span class="text-gray-400 dark:text-gray-500">/</span>
+                <span class="text-gray-900 dark:text-white font-medium">Teachers</span>
+            </nav>
+            <div class="app-bar p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Teachers Directory</h2>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Manage teaching staff, subjects, and assignments.</p>
+                </div>
+                <div class="flex flex-wrap items-center gap-3">
+                    <input type="text" id="searchTeacherInput" placeholder="Search teachers..." autocomplete="off" class="app-toolbar-input px-4 py-2 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 outline-none placeholder-gray-500 dark:placeholder-gray-400 min-w-[200px]">
                     
                     <!-- Dropdown Button -->
                     <div class="relative">
@@ -52,9 +60,11 @@ export async function render(container) {
                 </div>
             </div>
 
-            <!-- Teacher Table -->
-            <div class="overflow-x-auto">
-                <table class="w-full">
+            <!-- Teacher Table (tile) -->
+            <div class="px-6 pb-6">
+                <div class="app-table-tile rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+                    <div class="overflow-x-auto">
+                <table class="w-full text-sm">
                     <thead class="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
                         <tr>
                             <th class="p-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Teacher</th>
@@ -65,15 +75,17 @@ export async function render(container) {
                             <th class="p-4 text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
                         </tr>
                     </thead>
-                    <tbody id="teachersTableBody" class="divide-y divide-gray-200 dark:divide-gray-800">
+                    <tbody id="teachersTableBody" class="divide-y divide-gray-200 dark:divide-gray-700">
                         <tr><td colspan="6" class="p-4 text-center text-gray-500 dark:text-gray-400">Loading...</td></tr>
                     </tbody>
                 </table>
+                    </div>
+                </div>
             </div>
 
-            <!-- Pagination -->
-            <div class="p-4 border-t border-gray-200 dark:border-gray-800 flex justify-end">
-                <span class="text-xs text-gray-500 dark:text-gray-500">Showing all records</span>
+            <!-- Pagination bar -->
+            <div class="app-bar px-6 py-4 flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
+                <span id="teachersPaginationText">Showing all records</span>
             </div>
         </div>
 
@@ -88,7 +100,7 @@ export async function render(container) {
                         </svg>
                     </button>
                 </div>
-                <form id="teacherForm" class="p-6 space-y-4">
+                <form id="teacherForm" class="p-6 space-y-4" autocomplete="off">
                     <input type="hidden" id="teacherId">
                     
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -344,6 +356,10 @@ export async function render(container) {
         if (el) el.addEventListener(event, handler);
         else console.warn(`Element ${id} not found`);
     };
+
+    container.querySelector('[data-nav="dashboard"]')?.addEventListener('click', () => {
+        if (typeof window.loadModule === 'function') window.loadModule('dashboard');
+    });
 
     // Dropdown toggle
     const dropdown = document.getElementById('addTeacherDropdown');

@@ -44,11 +44,11 @@ export async function render(container) {
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Default Tuition Fee</label>
-                            <input type="number" id="defaultTuition" class="w-full px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-gray-900 dark:text-white placeholder-gray-500 transition-colors">
+                            <input type="number" id="defaultTuition" placeholder="0" class="w-full px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-gray-900 dark:text-white placeholder-gray-500 transition-colors">
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Default Transport Fee</label>
-                            <input type="number" id="defaultTransport" class="w-full px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-gray-900 dark:text-white placeholder-gray-500 transition-colors">
+                            <input type="number" id="defaultTransport" placeholder="0" class="w-full px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-gray-900 dark:text-white placeholder-gray-500 transition-colors">
                         </div>
                     </div>
                 </div>
@@ -85,8 +85,9 @@ async function fetchSettings() {
         document.getElementById('currency').value = data.currency || 'PKR';
 
         if (data.default_fee_structure) {
-            document.getElementById('defaultTuition').value = data.default_fee_structure.tuition || 0;
-            document.getElementById('defaultTransport').value = data.default_fee_structure.transport || 0;
+            const setOrPlaceholder = (v) => (v != null && Number(v) !== 0 ? v : '');
+            document.getElementById('defaultTuition').value = setOrPlaceholder(data.default_fee_structure.tuition);
+            document.getElementById('defaultTransport').value = setOrPlaceholder(data.default_fee_structure.transport);
         }
     }
 }
@@ -101,8 +102,8 @@ async function handleSave(e) {
     const schoolName = document.getElementById('schoolName').value;
     const logoUrl = document.getElementById('logoUrl').value;
     const currency = document.getElementById('currency').value;
-    const defaultTuition = document.getElementById('defaultTuition').value;
-    const defaultTransport = document.getElementById('defaultTransport').value;
+    const defaultTuition = Number(document.getElementById('defaultTuition').value) || 0;
+    const defaultTransport = Number(document.getElementById('defaultTransport').value) || 0;
 
     const payload = {
         school_name: schoolName,

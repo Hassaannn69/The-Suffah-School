@@ -18,9 +18,9 @@
         detectRetina: true,
         background: { color: { value: 'transparent' } },
         particles: {
-            number: { value: 45, density: { enable: true, width: 800, height: 600 } },
-            color: { value: '#ffffff' },
-            opacity: { value: 0.3 },
+            number: { value: 50, density: { enable: true, width: 800, height: 600 } },
+            color: { value: '#818cf8' },
+            opacity: { value: 0.4 },
             shape: {
                 type: ['circle', 'square', 'image'],
                 options: {

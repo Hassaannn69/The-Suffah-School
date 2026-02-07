@@ -515,9 +515,10 @@ async function fetchPaymentHistory(studentId, familyCode) {
             const { data: family } = await supabase.from('students').select('id').eq('family_code', familyCode);
             if (family) studentIds = family.map(s => s.id);
         }
-        const { data: withReceipts, error: err1 } = await supabase.from('fee_payments').select('*, students (name, roll_no), fees (fee_type, month), receipts(receipt_number, payment_date, payment_method, total_paid)').in('student_id', studentIds).order('payment_date', { ascending: false });
+        // Fetch full payment history (high limit so history is never truncated)
+        const { data: withReceipts, error: err1 } = await supabase.from('fee_payments').select('*, students (name, roll_no), fees (fee_type, month), receipts(receipt_number, payment_date, payment_method, total_paid)').in('student_id', studentIds).order('payment_date', { ascending: false }).limit(50000);
         if (!err1 && withReceipts) return withReceipts;
-        const { data: withoutReceipts, error } = await supabase.from('fee_payments').select('*, students (name, roll_no), fees (fee_type, month)').in('student_id', studentIds).order('payment_date', { ascending: false });
+        const { data: withoutReceipts, error } = await supabase.from('fee_payments').select('*, students (name, roll_no), fees (fee_type, month)').in('student_id', studentIds).order('payment_date', { ascending: false }).limit(50000);
         if (error) throw error;
         return withoutReceipts || [];
     } catch (err) { console.error('Error fetching payments:', err); return []; }

@@ -8,6 +8,17 @@ body {
   overflow-x: hidden;
 }
 
+/* Remove number input spinners (stepper arrows) site-wide for a cleaner look */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
 /* Dashboard main content: flex child can shrink and become the scroll region */
 #mainContent {
   min-height: 0;
@@ -142,6 +153,171 @@ textarea:focus {
   /* Indigo 500 ring */
 }
 
+/* ========== Bars & Tiles Design System (light + dark) ========== */
+/* Use these for consistent page layout: bars (headers, toolbars, tabs) and tiles (cards, table wrappers). */
+
+.app-page-tile {
+  border-radius: 0.75rem;
+  border-width: 1px;
+  background-color: #ffffff;
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.05);
+  overflow: hidden;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+.dark .app-page-tile {
+  background-color: #111827;
+  border-color: #1f2937;
+}
+
+.app-bar {
+  border-bottom-width: 1px;
+  border-color: #e5e7eb;
+}
+.dark .app-bar {
+  border-color: #374151;
+}
+
+.app-table-tile {
+  border-radius: 0.75rem;
+  border-width: 1px;
+  border-color: #e5e7eb;
+  background-color: #ffffff;
+  overflow: hidden;
+}
+.dark .app-table-tile {
+  border-color: #374151;
+  background-color: #1f2937;
+}
+
+.app-summary-tile {
+  border-radius: 0.75rem;
+  padding: 1.25rem;
+  border-width: 1px;
+  border-color: #e5e7eb;
+  background-color: #ffffff;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+.dark .app-summary-tile {
+  border-color: #374151;
+  background-color: rgba(31, 41, 55, 0.5);
+}
+
+.app-summary-tile-icon-indigo {
+  background-color: #e0e7ff;
+  color: #4f46e5;
+}
+.dark .app-summary-tile-icon-indigo {
+  background-color: rgba(79, 70, 229, 0.25);
+  color: #818cf8;
+}
+
+.app-summary-tile-icon-purple {
+  background-color: #f3e8ff;
+  color: #9333ea;
+}
+.dark .app-summary-tile-icon-purple {
+  background-color: rgba(147, 51, 234, 0.25);
+  color: #c084fc;
+}
+
+.app-summary-tile-icon-amber {
+  background-color: #fffbeb;
+  color: #d97706;
+}
+.dark .app-summary-tile-icon-amber {
+  background-color: rgba(217, 119, 6, 0.25);
+  color: #fbbf24;
+}
+
+.app-summary-tile-icon-emerald {
+  background-color: #ecfdf5;
+  color: #059669;
+}
+.dark .app-summary-tile-icon-emerald {
+  background-color: rgba(5, 150, 105, 0.25);
+  color: #34d399;
+}
+
+.app-tab-bar {
+  border-bottom-width: 1px;
+  border-color: #e5e7eb;
+}
+.dark .app-tab-bar {
+  border-color: #374151;
+}
+
+.app-toolbar-input {
+  background-color: #ffffff;
+  border-width: 1px;
+  border-color: #d1d5db;
+  color: #111827;
+}
+.dark .app-toolbar-input {
+  background-color: #1f2937;
+  border-color: #4b5563;
+  color: #f9fafb;
+}
+
+.app-progress-track {
+  background-color: #e5e7eb;
+}
+.dark .app-progress-track {
+  background-color: #374151;
+}
+
+.app-progress-fill {
+  background-color: #4f46e5;
+}
+.dark .app-progress-fill {
+  background-color: #6366f1;
+}
+
+/* Badge pills: primary (indigo), success (green), warning (amber), danger (red), muted (gray) */
+.app-badge-primary {
+  background-color: #e0e7ff;
+  color: #4338ca;
+}
+.dark .app-badge-primary {
+  background-color: rgba(79, 70, 229, 0.3);
+  color: #a5b4fc;
+}
+
+.app-badge-success {
+  background-color: #dcfce7;
+  color: #166534;
+}
+.dark .app-badge-success {
+  background-color: rgba(22, 163, 74, 0.3);
+  color: #86efac;
+}
+
+.app-badge-warning {
+  background-color: #fef3c7;
+  color: #b45309;
+}
+.dark .app-badge-warning {
+  background-color: rgba(245, 158, 11, 0.3);
+  color: #fcd34d;
+}
+
+.app-badge-danger {
+  background-color: #fee2e2;
+  color: #b91c1c;
+}
+.dark .app-badge-danger {
+  background-color: rgba(220, 38, 38, 0.3);
+  color: #f87171;
+}
+
+.app-badge-muted {
+  background-color: #f3f4f6;
+  color: #4b5563;
+}
+.dark .app-badge-muted {
+  background-color: #374151;
+  color: #9ca3af;
+}
+
 /* Table Styles */
 .table-row-hover:hover td {
   background-color: rgba(241, 245, 249, 0.5);
@@ -231,4 +407,49 @@ input:-webkit-autofill:active {
 }
 .dark #mainContent [class*="border-gray"] {
   border-color: rgba(71, 85, 105, 0.8);
+}
+
+/* ========== Mobile & responsive (all pages) ========== */
+@media (max-width: 767px) {
+  /* Prevent zoom on input focus (iOS) when font-size >= 16px */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+
+  /* Touch-friendly tap targets (min 44px) */
+  button:not(.no-touch-target),
+  a[role="button"],
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Dashboard: main content padding on mobile */
+  #mainContent {
+    padding-left: max(0.75rem, env(safe-area-inset-left));
+    padding-right: max(0.75rem, env(safe-area-inset-right));
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+
+  /* Reduce motion for modals on small screens if preferred */
+  @media (prefers-reduced-motion: reduce) {
+    .animate-shake {
+      animation: none;
+    }
+  }
+}
+
+/* Safe area for fixed/sticky elements (dashboard sidebar, headers) */
+@supports (padding: env(safe-area-inset-top)) {
+  .safe-top {
+    padding-top: max(0.5rem, env(safe-area-inset-top));
+  }
+  .safe-bottom {
+    padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+  }
 }

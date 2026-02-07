@@ -3,11 +3,11 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Dashboard - School Management System</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="assets/js/tailwind-config.js?v=1770453908767"></script>
-    <link rel="stylesheet" href="assets/css/styles.css?v=1770453908767">
+    <script src="assets/js/tailwind-config.js?v=1770495781648"></script>
+    <link rel="stylesheet" href="assets/css/styles.css?v=1770495781648">
     <!-- Chart.js for charts -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -97,6 +97,24 @@
                 </div>
             </div>
             <div class="flex items-center space-x-4">
+                <!-- Notifications (admin: pending applications) -->
+                <div id="adminNotificationsContainer" class="relative hidden">
+                    <button id="adminNotificationsBtn" type="button" class="relative p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 transition-colors" aria-label="Notifications">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                        </svg>
+                        <span id="adminNotificationsBadge" class="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-red-500 text-white text-xs font-bold hidden">0</span>
+                    </button>
+                    <div id="adminNotificationsDropdown" class="hidden absolute right-0 mt-2 w-72 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 z-50 py-2">
+                        <div class="px-4 py-2 border-b border-gray-100 dark:border-gray-700">
+                            <p class="text-sm font-semibold text-gray-900 dark:text-white">Notifications</p>
+                        </div>
+                        <div id="adminNotificationsList" class="max-h-64 overflow-y-auto">
+                            <p class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">Loading...</p>
+                        </div>
+                        <a id="adminNotificationsViewAll" href="#" data-module="admissions" class="block px-4 py-3 text-sm font-medium text-primary-600 dark:text-primary-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 border-t border-gray-100 dark:border-gray-700">View all applications</a>
+                    </div>
+                </div>
                 <!-- Dark Mode Toggle -->
                 <button id="themeToggle"
                     class="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 transition-colors">
@@ -131,13 +149,13 @@
     </main>
 
     <!-- UI Components MUST load before app.js -->
-    <script src="assets/js/ui-components.js?v=1770453908767"></script>
+    <script src="assets/js/ui-components.js?v=1770495781648"></script>
     <!-- Load Supabase from CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
     <!-- Initialize Supabase client -->
-    <script src="assets/js/supabase-init.js?v=1770453908767"></script>
+    <script src="assets/js/supabase-init.js?v=1770495781648"></script>
     <!-- Load app as ES6 module -->
-    <script type="module" src="assets/js/app.js?v=1770453908767"></script>
+    <script type="module" src="assets/js/app.js?v=1770495781648"></script>
 </body>
 
 </html>

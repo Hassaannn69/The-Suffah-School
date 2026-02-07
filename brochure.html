@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="The Suffah School – Fee Schedule 2025-2026. Monthly fee structure and admission information.">
+    <title>Fee Schedule & Brochure – The Suffah School</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+    <script src="assets/js/supabase-init.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: { '500': '#6366f1', '600': '#4f46e5', '700': '#4338ca', '800': '#3730a3' }
+                    }
+                }
+            }
+        };
+    </script>
+    <link rel="stylesheet" href="assets/css/landing.css">
+    <link rel="stylesheet" href="assets/css/brochure.css">
+</head>
+<body class="bg-gray-50 text-gray-900 antialiased min-h-screen">
+    <header class="brochure-header bg-white border-b border-gray-200 sticky top-0 z-40 shadow-sm">
+        <div class="container mx-auto px-4 flex items-center justify-between h-16 md:h-20 gap-4">
+            <a href="index.html" class="flex items-center gap-2 flex-shrink-0">
+                <img src="assets/images/school-logo.jpg" alt="The Suffah School" class="w-10 h-10 rounded-lg object-cover shadow">
+                <span class="font-bold text-gray-900 text-lg">The Suffah School</span>
+            </a>
+            <div class="flex items-center gap-3">
+                <a href="apply.html" class="hidden sm:inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-lg font-medium transition-colors">
+                    Get Admission Now
+                </a>
+                <a href="index.html" class="text-gray-600 hover:text-indigo-600 font-medium transition-colors flex items-center gap-1.5">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+                    Home
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main class="brochure-main container mx-auto px-4 py-8 md:py-12">
+        <div id="brochure-content" class="brochure-content bg-white rounded-2xl shadow-xl overflow-hidden max-w-6xl mx-auto">
+            <!-- Top bar: title + Download PDF -->
+            <div class="brochure-top flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 p-6 md:p-8 border-b border-gray-100">
+                <div>
+                    <h1 class="text-2xl md:text-3xl font-bold text-indigo-900">THE SUFFAH SCHOOL</h1>
+                    <p class="text-gray-600 mt-1">Municipal Corporation Colony, Dila zak Road, Peshawar</p>
+                    <span id="brochure-version-badge" class="inline-block mt-3 px-4 py-1.5 bg-indigo-100 text-indigo-800 text-sm font-semibold rounded-lg">MONTHLY FEE SCHEDULE</span>
+                </div>
+                <div class="flex flex-wrap items-center gap-3">
+                    <button type="button" id="brochure-download-pdf" class="brochure-btn-pdf inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-lg font-medium transition-colors shadow-sm">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                        Download PDF
+                    </button>
+                    <a href="apply.html" class="sm:hidden inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-lg font-medium transition-colors">
+                        Get Admission Now
+                    </a>
+                </div>
+            </div>
+
+            <!-- Fee schedule only (this block + table + cards = PDF content); title shown only when generating PDF -->
+            <div id="brochure-pdf-content">
+                <div class="brochure-pdf-title p-6 md:p-8 pb-4">
+                    <h1 class="text-2xl md:text-3xl font-bold text-indigo-900">THE SUFFAH SCHOOL</h1>
+                    <p class="text-gray-600 mt-1">Municipal Corporation Colony, Dila zak Road, Peshawar</p>
+                    <span id="brochure-pdf-version-badge" class="inline-block mt-3 px-4 py-1.5 bg-indigo-100 text-indigo-800 text-sm font-semibold rounded-lg">MONTHLY FEE SCHEDULE</span>
+                </div>
+                <!-- Fee table: loaded from active fee structure (brochure.js) -->
+                <div id="brochure-fee-table-wrap" class="p-6 md:p-8 overflow-x-auto">
+                    <div id="brochure-fee-loading" class="py-8 text-center text-gray-500">Loading fee schedule…</div>
+                    <table id="brochure-fee-table" class="brochure-table w-full border-collapse text-sm hidden">
+                        <thead>
+                            <tr class="bg-gray-50 border-b-2 border-indigo-200">
+                                <th class="brochure-th text-left py-3 px-3">CLASS / GRADE</th>
+                                <th class="brochure-th py-3 px-3 text-right">BASE MONTHLY FEE</th>
+                                <th class="brochure-th py-3 px-3 text-right">ADMISSION FEE</th>
+                                <th class="brochure-th py-3 px-3 text-right">EXAM FEE</th>
+                                <th class="brochure-th py-3 px-3 text-right">MISC</th>
+                                <th class="brochure-th brochure-bg-green py-3 px-3 text-right">TOTAL</th>
+                            </tr>
+                        </thead>
+                        <tbody id="brochure-fee-tbody"></tbody>
+                    </table>
+                    <div id="brochure-fee-error" class="py-8 text-center text-amber-600 hidden">Fee schedule is not available. Please check back later.</div>
+                </div>
+                <div id="brochure-discount-note" class="px-6 md:px-8 pb-2 text-sm text-gray-600 hidden"></div>
+
+                <!-- Bottom cards: Important Notes + PSC Includes -->
+                <div class="grid md:grid-cols-2 gap-6 p-6 md:p-8 bg-gray-50 border-t border-gray-100">
+                <div class="brochure-card-notes bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
+                    <div class="flex items-center gap-2 mb-3">
+                        <span class="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-100 text-blue-600">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        </span>
+                        <h2 class="font-bold text-indigo-900">Important Notes</h2>
+                    </div>
+                    <p class="text-gray-600 text-sm leading-relaxed">
+                        PSC as per PSRA Regulation Section 7(4) iii. Children of present service staff will get <strong>50% discount</strong> and <strong>25% discount</strong> for children of Ex-service staff in monthly fee.
+                    </p>
+                </div>
+                <div class="brochure-card-psc bg-indigo-800 text-white rounded-xl p-6 shadow-sm">
+                    <div class="flex items-center gap-2 mb-4">
+                        <span class="flex items-center justify-center w-8 h-8 rounded-lg bg-white/20">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                        </span>
+                        <h2 class="font-bold">PSC Includes Services</h2>
+                    </div>
+                    <ul class="space-y-2 text-sm text-white/95">
+                        <li class="flex items-center gap-2"><span class="text-indigo-200">⚡</span> Generator & Solar</li>
+                        <li class="flex items-center gap-2"><span class="text-indigo-200">🔬</span> Sci Lab & Library</li>
+                        <li class="flex items-center gap-2"><span class="text-indigo-200">✏️</span> Stationary</li>
+                        <li class="flex items-center gap-2"><span class="text-indigo-200">🎭</span> Co-curricular Activities</li>
+                        <li class="flex items-center gap-2"><span class="text-indigo-200">💻</span> Digital Devices</li>
+                        <li class="flex items-center gap-2"><span class="text-indigo-200">🩹</span> 1st Aid</li>
+                        <li class="flex items-center gap-2"><span class="text-indigo-200">🔧</span> Building Maintenance</li>
+                        <li class="flex items-center gap-2"><span class="text-indigo-200">🎉</span> Days Celebration</li>
+                    </ul>
+                </div>
+            </div>
+            </div>
+            <!-- end #brochure-pdf-content -->
+
+            <!-- Get Admission Now CTA -->
+            <div class="brochure-cta p-6 md:p-8 text-center border-t border-gray-100 bg-white">
+                <p class="text-gray-600 mb-4">Ready to join? Start your application online.</p>
+                <a href="apply.html" class="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3.5 rounded-lg font-semibold transition-colors shadow-md">
+                    Get Admission Now
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+                </a>
+            </div>
+        </div>
+    </main>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="assets/js/brochure.js"></script>
+</body>
+</html>

@@ -101,7 +101,7 @@
                             <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
                             <span>Portal Login</span>
                         </a>
-                        <a href="login.html" class="landing-nav-link flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-3.5 rounded-xl font-semibold transition-colors active:scale-[0.98]">
+                        <a href="apply.html" class="landing-nav-link flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-3.5 rounded-xl font-semibold transition-colors active:scale-[0.98]">
                             <span>Apply Now</span>
                         </a>
                     </div>
@@ -110,7 +110,7 @@
                     <a href="#news" class="hidden md:flex items-center gap-1.5 text-gray-600 hover:text-indigo-600 font-medium transition-colors"><svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg><span>Campus Life</span></a>
                     <a href="#about" class="hidden md:flex items-center gap-1.5 text-gray-600 hover:text-indigo-600 font-medium transition-colors"><svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg><span>About</span></a>
                     <a href="login.html" class="hidden md:flex items-center gap-2 border border-gray-300 bg-white text-gray-800 hover:border-indigo-500 hover:bg-gray-50 px-4 py-2.5 rounded-lg font-medium transition-colors"><svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg><span>Portal Login</span></a>
-                    <a href="login.html" class="hidden md:inline-flex items-center bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-lg font-medium transition-colors">Apply Now</a>
+                    <a href="apply.html" class="hidden md:inline-flex items-center bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-lg font-medium transition-colors">Apply Now</a>
                 </nav>
             </div>
         `;
@@ -130,20 +130,6 @@
         el.innerHTML = `
             <section class="landing-hero w-full" style="${bgImage ? `background-image: url(${bgImage})` : ''}" ${bgImage ? 'data-has-hero-image="true"' : ''}>
                 <div id="hero-particles" class="landing-hero-particles" aria-hidden="true"></div>
-                <div class="landing-mat" aria-hidden="true">
-                    <div class="landing-mat-inner" id="landing-mat-inner">
-                        <div class="mat-panel-lg-back"></div>
-                        <div class="mat-panel-lg"></div>
-                        <div class="mat-dot-sm"></div>
-                        <div class="mat-circle-md"></div>
-                        <div class="mat-ring"></div>
-                        <div class="mat-arc"></div>
-                        <div class="mat-rect-bl"></div>
-                        <div class="mat-angular-bl"></div>
-                        <div class="mat-rect-ml"></div>
-                        <div class="mat-dot-tl"></div>
-                    </div>
-                </div>
                 <div class="landing-hero-overlay"></div>
                 <div class="container mx-auto px-4 py-16 md:py-24">
                     <div class="landing-hero-content max-w-2xl">
@@ -429,15 +415,19 @@
     function renderCta() {
         const el = document.getElementById('landing-cta');
         if (!el || !isSectionEnabled('cta')) { if (el) el.remove(); return; }
-        const cta = getContent('cta', { title: 'Ready to Join?', description: '', primary_label: 'Apply Now', primary_url: 'login.html', secondary_label: 'Contact', secondary_url: '#contact' });
+        const cta = getContent('cta', { title: 'Become Part of Our School Family!', description: 'Explore the opportunities that await your child. Apply now or book a campus visit today.', primary_label: 'Get Admission Now', primary_url: 'apply.html', secondary_label: 'Download Brochure', secondary_url: 'brochure.html' });
+        const primaryLabel = (cta.primary_label || 'Get Admission Now').trim();
+        const secondaryLabel = (cta.secondary_label || 'Download Brochure').trim();
+        const primaryHref = (/admission|apply/i.test(primaryLabel) || !cta.primary_url || cta.primary_url === 'index.html') ? 'apply.html' : (cta.primary_url || 'apply.html');
+        const secondaryHref = (/brochure/i.test(secondaryLabel) || cta.secondary_url === '#contact' || cta.secondary_url === '#') ? 'brochure.html' : (cta.secondary_url || 'brochure.html');
         el.innerHTML = `
             <section id="cta" class="landing-section landing-cta landing-fade-in py-16 md:py-24">
                 <div class="container mx-auto px-4 text-center">
-                    <h2 class="text-3xl md:text-4xl font-bold text-white mb-4">${escapeHtml(cta.title || '')}</h2>
-                    <p class="text-white/90 text-lg mb-8 max-w-2xl mx-auto">${escapeHtml(cta.description || '')}</p>
+                    <h2 class="text-3xl md:text-4xl font-bold text-white mb-4">${escapeHtml(cta.title || 'Become Part of Our School Family!')}</h2>
+                    <p class="text-white/90 text-lg mb-8 max-w-2xl mx-auto">${escapeHtml(cta.description || 'Explore the opportunities that await your child. Apply now or book a campus visit today.')}</p>
                     <div class="flex flex-wrap justify-center gap-4">
-                        <a href="${escapeAttr(cta.primary_url || 'login.html')}" class="bg-white text-indigo-600 px-6 py-3 rounded-lg font-medium hover:bg-gray-100 transition-colors">${escapeHtml(cta.primary_label || 'Apply Now')}</a>
-                        <a href="${escapeAttr(cta.secondary_url || '#contact')}" class="border-2 border-white text-white px-6 py-3 rounded-lg font-medium hover:bg-white/10 transition-colors">${escapeHtml(cta.secondary_label || 'Contact')}</a>
+                        <a href="${escapeAttr(primaryHref)}" class="bg-white text-indigo-600 px-6 py-3 rounded-lg font-medium hover:bg-gray-100 transition-colors">${escapeHtml(primaryLabel || 'Get Admission Now')}</a>
+                        <a href="${escapeAttr(secondaryHref)}" class="border-2 border-white text-white px-6 py-3 rounded-lg font-medium hover:bg-white/10 transition-colors">${escapeHtml(secondaryLabel || 'Download Brochure')}</a>
                     </div>
                 </div>
             </section>

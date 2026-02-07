@@ -223,7 +223,9 @@ async function handleSubmit(e) {
         return;
     }
 
-    // Set Loading State
+    const teacher = teachersData.find(t => t.id === state.selectedTeacher);
+    const [classId, className, section] = state.selectedClass.split('|');
+
     const btn = document.getElementById('assignBtn');
     const originalText = btn.innerHTML;
     btn.disabled = true;
@@ -235,48 +237,45 @@ async function handleSubmit(e) {
         Assigning...
     `;
 
-    // Simulate Network Request
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    const toast = window.toast || { success: (m) => alert(m), error: (m) => alert(m) };
 
-    // Log Logic
-    const teacher = teachersData.find(t => t.id === state.selectedTeacher);
-    const [classId, className, section] = state.selectedClass.split('|');
-
-    const assignmentData = {
+    const { error } = await supabase.from('teacher_assignments').insert([{
         teacher_id: state.selectedTeacher,
-        teacher_name: teacher.name,
         class_id: classId,
-        class_name: className,
-        section: section,
+        section: section || '',
         subject: state.selectedSubject,
-        assigned_at: new Date().toISOString()
-    };
+        role: 'subject_teacher',
+        is_active: true
+    }]);
 
-    console.log('--------------------------------');
-    console.log(' CLASS ASSIGNMENT SUCCESSFUL');
-    console.log('--------------------------------');
-    console.log('Data:', assignmentData);
+    if (error) {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+        const msg = error.code === '23505' ? 'This teacher is already assigned to this class, section and subject.' : error.message;
+        toast.error(msg);
+        return;
+    }
 
-    // Show Success Notification
-    alert(`Success!\n\n${teacher.name} has been assigned to:\n${className} (${section}) - ${state.selectedSubject}`);
+    toast.success(`${teacher.name} has been assigned to ${className} (${section}) - ${state.selectedSubject}`);
 
-    // Reset Form
     e.target.reset();
     state.selectedTeacher = '';
     state.selectedClass = '';
     state.selectedSubject = '';
-    updateSubjectDropdown(null); // Reset subject dropdown
+    updateSubjectDropdown(null);
 
-    // Reset Button
     btn.innerHTML = `
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
         Assigned!
     `;
     btn.classList.replace('bg-primary-600', 'bg-green-600');
-
     setTimeout(() => {
         btn.innerHTML = originalText;
         btn.disabled = false;
         btn.classList.replace('bg-green-600', 'bg-primary-600');
     }, 2000);
+
+    if (typeof window.refreshClassDetailIfOpen === 'function') {
+        window.refreshClassDetailIfOpen(classId);
+    }
 }

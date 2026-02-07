@@ -35,10 +35,10 @@
     -- Enable RLS
     ALTER TABLE online_applications ENABLE ROW LEVEL SECURITY;
 
-    -- Admin can do everything
+    -- Admin can do everything (JWT: user_metadata or app_metadata)
     CREATE POLICY "Admin full access" ON online_applications
         FOR ALL USING (
-            auth.uid() IN (SELECT id FROM auth.users WHERE raw_user_meta_data->>'role' = 'admin')
+            COALESCE(auth.jwt() -> 'user_metadata' ->> 'role', auth.jwt() -> 'app_metadata' ->> 'role') = 'admin'
         );
 
     -- Public can insert (for landing page form)

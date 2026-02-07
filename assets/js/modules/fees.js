@@ -196,10 +196,19 @@ function renderPaymentModalTemplate() {
 async function initializeData() {
     try {
         const { data: feesData, error } = await supabase.from('fees').select('*, students(*)').order('generated_at', { ascending: false });
+        // Payment history: fetch ALL records (high limit so history is never truncated when adding new payments)
         let allPayments;
-        const { data: paymentsWithReceipts, error: payErr } = await supabase.from('fee_payments').select('*, receipts(receipt_number, payment_date, payment_method, total_paid)').order('payment_date', { ascending: false });
+        const { data: paymentsWithReceipts, error: payErr } = await supabase
+            .from('fee_payments')
+            .select('*, receipts(receipt_number, payment_date, payment_method, total_paid)')
+            .order('payment_date', { ascending: false })
+            .limit(50000);
         if (payErr) {
-            const { data: paymentsOnly } = await supabase.from('fee_payments').select('*').order('payment_date', { ascending: false });
+            const { data: paymentsOnly } = await supabase
+                .from('fee_payments')
+                .select('*')
+                .order('payment_date', { ascending: false })
+                .limit(50000);
             allPayments = paymentsOnly || [];
         } else {
             allPayments = paymentsWithReceipts || [];
@@ -233,6 +242,7 @@ async function initializeData() {
                     id: s.id,
                     name: s.name,
                     class: s.class,
+                    section: s.section,
                     photo_url: s.photo_url,
                     totalFees: 0,
                     paidAmount: 0,
@@ -248,6 +258,30 @@ async function initializeData() {
             student.fees.push(fee);
             f.totalAssigned += net;
             f.allFees.push(fee);
+        });
+
+        // Include ALL linked siblings in each family (e.g. new admissions or zero-fee students)
+        // so every sibling is visible and switchable in the fee profile
+        const { data: allStudents } = await supabase
+            .from('students')
+            .select('id, name, class, section, photo_url, family_code, father_cnic')
+            .limit(50000);
+        (allStudents || []).forEach(s => {
+            const key = s.family_code || s.father_cnic || s.id;
+            const f = familiesMap.get(key);
+            if (!f) return;
+            if (f.students.has(s.id)) return;
+            f.students.set(s.id, {
+                id: s.id,
+                name: s.name,
+                class: s.class,
+                section: s.section,
+                photo_url: s.photo_url,
+                totalFees: 0,
+                paidAmount: 0,
+                outstanding: 0,
+                fees: []
+            });
         });
 
         allFamilies = Array.from(familiesMap.values()).map(f => {
@@ -511,17 +545,20 @@ window.viewFamilyProfile = (key) => {
             <div class="mb-8">
                 <p class="text-[11px] font-black text-slate-500 uppercase tracking-widest mb-4">Select Student</p>
                 <div class="sibling-selector-bar no-scrollbar">
-                    ${Array.from(family.students.values()).map(s => `
+                    ${Array.from(family.students.values()).map(s => {
+                        const classLabel = s.class ? ('Class ' + s.class + (s.section ? ' (' + s.section + ')' : '')) : (s.section || '—');
+                        return `
                         <div class="sibling-card ${s.id === currentStudentId ? 'active' : ''} mb-2" onclick="window.profileSelectStudent('${s.id}')">
                             <div class="avatar-sm overflow-hidden">
-                                ${s.photo_url ? `<img src="${s.photo_url}" class="w-full h-full object-cover">` : s.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                                ${s.photo_url ? `<img src="${s.photo_url}" class="w-full h-full object-cover">` : (s.name || '').split(' ').map(n => n[0]).join('').slice(0, 2)}
                             </div>
                             <div>
-                                <p class="text-sm font-bold text-white leading-tight truncate max-w-[120px]">${s.name}</p>
-                                <p class="text-[10px] text-slate-500 font-bold uppercase mt-0.5">${s.class}</p>
+                                <p class="text-sm font-bold text-white leading-tight truncate max-w-[120px]">${s.name || '—'}</p>
+                                <p class="text-[10px] text-slate-500 font-bold uppercase mt-0.5">${classLabel || '—'}</p>
                             </div>
                         </div>
-                    `).join('')}
+                    `;
+                    }).join('')}
                 </div>
             </div>
 
@@ -641,10 +678,6 @@ window.renderStudentFinancials = async () => {
                                  <button onclick="window.openPaymentModal('${currentFamily.key}')" class="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-500 transition-colors font-bold text-xs flex items-center gap-2 shadow-lg shadow-emerald-600/20">
                                     <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
                                     Record Payment
-                                 </button>
-                                 <button class="bg-slate-800 text-slate-400 p-2 rounded-lg hover:text-white transition-colors" title="Filter"><svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" /></svg></button>
-                                 <button onclick="window.printStudentReceipt('${student.id}')" class="bg-slate-800 text-slate-400 p-2 rounded-lg hover:text-white transition-colors" title="Download Statement">
-                                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                                  </button>
                             </div>
                         </div>
@@ -777,7 +810,7 @@ window.openPaymentModal = (key) => {
     if (!f) return;
 
     document.getElementById('paymentTargetId').value = key;
-    document.getElementById('paymentAmount').value = f.totalDue;
+    document.getElementById('paymentAmount').value = '';
     const today = new Date();
     document.getElementById('paymentDate').value = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
     document.getElementById('paymentModalSubtitle').textContent = `Recording payment for ${f.seniorMember} (${f.code})`;
@@ -1046,12 +1079,13 @@ window.recalculateAllocations = () => {
         }
         if (val < 0) {
             val = 0;
-            input.value = 0;
+            input.value = '';
         }
         total += val;
     });
 
-    document.getElementById('paymentAmount').value = total;
+    const paymentAmountEl = document.getElementById('paymentAmount');
+    paymentAmountEl.value = total === 0 ? '' : total;
     document.getElementById('totalAmountDisplay').textContent = total.toLocaleString();
     document.getElementById('allocatedAmountDisplay').textContent = total.toLocaleString();
 };

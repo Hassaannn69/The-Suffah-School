@@ -10,11 +10,50 @@ let filteredApps = [];
 let selectedApp = null;
 let currentPage = 1;
 const PAGE_SIZE = 4;
-let currentFilter = 'all';
+let currentFilter = 'pending';
 let searchQuery = '';
+let fetchError = null;
+
+// Roll number helper (mirrors add_student for creating students from applications)
+const CLASS_MAP = {
+    'play group': '01', 'pg': '01', 'prep': '02',
+    'class 1': '03', '1': '03', 'grade 1': '03', 'class 2': '04', '2': '04', 'grade 2': '04',
+    'class 3': '05', '3': '05', 'grade 3': '05', 'class 4': '06', '4': '06', 'grade 4': '06',
+    'class 5': '07', '5': '07', 'grade 5': '07', 'class 6': '08', '6': '08', 'grade 6': '08',
+    'class 7': '09', '7': '09', 'grade 7': '09', 'class 8': '10', '8': '10', 'grade 8': '10',
+    'class 9': '11', '9': '11', 'grade 9': '11', 'class 10': '12', '10': '12', 'grade 10': '12'
+};
+function getClassCode(className) {
+    const n = (className || '').toString().toLowerCase().replace(/\s*\([a-z]\)$/i, '').trim();
+    return CLASS_MAP[n] || '99';
+}
+async function getNextRollNumber(className) {
+    const year = new Date().getFullYear();
+    const yearCode = year.toString().slice(-2);
+    const classCode = getClassCode(className);
+    try {
+        const { data, error } = await supabase
+            .from('students')
+            .select('roll_no')
+            .eq('admission_year', year)
+            .ilike('class', `%${(className || '').toString().split('(')[0].trim()}%`)
+            .order('roll_no', { ascending: false })
+            .limit(1);
+        if (error) throw error;
+        let next = 1;
+        if (data && data.length > 0) {
+            const m = (data[0].roll_no || '').match(/SUF\d{2}\d{2}(\d{4})$/);
+            if (m) next = parseInt(m[1], 10) + 1;
+        }
+        return `SUF${yearCode}${classCode}${next.toString().padStart(4, '0')}`;
+    } catch (err) {
+        return `SUF${yearCode}${classCode}0001`;
+    }
+}
 
 // ── Fetch ──
 async function fetchApplications() {
+    fetchError = null;
     const { data, error } = await supabase
         .from('online_applications')
         .select('*')
@@ -22,6 +61,7 @@ async function fetchApplications() {
 
     if (error) {
         console.error('Error fetching applications:', error);
+        fetchError = error.message || 'Could not load applications.';
         applications = [];
     } else {
         applications = data || [];
@@ -30,13 +70,24 @@ async function fetchApplications() {
 }
 
 function applyFilters() {
-    filteredApps = applications.filter(app => {
-        const matchesFilter = currentFilter === 'all' || app.status === currentFilter;
+    let base = applications;
+    if (currentFilter === 'all') {
+        base = applications;
+    } else if (currentFilter === 'approved') {
+        base = applications.filter(a => a.status === 'approved');
+    } else if (currentFilter === 'pending') {
+        base = applications.filter(a => a.status === 'pending');
+    } else if (currentFilter === 'rejected') {
+        base = applications.filter(a => a.status === 'rejected');
+    } else {
+        base = applications;
+    }
+    filteredApps = base.filter(app => {
         const matchesSearch = !searchQuery ||
             app.student_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
             app.parent_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
             app.grade_applying?.toLowerCase().includes(searchQuery.toLowerCase());
-        return matchesFilter && matchesSearch;
+        return matchesSearch;
     });
     currentPage = 1;
 }
@@ -82,14 +133,32 @@ function avatarColor(name) {
     return colors[Math.abs(hash) % colors.length];
 }
 
+// Mark all unseen admission requests as seen (persistent badge state)
+async function markAllAdmissionRequestsSeen() {
+    const { error } = await supabase
+        .from('online_applications')
+        .update({ is_seen: true })
+        .eq('is_seen', false);
+    if (error) console.warn('Could not mark admission requests as seen:', error);
+}
+
 // ── Render ──
 export async function render(container) {
     container.innerHTML = `<div class="admissions-loading flex items-center justify-center py-24">
         <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500"></div>
     </div>`;
 
+    await markAllAdmissionRequestsSeen();
+    if (typeof window.fetchAndUpdateAdminNotificationCount === 'function') {
+        window.fetchAndUpdateAdminNotificationCount();
+    }
+
     await fetchApplications();
     renderPage(container);
+
+    if (typeof window.markAdminNotificationsSeen === 'function') {
+        window.markAdminNotificationsSeen();
+    }
 }
 
 function renderPage(container) {
@@ -97,14 +166,22 @@ function renderPage(container) {
     const totalPages = Math.max(1, Math.ceil(filteredApps.length / PAGE_SIZE));
     const pageApps = filteredApps.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
+    const errorBanner = fetchError
+        ? `<div class="rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 text-sm flex items-center gap-2">
+            <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <span>${fetchError} Ensure you are logged in as an administrator and that your user has <strong>User Metadata</strong> or <strong>App Metadata</strong> set to <code class="bg-gray-800 px-1 rounded">{"role": "admin"}</code> in Supabase Auth. If it still fails, check the browser console for the exact error.</span>
+           </div>`
+        : '';
+
     container.innerHTML = `
         <div class="flex flex-col lg:flex-row gap-6 h-full">
             <!-- LEFT: Main panel -->
             <div class="flex-1 flex flex-col gap-6 min-w-0">
+                ${errorBanner}
                 <!-- Header -->
                 <div>
                     <h1 class="text-2xl font-bold text-white">Admissions Review</h1>
-                    <p class="text-gray-400 text-sm mt-1">Manage online applications</p>
+                    <p class="text-gray-400 text-sm mt-1">Manage online applications (student applications from apply page)</p>
                 </div>
 
                 <!-- Stats Cards -->
@@ -392,6 +469,95 @@ function bindEvents(container) {
     }
 }
 
+async function createStudentFromApplication(app) {
+    const grade = (app.grade_applying || '').toString().trim() || '1';
+    const className = grade.match(/^\d+$/) ? `Grade ${grade}` : grade;
+    const roll_no = await getNextRollNumber(className);
+    const admissionDate = new Date().toISOString().split('T')[0];
+    const year = new Date().getFullYear();
+    const phone = (app.parent_contact || '').toString().trim() || '';
+    const email = (app.parent_email || '').toString().trim() || `${roll_no}@student.suffah.school`;
+
+    const studentData = {
+        name: (app.student_name || '').trim(),
+        roll_no,
+        class: className,
+        section: 'A',
+        email,
+        phone: phone || null,
+        gender: app.gender || null,
+        date_of_birth: app.date_of_birth || null,
+        password_changed: false,
+        father_name: (app.parent_name || '').trim() || null,
+        father_cnic: null,
+        from_which_school: (app.previous_school || '').trim() || null,
+        family_code: (app.family_code || '').trim() || null,
+        admission_date: admissionDate,
+        admission_year: year
+    };
+
+    let feeResult = null;
+    try {
+        const { applyFeeStructureAtAdmission } = await import('./fee_admission.js');
+        feeResult = await applyFeeStructureAtAdmission(supabase, {
+            className,
+            familyCode: studentData.family_code || null,
+            isStaffChild: false,
+            earlyAdmission: false
+        });
+    } catch (e) {
+        console.warn('Fee structure at admission:', e);
+    }
+    if (feeResult) {
+        studentData.fee_structure_version_id = feeResult.versionId;
+        if (feeResult.tuition_fee != null) studentData.tuition_fee = feeResult.tuition_fee;
+        if (feeResult.admission_fee != null) studentData.admission_fee = feeResult.admission_fee;
+    }
+
+    const { data, error } = await supabase.from('students').insert([studentData]).select();
+    if (error) {
+        console.error('Create student from application:', error);
+        throw error;
+    }
+    const student = data && data[0] ? data[0] : null;
+    if (student && feeResult) {
+        try {
+            const { saveStudentFeeSnapshot } = await import('./fee_admission.js');
+            await saveStudentFeeSnapshot(supabase, student.id, feeResult, {
+                tuition_fee: feeResult.tuition_fee,
+                admission_fee: feeResult.admission_fee
+            });
+        } catch (e) {
+            console.warn('Save fee snapshot:', e);
+        }
+    }
+    if (student && student.date_of_birth && window.SupabaseLib && window.SUPABASE_URL && window.SUPABASE_ANON_KEY) {
+        try {
+            await syncStudentAuth(student);
+        } catch (e) {
+            console.warn('Admitted student auth sync skipped:', e);
+        }
+    }
+    return student;
+}
+
+async function syncStudentAuth(student) {
+    const password = student.date_of_birth.split('-').reverse().join('');
+    const loginEmail = `${(student.roll_no || '').toLowerCase()}@student.suffah.school`;
+    const tempClient = window.SupabaseLib.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY, {
+        auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
+    });
+    const { data, error } = await tempClient.auth.signUp({
+        email: loginEmail,
+        password,
+        options: { data: { role: 'student', name: student.name, roll_no: student.roll_no } }
+    });
+    if (error && !error.message.includes('already registered')) throw error;
+    if (data && data.user) {
+        await supabase.from('students').update({ auth_id: data.user.id }).eq('id', student.id);
+    }
+}
+
 async function updateStatus(container, newStatus) {
     if (!selectedApp) return;
 
@@ -413,14 +579,25 @@ async function updateStatus(container, newStatus) {
         return;
     }
 
-    // Update local state
+    if (newStatus === 'approved') {
+        try {
+            const student = await createStudentFromApplication(selectedApp);
+            showToast(student
+                ? `Application approved. Student admitted (${student.name}, ${student.roll_no}).`
+                : 'Application approved.', 'success');
+        } catch (err) {
+            showToast('Application approved but failed to admit student. Add student manually from Students.', 'error');
+        }
+    } else {
+        showToast(`Application ${newStatus} successfully`, 'success');
+    }
+
     selectedApp.status = newStatus;
     selectedApp.admin_notes = notes;
     const idx = applications.findIndex(a => a.id === selectedApp.id);
     if (idx !== -1) applications[idx] = { ...selectedApp };
     applyFilters();
 
-    showToast(`Application ${newStatus} successfully`, 'success');
     renderPage(container);
 }
 
