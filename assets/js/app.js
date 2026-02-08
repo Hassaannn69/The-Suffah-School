@@ -110,11 +110,13 @@ async function initApp() {
         window.backfillFamilyCodesV2();
         // Restore last opened page so reloads don't send you back to dashboard home
         const lastModule = localStorage.getItem('suffah_last_module');
-        const allowedModules = ['dashboard', 'student-dashboard', 'students', 'add_student', 'admissions', 'student_promotions', 'teachers', 'assign_class', 'timetable', 'teacher_attendance', 'payroll', 'classes', 'fees', 'fee_generation', 'fee_structure', 'fee_reports', 'fee_discounts', 'expenses', 'staff', 'landing_page_editor', 'settings'];
+        const allowedModules = ['dashboard', 'student-dashboard', 'students', 'add_student', 'admissions', 'student_promotions', 'teachers', 'assign_class', 'timetable', 'teacher_attendance', 'payroll', 'classes', 'fees', 'fee_generation', 'fee_structure', 'fee_reports', 'fee_discounts', 'expenses', 'staff', 'landing_page_editor', 'settings', 'attendance_reports', 'student_reports', 'academic_reports', 'assignment_reports'];
         const initialModule = (lastModule && allowedModules.includes(lastModule)) ? lastModule : 'dashboard';
-        loadModule(initialModule);
+        await loadModule(initialModule);
         // Auto-expand dropdown that contains the active sub-module
         autoExpandDropdown(initialModule);
+        // Initialize premium dropdowns site-wide
+        window.initializePremiumDropdowns();
         startUpdateCheck(); // Show "Website updated" banner when code changes — no auto-refresh
     } catch (err) {
         console.error('Error initializing app:', err);
@@ -132,37 +134,54 @@ async function initApp() {
     }
 }
 
+// Global Data Refresh System - ensures changes in one module reflect in others
+window.broadcastDataChange = (entityType) => {
+    console.log(`[App] Data change broadcast: ${entityType}`);
+    window.dispatchEvent(new CustomEvent('appDataChange', { detail: { type: entityType } }));
+};
+
 // Sidebar Navigation Config
 const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: 'M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z', roles: ['admin', 'teacher', 'accountant', 'student'] },
+
+    // Admin & Staff Students Menu
     {
         id: 'students-menu',
         label: 'Students',
         icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z',
-        roles: ['admin', 'teacher', 'accountant'],
+        roles: ['admin', 'accountant'],
         isDropdown: true,
         submenu: [
             { id: 'add_student', label: 'Add a Student', icon: 'M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z', roles: ['admin'] },
-            { id: 'students', label: 'Student List', icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z', roles: ['admin', 'teacher', 'accountant'] },
+            { id: 'students', label: 'Student List', icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z', roles: ['admin', 'accountant'] },
             { id: 'admissions', label: 'Online Admission', icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z', roles: ['admin'] },
             { id: 'student_promotions', label: 'Student Promotions', icon: 'M13 7h8m0 0v8m0-8l-8 8-4-4-6 6', roles: ['admin'] }
         ]
     },
+
+    // Teacher Portal Specific Menu Items
+    { id: 'teacher-classes', label: 'My Classes', icon: 'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10', roles: ['teacher'], targetModule: 'classes' },
+    { id: 'teacher-attendance', label: 'Attendance', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4', roles: ['teacher'] },
+    { id: 'teacher-assignments', label: 'Assignments', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01', roles: ['teacher'] },
+    { id: 'teacher-exams', label: 'Exams & Marks', icon: 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z', roles: ['teacher'] },
+    { id: 'teacher-timetable', label: 'Timetable', icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z', roles: ['teacher'] },
+
+    // Admin & Accounting Modules
     {
         id: 'teachers-menu',
         label: 'Teachers',
         icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z',
-        roles: ['admin', 'teacher'],
+        roles: ['admin'],
         isDropdown: true,
         submenu: [
             { id: 'teachers', label: 'Manage Teachers', icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z', roles: ['admin'] },
             { id: 'assign_class', label: 'Assign Class', icon: 'M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z', roles: ['admin'] },
-            { id: 'timetable', label: 'Timetable', icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z', roles: ['admin', 'teacher'] },
             { id: 'teacher_attendance', label: 'Attendance', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4', roles: ['admin'] },
+            { id: 'timetable', label: 'Manage Timetable', icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z', roles: ['admin'] },
             { id: 'payroll', label: 'Payroll', icon: 'M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z', roles: ['admin', 'accountant'] }
         ]
     },
-    { id: 'classes', label: 'Classes', icon: 'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10', roles: ['admin', 'teacher'] },
+    { id: 'classes', label: 'Classes', icon: 'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10', roles: ['admin'] },
     {
         id: 'fees-menu',
         label: 'Fees',
@@ -178,8 +197,23 @@ const menuItems = [
         ]
     },
     { id: 'expenses', label: 'Expenses', icon: 'M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z', roles: ['admin', 'accountant'] },
+    {
+        id: 'reports-menu',
+        label: 'Reports',
+        icon: 'M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
+        roles: ['admin', 'accountant', 'teacher'],
+        isDropdown: true,
+        submenu: [
+            { id: 'fee_reports', label: 'Financial Reports', icon: 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2', roles: ['admin', 'accountant'] },
+            { id: 'student_reports', label: 'Student Analytics', icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1', roles: ['admin'] },
+            { id: 'attendance_reports', label: 'Attendance Analytics', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7', roles: ['admin', 'teacher'] },
+            { id: 'academic_reports', label: 'Academic Performance', icon: 'M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z', roles: ['admin', 'teacher'] },
+            { id: 'assignment_reports', label: 'Homework & Assignments', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7', roles: ['admin', 'teacher'] }
+        ]
+    },
     { id: 'staff', label: 'Staff & Users', icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z', roles: ['admin'] },
     { id: 'landing_page_editor', label: 'Landing Page', icon: 'M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0h.5a2.5 2.5 0 001.5-4.065M3.055 11H3a2 2 0 00-2 2v2a2 2 0 002 2h2.945M21 12v.5a2.5 2.5 0 01-2.5 2.5h-.5a2 2 0 01-2-2v-1.055M21 12V10a2 2 0 00-2-2h-2.945', roles: ['admin'] },
+    { id: 'teacher-profile', label: 'My Profile', icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z', roles: ['teacher'] },
     { id: 'settings', label: 'Settings', icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z', roles: ['admin'] }
 ];
 
@@ -446,6 +480,7 @@ async function loadModule(moduleId) {
     const titleMap = {
         'dashboard': 'Dashboard',
         'student-dashboard': 'My Dashboard',
+        'teacher-dashboard': 'Teacher Dashboard',
         'students': 'Student List',
         'add_student': 'Add a Student',
         'admissions': 'Admissions Review',
@@ -456,6 +491,11 @@ async function loadModule(moduleId) {
         'teacher_attendance': 'Teacher Attendance',
         'payroll': 'Payroll',
         'classes': 'Classes',
+        'teacher-classes': 'My Classes',
+        'teacher-attendance': 'Mark Student Attendance',
+        'teacher-assignments': 'Assignments & Homework',
+        'teacher-exams': 'Exams & Marks',
+        'teacher-profile': 'Account Settings',
         'fees': 'Fee Collection',
         'fee_generation': 'Generate Fees',
         'fee_structure': 'Fee Structure',
@@ -464,7 +504,11 @@ async function loadModule(moduleId) {
         'expenses': 'Expenses',
         'staff': 'Staff Management',
         'landing_page_editor': 'Landing Page Editor',
-        'settings': 'Settings'
+        'settings': 'Settings',
+        'attendance_reports': 'Attendance Analytics',
+        'student_reports': 'Student Analytics',
+        'academic_reports': 'Academic Performance',
+        'assignment_reports': 'Homework & Assignments'
     };
     pageTitle.textContent = titleMap[moduleId] || moduleId.charAt(0).toUpperCase() + moduleId.slice(1);
 
@@ -492,17 +536,28 @@ async function loadModule(moduleId) {
                 throw new Error('Supabase client not initialized. Please refresh the page.');
             }
 
-            // Role-based routing: Students get their own dashboard
+            // Role-based routing
             let actualModuleId = moduleId;
-            if (moduleId === 'dashboard' && currentRole === 'student') {
-                actualModuleId = 'student-dashboard';
+
+            // Map moduleId to a target file if specified in menuItems configuration
+            const menuItem = menuItems.find(m => m.id === moduleId) ||
+                menuItems.flatMap(m => m.submenu || []).find(m => m.id === moduleId);
+            if (menuItem && menuItem.targetModule) {
+                actualModuleId = menuItem.targetModule;
             }
 
-            const APP_VERSION = '1.0.4'; // Increment this when modules change
+            if (moduleId === 'dashboard') {
+                if (currentRole === 'student') actualModuleId = 'student-dashboard';
+                else if (currentRole === 'teacher') actualModuleId = 'teacher-dashboard';
+            }
+
+            const APP_VERSION = '1.0.7'; // Increment this when modules change
             const module = await import(`./modules/${actualModuleId}.js?v=${APP_VERSION}`);
             if (module && module.render) {
                 await module.render(mainContent);
                 disableAutocompleteSuggestions(mainContent);
+                // Initialize premium dropdowns after module render
+                window.initializePremiumDropdowns(mainContent);
             } else {
                 mainContent.innerHTML = `
                     <div class="text-center py-10">
@@ -542,7 +597,7 @@ window.openDashboardReport = function (reportId) {
 };
 
 // Global utility: sort class names in natural order (Play Group, Nursery, Prep, Class 1-11, etc.)
-window.sortClassesNatural = function(arr, key) {
+window.sortClassesNatural = function (arr, key) {
     const rank = (name) => {
         if (!name) return 9999;
         const n = name.toLowerCase().trim();
@@ -560,7 +615,7 @@ window.sortClassesNatural = function(arr, key) {
 };
 
 // ── One-time backfill: assign family codes to existing students ──
-window.backfillFamilyCodes = async function() {
+window.backfillFamilyCodes = async function () {
     const MIGRATION_KEY = 'suffah_family_code_backfill_v1';
     if (localStorage.getItem(MIGRATION_KEY)) return;
 
@@ -638,7 +693,7 @@ window.backfillFamilyCodes = async function() {
 };
 
 // ── V2 backfill: normalize old-format family codes (e.g. "003") to FAM-XXX ──
-window.backfillFamilyCodesV2 = async function() {
+window.backfillFamilyCodesV2 = async function () {
     const MIGRATION_KEY = 'suffah_family_code_backfill_v2';
     if (localStorage.getItem(MIGRATION_KEY)) return;
 
@@ -718,6 +773,120 @@ window.backfillFamilyCodesV2 = async function() {
     }
 };
 
+// ── Premium Dropdown Enhancement Engine ──
+window.initializePremiumDropdowns = function (container = document) {
+    const selects = container.querySelectorAll('select:not(.enhanced)');
+
+    selects.forEach(select => {
+        if (select.closest('.custom-select-wrapper')) return;
+        select.classList.add('enhanced');
+
+        // Hide native select completely
+        select.style.opacity = '0';
+        select.style.position = 'absolute';
+        select.style.pointerEvents = 'none';
+        select.style.width = '1px';
+        select.style.height = '1px';
+        select.style.overflow = 'hidden';
+
+        // Create wrapper
+        const wrapper = document.createElement('div');
+        wrapper.className = 'custom-select-wrapper';
+        if (select.id) wrapper.id = `wrapper-${select.id}`;
+        select.parentNode.insertBefore(wrapper, select);
+        wrapper.appendChild(select);
+
+        // Create custom trigger
+        const trigger = document.createElement('div');
+        const originalClasses = select.className.replace('enhanced', '').trim();
+        trigger.className = originalClasses + ' custom-select-trigger flex items-center justify-between cursor-pointer';
+
+        const updateTriggerText = () => {
+            const selected = select.options[select.selectedIndex];
+            trigger.textContent = selected ? selected.textContent : (select.options[0]?.textContent || 'Select...');
+        };
+        updateTriggerText();
+        wrapper.appendChild(trigger);
+
+        // Create custom list
+        const listContainer = document.createElement('div');
+        listContainer.className = 'custom-select-list';
+
+        const updateList = () => {
+            listContainer.innerHTML = '';
+            Array.from(select.options).forEach((opt, idx) => {
+                const item = document.createElement('div');
+                item.className = `custom-select-item ${select.selectedIndex === idx ? 'selected' : ''}`;
+                item.textContent = opt.textContent;
+                item.dataset.value = opt.value;
+                item.dataset.index = idx;
+
+                item.onclick = (e) => {
+                    e.stopPropagation();
+                    select.selectedIndex = idx;
+                    select.dispatchEvent(new Event('change', { bubbles: true }));
+                    wrapper.classList.remove('open');
+                    updateTriggerText();
+                    updateList();
+                };
+                listContainer.appendChild(item);
+            });
+            updateTriggerText();
+        };
+
+        updateList();
+        wrapper.appendChild(listContainer);
+
+        // Toggle list
+        trigger.onclick = (e) => {
+            e.stopPropagation();
+            const isOpen = wrapper.classList.contains('open');
+            document.querySelectorAll('.custom-select-wrapper.open').forEach(w => {
+                if (w !== wrapper) w.classList.remove('open');
+            });
+            wrapper.classList.toggle('open');
+            if (wrapper.classList.contains('open')) updateList();
+        };
+
+        // Sync with native select changes
+        const observer = new MutationObserver(() => {
+            updateList();
+        });
+        observer.observe(select, { childList: true, subtree: true, attributes: true });
+
+        select.addEventListener('change', () => {
+            updateTriggerText();
+            updateList();
+        });
+    });
+};
+
+// Auto-run on document changes for dynamic content
+if (!window.globalSelectObserverInitialized) {
+    const globalSelectObserver = new MutationObserver((mutations) => {
+        let shouldInit = false;
+        mutations.forEach(mutation => {
+            if (mutation.addedNodes.length) {
+                mutation.addedNodes.forEach(node => {
+                    if (node.nodeType === 1 && (node.tagName === 'SELECT' || node.querySelector?.('select'))) {
+                        shouldInit = true;
+                    }
+                });
+            }
+        });
+        if (shouldInit) window.initializePremiumDropdowns();
+    });
+    globalSelectObserver.observe(document.body, { childList: true, subtree: true });
+    window.globalSelectObserverInitialized = true;
+}
+
+// Global click to close
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('.custom-select-wrapper')) {
+        document.querySelectorAll('.custom-select-wrapper.open').forEach(w => w.classList.remove('open'));
+    }
+});
+
 // --- Update check: show "Website updated" banner when new code is deployed; do NOT auto-refresh ---
 function getCurrentAppVersion() {
     try {
@@ -765,7 +934,7 @@ function startUpdateCheck() {
                     if (checkInterval) clearInterval(checkInterval);
                 }
             })
-            .catch(() => {});
+            .catch(() => { });
     }
 
     // Check when tab becomes visible (e.g. after switching back from editor)

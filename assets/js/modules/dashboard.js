@@ -16,90 +16,106 @@ export async function render(container) {
             <!-- Main Content (Left Side) -->
             <div class="lg:col-span-9 space-y-6">
                 <!-- Top Stats Grid (6 Individual Tiles) -->
-                <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-6">
-                    <!-- Tile 1: Total Students (Clickable) -->
-                    <div onclick="window.loadModule('students')" class="dashboard-stat-card glow-neutral p-4 relative overflow-hidden cursor-pointer group hover:shadow-lg transition-all">
-                        <div class="absolute top-0 right-0 w-20 h-20 bg-indigo-500/5 rounded-full blur-2xl -mr-10 -mt-10 group-hover:bg-indigo-500/10 transition-all"></div>
-                        <p class="dashboard-label text-[9px] text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1.5">Total Students</p>
-                        <div class="flex items-center justify-between gap-2">
+                <!-- Top Stats Grid (6 Individual Tiles) -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <!-- Tile 1: Total Students -->
+                    <div class="bg-[#1e293b] border border-[#334155]/50 rounded-2xl p-5 relative overflow-hidden group hover:border-[#475569] transition-all shadow-sm">
+                        <div class="flex justify-between items-start">
                             <div>
-                                <p class="dashboard-value text-2xl text-gray-900 dark:text-white" id="statTotalStudents">...</p>
-                                <p class="text-[9px] font-semibold text-indigo-500 mt-1 flex items-center gap-1">
-                                    <span id="attendanceCount">0</span> Present
-                                    <svg class="w-2 h-2 group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
-                                </p>
+                                <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Total Students</p>
+                                <p class="text-4xl font-bold text-white mt-1" id="statTotalStudents">...</p>
                             </div>
-                            <div class="relative w-12 h-12">
-                                <svg class="w-12 h-12 transform -rotate-90">
-                                    <circle cx="24" cy="24" r="20" stroke="currentColor" stroke-width="4" fill="none" class="text-gray-100 dark:text-gray-800" />
-                                    <circle id="attendanceCircle" cx="24" cy="24" r="20" stroke="currentColor" stroke-width="4" fill="none" class="text-indigo-500 transition-all duration-1000" stroke-dasharray="125.66" stroke-dashoffset="125.66" stroke-linecap="round" />
+                            <!-- Circular Progress -->
+                            <div class="relative w-16 h-16">
+                                <svg class="w-full h-full transform -rotate-90">
+                                    <circle cx="32" cy="32" r="28" stroke="currentColor" stroke-width="6" fill="none" class="text-gray-800" />
+                                    <circle id="attendanceCircle" cx="32" cy="32" r="28" stroke="currentColor" stroke-width="6" fill="none" class="text-blue-500 transition-all duration-1000" stroke-dasharray="175.93" stroke-dashoffset="175.93" stroke-linecap="round" />
                                 </svg>
                                 <div class="absolute inset-0 flex items-center justify-center">
-                                    <span class="text-[9px] font-bold text-gray-900 dark:text-white" id="attendanceGaugeText">0%</span>
+                                    <span class="text-sm font-bold text-white" id="attendanceGaugeText">0%</span>
                                 </div>
                             </div>
                         </div>
-                    </div>
+                        
+                        <div class="h-px bg-gray-700/50 my-4 w-full"></div>
 
-                    <!-- Tile 2: Monthly Fees (Current Period) - Click → Monthly Collection Report -->
-                    <div onclick="window.openDashboardReport && window.openDashboardReport('monthly_collection')" class="dashboard-stat-card glow-neutral p-4 relative overflow-hidden group transition-all cursor-pointer hover:shadow-lg transition-all">
-                        <div class="absolute top-0 right-0 w-20 h-20 bg-indigo-500/5 rounded-full blur-2xl -mr-10 -mt-10 group-hover:bg-indigo-500/10 transition-all"></div>
-                        <p class="dashboard-label text-[9px] text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2" id="feesPeriodLabel">Monthly Fees</p>
-                        <p class="dashboard-value text-2xl text-gray-900 dark:text-white" id="statFeesCollected">PKR 0</p>
-                        <div class="mt-3 flex items-center gap-2">
-                            <div class="h-1 flex-1 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-                                <div id="feeProgressBar" class="h-full bg-gradient-to-r from-indigo-400 to-indigo-600 rounded-full transition-all duration-1000" style="width: 0%"></div>
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-[10px] text-gray-500 mb-0.5">Attendance</p>
+                                <div class="flex items-center gap-1">
+                                    <p class="text-base font-bold text-blue-400 leading-none" id="attendanceCount">0 / 0</p>
+                                </div>
                             </div>
-                            <span class="text-[9px] font-semibold text-indigo-600 dark:text-indigo-400" id="feePercentage">0%</span>
+                             <button onclick="window.loadModule('students')" class="bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 px-3 py-1.5 rounded-full text-xs font-semibold flex items-center transition-colors cursor-pointer group-hover:bg-blue-500/20">
+                                Details
+                                <svg class="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
+                            </button>
                         </div>
-                        <p class="text-[9px] text-indigo-500/80 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">Click for monthly income report</p>
                     </div>
 
-                    <!-- Tile 3: Monthly Expenses (Current Period) -->
-                    <div class="dashboard-stat-card glow-neutral p-4 relative overflow-hidden group transition-all">
-                        <div class="absolute top-0 right-0 w-20 h-20 bg-rose-500/5 rounded-full blur-2xl -mr-10 -mt-10 transition-all"></div>
-                        <p class="dashboard-label text-[9px] text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2" id="expensesPeriodLabel">Monthly Expenses</p>
-                        <p class="dashboard-value text-2xl text-gray-900 dark:text-white" id="statMonthlyExpenses">PKR 0</p>
-                        <p class="dashboard-caption text-[9px] text-gray-400 mt-2 flex items-center gap-1">
-                            <svg class="w-2.5 h-2.5 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" /></svg>
-                            Operational Costs
-                        </p>
+                    <!-- Tile 2: Monthly Fees -->
+                    <div onclick="window.openDashboardReport && window.openDashboardReport('monthly_collection')" class="bg-[#1e293b] border border-[#334155]/50 rounded-2xl p-5 relative overflow-hidden cursor-pointer group hover:border-[#475569] transition-all shadow-sm">
+                        <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1" id="feesPeriodLabel">Monthly Fees</p>
+                        <div class="mt-1 mb-4 flex items-baseline gap-1">
+                            <p class="text-[10px] text-gray-500 font-semibold mb-0.5">PKR</p>
+                            <p class="text-4xl font-bold text-white leading-none" id="statFeesCollectedVal">0</p>
+                        </div>
+                        <div class="w-full bg-gray-700 rounded-full h-1.5 mb-2 overflow-hidden">
+                            <div id="feeProgressBar" class="bg-indigo-500 h-1.5 rounded-full transition-all duration-1000" style="width: 0%"></div>
+                        </div>
+                        <p class="text-[10px] text-gray-500 text-right"><span id="feePercentage">0%</span> collected</p>
                     </div>
 
-                    <!-- Tile 4: Income Today - Click → Daily Fee Collection Report -->
-                    <div onclick="window.openDashboardReport && window.openDashboardReport('daily_collection')" class="dashboard-stat-card glow-positive p-4 relative overflow-hidden group transition-all cursor-pointer hover:shadow-lg transition-all">
-                        <div class="absolute top-0 right-0 w-20 h-20 bg-emerald-500/5 rounded-full blur-2xl -mr-10 -mt-10 group-hover:bg-emerald-500/10 transition-all"></div>
-                        <p class="dashboard-label text-[9px] text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Income Today</p>
-                        <p class="dashboard-value text-2xl text-emerald-600 dark:text-emerald-400" id="statCollectedToday">PKR 0</p>
-                        <p class="dashboard-caption text-[9px] text-emerald-500/60 mt-2 flex items-center gap-1">
-                            <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18" /></svg>
-                            Direct Cashflow
-                        </p>
-                        <p class="text-[9px] text-emerald-500/80 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">Click for today's income report</p>
+                    <!-- Tile 3: Monthly Expenses -->
+                    <div class="bg-[#1e293b] border border-[#334155]/50 rounded-2xl p-5 relative overflow-hidden group hover:border-[#475569] transition-all shadow-sm">
+                        <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1" id="expensesPeriodLabel">Monthly Expenses</p>
+                        <div class="mt-1 mb-4 flex items-baseline gap-1">
+                            <p class="text-[10px] text-gray-500 font-semibold mb-0.5">PKR</p>
+                            <p class="text-4xl font-bold text-white leading-none" id="statMonthlyExpensesVal">0</p>
+                        </div>
+                        <div class="flex items-center text-xs text-red-500 font-medium">
+                            <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" /></svg>
+                            <span>Operational Costs</span>
+                        </div>
                     </div>
 
-                    <!-- Tile 5: Expense Today - Click → Income & Expense Today (Profit) Report -->
-                    <div onclick="window.openDashboardReport && window.openDashboardReport('daily_summary')" class="dashboard-stat-card glow-negative p-4 relative overflow-hidden group transition-all cursor-pointer hover:shadow-lg transition-all">
-                        <div class="absolute top-0 right-0 w-20 h-20 bg-rose-500/5 rounded-full blur-2xl -mr-10 -mt-10 group-hover:bg-rose-500/10 transition-all"></div>
-                        <p class="dashboard-label text-[9px] text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Expense Today</p>
-                        <p class="dashboard-value text-2xl text-rose-600 dark:text-rose-400" id="statExpensesToday">PKR 0</p>
-                        <p class="dashboard-caption text-[9px] text-rose-500/60 mt-2 flex items-center gap-1">
-                            <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>
-                            Daily Spending
-                        </p>
-                        <p class="text-[9px] text-rose-500/80 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">Click for today's expense report</p>
+                    <!-- Tile 4: Income Today -->
+                    <div onclick="window.openDashboardReport && window.openDashboardReport('daily_collection')" class="bg-[#1e293b] border border-[#334155]/50 rounded-2xl p-5 relative overflow-hidden cursor-pointer group hover:border-[#475569] transition-all shadow-sm">
+                        <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1" id="todayIncomeLabel">Income Today</p>
+                        <div class="mb-3 flex items-baseline gap-1">
+                            <span class="text-xs font-bold text-emerald-600/70">PKR</span>
+                            <p class="text-4xl font-bold text-emerald-500" id="statCollectedToday">0</p>
+                        </div>
+                        <div class="flex items-center text-xs text-emerald-500 font-medium">
+                            <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18" /></svg>
+                            <span>Direct Cashflow</span>
+                        </div>
                     </div>
 
-                    <!-- Tile 6: Net Today - Click → Profit Report (Income & Expense Today) -->
-                    <div id="netTodayCard" onclick="window.openDashboardReport && window.openDashboardReport('daily_summary')" class="dashboard-stat-card glow-neutral p-4 relative overflow-hidden group transition-all cursor-pointer hover:shadow-lg transition-all">
-                        <div id="netTodayBg" class="absolute top-0 right-0 w-20 h-20 bg-indigo-500/5 rounded-full blur-2xl -mr-10 -mt-10 transition-all"></div>
-                        <p class="dashboard-label text-[9px] text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Net Today</p>
-                        <p class="dashboard-value text-2xl transition-colors" id="statNetToday">PKR 0</p>
-                        <p class="dashboard-caption text-[9px] text-gray-400 mt-2 flex items-center gap-1">
-                            <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
-                            Daily Balance
-                        </p>
-                        <p class="text-[9px] text-gray-500 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">Click for profit report</p>
+                    <!-- Tile 5: Expense Today -->
+                    <div onclick="window.openDashboardReport && window.openDashboardReport('daily_voucher_detail')" class="bg-[#1e293b] border border-[#334155]/50 rounded-2xl p-5 relative overflow-hidden cursor-pointer group hover:border-[#475569] transition-all shadow-sm">
+                        <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1" id="todayExpenseLabel">Expense Today</p>
+                        <div class="mb-3 flex items-baseline gap-1">
+                            <span class="text-xs font-bold text-rose-600/70">PKR</span>
+                            <p class="text-4xl font-bold text-rose-500" id="statExpensesToday">0</p>
+                        </div>
+                        <div class="flex items-center text-xs text-rose-500 font-medium">
+                            <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>
+                            <span>Daily Spending</span>
+                        </div>
+                    </div>
+
+                    <!-- Tile 6: Net Today -->
+                    <div id="netTodayCard" onclick="window.openDashboardReport && window.openDashboardReport('daily_summary')" class="bg-[#1e293b] border border-[#334155]/50 rounded-2xl p-5 relative overflow-hidden cursor-pointer group hover:border-[#475569] transition-all shadow-sm">
+                        <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1" id="todayNetLabel">Net Today</p>
+                        <div class="mb-3 flex items-baseline gap-1">
+                            <span class="text-xs font-bold text-gray-500">PKR</span>
+                            <p class="text-4xl font-bold text-white" id="statNetToday">0</p>
+                        </div>
+                        <div class="flex items-center text-xs text-gray-500 font-medium">
+                            <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+                            <span>Daily Balance</span>
+                        </div>
                     </div>
                 </div>
 
@@ -202,49 +218,28 @@ export async function render(container) {
             <!-- Right Sidebar -->
             <div class="lg:col-span-3 space-y-6">
                 <!-- Quick Actions (semi-transparent tints, cohesive) -->
+
+
+                <!-- Quick Reports (Modern Pill Series) -->
                 <div class="dashboard-stat-card p-6">
                     <div class="flex items-center gap-2 mb-6">
-                        <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                         </svg>
-                        <h3 class="dashboard-title text-lg text-gray-900 dark:text-white">Quick Actions</h3>
+                        <h3 class="dashboard-title text-lg text-gray-900 dark:text-white">Quick Reports</h3>
                     </div>
                     <div class="space-y-3">
-                        <button class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all group relative bg-indigo-500/12 hover:bg-indigo-500/20 text-left">
-                            <div class="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-gray-900 animate-pulse" id="smsNotificationDot" style="display: none;"></div>
-                            <div class="p-2 rounded-lg bg-indigo-500/15 group-hover:bg-indigo-500/25 transition-colors">
-                                <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-                                </svg>
-                            </div>
-                            <div class="flex-1 min-w-0">
-                                <p class="text-sm font-semibold text-gray-900 dark:text-white">Send SMS to Absentees</p>
-                                <p class="text-xs text-gray-500 dark:text-gray-400">Notify parents</p>
-                            </div>
+                        <button onclick="window.loadModule('fee_reports')" class="w-full flex items-center justify-between px-5 py-4 rounded-full border border-gray-100 dark:border-gray-800 bg-white/50 dark:bg-gray-900/50 hover:bg-white dark:hover:bg-gray-800 transition-all group shadow-sm">
+                            <span class="text-[10px] font-black uppercase tracking-widest text-[#1e293b] dark:text-white">FINANCIAL SUMMARY</span>
+                            <svg class="w-4 h-4 text-gray-400 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                            </svg>
                         </button>
-
-                        <button class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all group bg-emerald-500/12 hover:bg-emerald-500/20 text-left">
-                            <div class="p-2 rounded-lg bg-emerald-500/15 group-hover:bg-emerald-500/25 transition-colors">
-                                <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                </svg>
-                            </div>
-                            <div class="flex-1 min-w-0">
-                                <p class="text-sm font-semibold text-gray-900 dark:text-white">Generate Bulk Fee Slips</p>
-                                <p class="text-xs text-gray-500 dark:text-gray-400">For all students</p>
-                            </div>
-                        </button>
-
-                        <button class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all group bg-purple-500/12 hover:bg-purple-500/20 text-left">
-                            <div class="p-2 rounded-lg bg-purple-500/15 group-hover:bg-purple-500/25 transition-colors">
-                                <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-                                </svg>
-                            </div>
-                            <div class="flex-1 min-w-0">
-                                <p class="text-sm font-semibold text-gray-900 dark:text-white">Assign New Class</p>
-                                <p class="text-xs text-gray-500 dark:text-gray-400">To teacher</p>
-                            </div>
+                        <button onclick="window.loadModule('student_reports')" class="w-full flex items-center justify-between px-5 py-4 rounded-full border border-gray-100 dark:border-gray-800 bg-white/50 dark:bg-gray-900/50 hover:bg-white dark:hover:bg-gray-800 transition-all group shadow-sm">
+                            <span class="text-[10px] font-black uppercase tracking-widest text-[#1e293b] dark:text-white">ENROLLMENT ANALYTICS</span>
+                            <svg class="w-4 h-4 text-gray-400 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                            </svg>
                         </button>
                     </div>
                 </div>
@@ -336,7 +331,22 @@ export async function render(container) {
             loadDashboardStats(); // Update stats when fee status changes
             loadUrgentFollowups(); // Update arrears
         })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'student_attendance' }, (payload) => {
+            console.log('Real-time Attendance Update:', payload);
+            loadDashboardStats();
+        })
         .subscribe();
+
+    // Global Event Listener (Sync across modules)
+    if (!window.hasDashboardDataListener) {
+        window.addEventListener('appDataChange', (e) => {
+            console.log(`[Dashboard] Refreshing due to change: ${e.detail?.type}`);
+            loadDashboardStats();
+            loadRecentActivity();
+            loadUrgentFollowups();
+        });
+        window.hasDashboardDataListener = true;
+    }
 
     // Also listen for custom paymentDeleted event from fees module
     window.addEventListener('paymentDeleted', () => {
@@ -430,7 +440,7 @@ async function checkAttendanceSMS() {
         // Check if SMS was sent today (you can add a table for SMS logs)
         // For now, we'll check if attendance was marked today
         const { data: attendanceToday } = await supabase
-            .from('attendance')
+            .from('student_attendance')
             .select('id')
             .eq('date', today)
             .limit(1);
@@ -499,7 +509,7 @@ async function loadDashboardStats(period = 'monthly', customStart = null, custom
 
         const [studentsRes, attendanceRes, periodPayments, periodExpenses, allFees, rangePayments, rangeExpenses] = await Promise.all([
             supabase.from('students').select('id'),
-            supabase.from('attendance').select('status').eq('date', todayStr),
+            supabase.from('student_attendance').select('status').eq('date', todayStr),
             // RECONCILIATION FIX: Use payment_date for period totals to match Reports and Graph logic
             supabase.from('fee_payments').select('amount_paid').gte('payment_date', startDayStr).lte('payment_date', endDayStr),
             supabase.from('expenses').select('amount').gte('date', startDayStr).lte('date', endDayStr),
@@ -526,9 +536,9 @@ async function loadDashboardStats(period = 'monthly', customStart = null, custom
         const progressPercent = currentMonthFees > 0 ? Math.round((periodRevenue / currentMonthFees) * 100) : 0;
 
         // Update UI Labels for Today Tiles if in Custom Mode
-        const todayIncomeLabel = document.getElementById('statCollectedToday').previousElementSibling;
-        const todayExpenseLabel = document.getElementById('statExpensesToday').previousElementSibling;
-        const todayNetLabel = document.getElementById('statNetToday').previousElementSibling;
+        const todayIncomeLabel = document.getElementById('todayIncomeLabel');
+        const todayExpenseLabel = document.getElementById('todayExpenseLabel');
+        const todayNetLabel = document.getElementById('todayNetLabel');
 
         if (period === 'custom') {
             if (todayIncomeLabel) todayIncomeLabel.textContent = "Income (Range)";
@@ -543,34 +553,27 @@ async function loadDashboardStats(period = 'monthly', customStart = null, custom
         document.getElementById('feesPeriodLabel').textContent = `${labelPrefix} Fees`;
         document.getElementById('expensesPeriodLabel').textContent = `${labelPrefix} Expenses`;
 
-        document.getElementById('statFeesCollected').textContent = 'PKR ' + periodRevenue.toLocaleString('en-PK');
-        document.getElementById('statMonthlyExpenses').textContent = 'PKR ' + periodExpenseTotal.toLocaleString('en-PK');
+        document.getElementById('statFeesCollectedVal').textContent = periodRevenue.toLocaleString('en-PK');
+        document.getElementById('statMonthlyExpensesVal').textContent = periodExpenseTotal.toLocaleString('en-PK');
 
-        document.getElementById('statCollectedToday').textContent = 'PKR ' + incomeInFocus.toLocaleString('en-PK');
-        document.getElementById('statExpensesToday').textContent = 'PKR ' + expenseInFocus.toLocaleString('en-PK');
+        document.getElementById('statCollectedToday').textContent = incomeInFocus.toLocaleString('en-PK');
+        document.getElementById('statExpensesToday').textContent = expenseInFocus.toLocaleString('en-PK');
 
         // Net Today with dynamic coloring
         const netEl = document.getElementById('statNetToday');
-        const netBg = document.getElementById('netTodayBg');
-        netEl.textContent = 'PKR ' + netInFocus.toLocaleString('en-PK');
-
         const netCard = document.getElementById('netTodayCard');
+        netEl.textContent = netInFocus.toLocaleString('en-PK');
+
         if (netInFocus > 0) {
-            netEl.className = 'dashboard-value text-2xl text-emerald-600 dark:text-emerald-400';
-            if (netBg) netBg.className = 'absolute top-0 right-0 w-20 h-20 bg-emerald-500/5 rounded-full blur-2xl -mr-10 -mt-10 transition-all';
-            if (netCard) { netCard.classList.remove('glow-negative', 'glow-neutral'); netCard.classList.add('glow-positive'); }
+            netEl.className = 'text-4xl font-bold text-emerald-500';
         } else if (netInFocus < 0) {
-            netEl.className = 'dashboard-value text-2xl text-rose-600 dark:text-rose-400';
-            if (netBg) netBg.className = 'absolute top-0 right-0 w-20 h-20 bg-rose-500/5 rounded-full blur-2xl -mr-10 -mt-10 transition-all';
-            if (netCard) { netCard.classList.remove('glow-positive', 'glow-neutral'); netCard.classList.add('glow-negative'); }
+            netEl.className = 'text-4xl font-bold text-rose-500';
         } else {
-            netEl.className = 'dashboard-value text-2xl text-gray-900 dark:text-white';
-            if (netBg) netBg.className = 'absolute top-0 right-0 w-20 h-20 bg-gray-500/5 rounded-full blur-2xl -mr-10 -mt-10 transition-all';
-            if (netCard) { netCard.classList.remove('glow-positive', 'glow-negative'); netCard.classList.add('glow-neutral'); }
+            netEl.className = 'text-4xl font-bold text-white';
         }
 
         document.getElementById('statTotalStudents').textContent = totalStudents;
-        document.getElementById('totalStudentsCount').textContent = totalStudents;
+        // document.getElementById('totalStudentsCount').textContent = totalStudents; // This ID is missing in HTML
         document.getElementById('attendanceCount').textContent = presentCount + ' / ' + totalStudents;
         document.getElementById('attendanceGaugeText').textContent = attendancePercent + '%';
 
@@ -579,7 +582,7 @@ async function loadDashboardStats(period = 'monthly', customStart = null, custom
         if (progressBar) progressBar.style.width = Math.min(progressPercent, 100) + '%';
 
         // Animate gauge
-        const circumference = 2 * Math.PI * 20; // Corrected radius
+        const circumference = 2 * Math.PI * 28; // Corrected radius r=28
         const offset = circumference - (attendancePercent / 100) * circumference;
         const circle = document.getElementById('attendanceCircle');
         if (circle) {
@@ -698,7 +701,6 @@ async function loadCharts(period = 'monthly', customStart = null, customEnd = nu
                 scales: {
                     y: {
                         beginAtZero: true,
-                        max: 35000,
                         ticks: {
                             color: '#9ca3af',
                             font: { size: 11 },

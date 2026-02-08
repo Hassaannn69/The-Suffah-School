@@ -31,7 +31,7 @@ export async function render(container) {
                         class="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:text-white transition-all">
                 </div>
                 <div>
-                    <select id="categoryFilter" class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:text-white transition-all">
+                    <select id="categoryFilter" class="app-select w-full px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 transition-all" style="color-scheme: dark;">
                         <option value="">All Categories</option>
                         <option value="Staff Salaries">Staff Salaries</option>
                         <option value="Utilities">Utilities</option>
@@ -98,8 +98,7 @@ export async function render(container) {
                         <div class="grid grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Category*</label>
-                                <select name="category" required
-                                    class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-indigo-500 dark:text-white transition-all">
+                                <select name="category" required class="app-select w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-indigo-500 transition-all" style="color-scheme: dark;">
                                     <option value="">Select Category</option>
                                     <option value="Staff Salaries">Staff Salaries</option>
                                     <option value="Utilities">Utilities</option>

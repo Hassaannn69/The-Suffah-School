@@ -343,9 +343,9 @@ function renderStudentDashboard(container, student, fees, family, attendance, no
                                     <h4 class="stat-label mb-5 border-l-2 border-emerald-500 pl-3">Verified Receipts</h4>
                                     <div class="space-y-3 max-h-[400px] overflow-y-auto pr-2 no-scrollbar">
                                         ${receiptGroups.length > 0 ? receiptGroups.map(g => {
-                                            const recId = g.receiptId ? `'${g.receiptId}'` : 'null';
-                                            const payId = g.payments[0] && g.payments[0].id ? `'${g.payments[0].id}'` : 'null';
-                                            return `
+        const recId = g.receiptId ? `'${g.receiptId}'` : 'null';
+        const payId = g.payments[0] && g.payments[0].id ? `'${g.payments[0].id}'` : 'null';
+        return `
                                             <div class="row-card group flex items-center justify-between">
                                                 <div class="flex items-center gap-4">
                                                     <div class="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-500">
@@ -367,7 +367,7 @@ function renderStudentDashboard(container, student, fees, family, attendance, no
                                                 </div>
                                             </div>
                                         `;
-                                        }).join('') : '<p class="text-[10px] text-slate-600 font-black text-center uppercase tracking-widest py-12">No transactions detected</p>'}
+    }).join('') : '<p class="text-[10px] text-slate-600 font-black text-center uppercase tracking-widest py-12">No transactions detected</p>'}
                                     </div>
                                 </div>
                             </div>
@@ -526,9 +526,10 @@ async function fetchPaymentHistory(studentId, familyCode) {
 
 async function fetchAttendance(studentId) {
     try {
-        const { data, error } = await supabase.from('attendance').select('*').eq('student_id', studentId).order('date', { ascending: false }).limit(30);
+        const { data, error } = await supabase.from('student_attendance').select('*').eq('student_id', studentId).order('date', { ascending: false }).limit(30);
         if (error) throw error;
-        return data || [];
+        // Map Present/Absent to present/absent for compatibility with existing UI styles
+        return (data || []).map(a => ({ ...a, status: a.status.toLowerCase() }));
     } catch (err) { console.error('Error fetching attendance:', err); return []; }
 }
 

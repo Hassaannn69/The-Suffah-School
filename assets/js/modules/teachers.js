@@ -425,28 +425,48 @@ export async function render(container) {
 
 async function fetchTeachers() {
     const tbody = document.getElementById('teachersTableBody');
+    if (!tbody) return;
+
     tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-gray-400">Loading...</td></tr>';
 
-    const { data, error } = await supabase
-        .from('teachers')
-        .select('*')
-        .order('created_at', { ascending: false });
+    try {
+        const { data: { user } } = await supabase.auth.getUser();
+        console.log('[Teachers] Current User:', user);
+        console.log('[Teachers] Role from Metadata:', user?.user_metadata?.role);
 
-    if (error) {
+        const { data, error } = await supabase
+            .from('teachers')
+            .select('*')
+            .order('name', { ascending: true });
+
+        if (error) throw error;
+
+        currentTeachers = data || [];
+        console.log(`[Teachers] Successfully fetched ${currentTeachers.length} records.`);
+        renderTeacherTable(currentTeachers);
+    } catch (error) {
         console.error('Error fetching teachers:', error);
-        tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-red-400">Error loading teachers. Make sure the teachers table exists.</td></tr>';
-        return;
+        tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-red-500">
+            <div class="flex flex-col items-center gap-3">
+                <div class="p-3 bg-red-100 dark:bg-red-900/30 rounded-full">
+                    <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                </div>
+                <div class="space-y-1">
+                    <p class="font-bold text-lg">Access Denied or Database Error</p>
+                    <p class="text-sm opacity-70">${error.message}</p>
+                </div>
+                <button onclick="location.reload()" class="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors">Retry Connection</button>
+            </div>
+        </td></tr>`;
     }
-
-    currentTeachers = data || [];
-    renderTeacherTable(currentTeachers);
 }
 
 function renderTeacherTable(teachers) {
     const tbody = document.getElementById('teachersTableBody');
+    if (!tbody) return;
 
     if (!teachers || teachers.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-gray-500 dark:text-gray-400">No teachers found</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" class="p-8 text-center text-gray-500">No teachers found. Click "Add Teacher" to add your first record.</td></tr>';
         return;
     }
 

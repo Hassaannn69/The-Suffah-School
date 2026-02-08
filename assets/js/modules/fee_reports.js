@@ -40,6 +40,7 @@ const REPORTS = [
     { id: 'custom_filter', label: 'Custom / Filtered', icon: 'M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z' },
     { id: 'student_history', label: 'Student History', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
     { id: 'class_collection', label: 'Class Collection', icon: 'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10' },
+    { id: 'daily_voucher_detail', label: 'Daily Voucher Detail', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2' },
     { id: 'defaulters', label: 'Defaulters Report (Family)', icon: 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z' }
 ];
 
@@ -52,7 +53,7 @@ export async function render(container) {
                 <!-- Mobile-only report type selector -->
                 <div class="md:hidden w-full shrink-0">
                     <label for="reportTypeSelect" class="sr-only">Report type</label>
-                    <select id="reportTypeSelect" class="w-full px-3 py-2.5 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500">
+                    <select id="reportTypeSelect" class="app-select w-full px-3 py-2.5 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-600 focus:ring-2 focus:ring-indigo-500" style="color-scheme: dark;">
                         ${REPORTS.map(r => `<option value="${r.id}" ${activeReport === r.id ? 'selected' : ''}>${r.label}</option>`).join('')}
                     </select>
                 </div>
@@ -74,50 +75,53 @@ export async function render(container) {
                     </div>
                 </div>
 
-                <!-- Content Area: overflow-auto so tall table preview can be scrolled; mobile-friendly -->
-                <div id="reportContentArea" class="flex-1 flex flex-col min-h-0 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-auto min-w-0">
-                    <!-- Report Options (filters): spacious, mobile stack -->
-                    <div class="p-4 sm:p-5 border-b border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/20 shrink-0 overflow-x-hidden" id="reportFilters">
+                <!-- Content Area: one scroll for the whole report (filters → header → table to end) -->
+                <div id="reportContentArea" class="flex-1 flex flex-col min-h-0 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 min-w-0 overflow-auto">
+                    <!-- Report Options (filters): stacked above report so dropdowns are never hidden -->
+                    <div class="relative z-20 p-4 sm:p-5 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shrink-0" id="reportFilters">
                         <span class="text-gray-400 text-sm">Loading filters...</span>
                     </div>
 
-                    <!-- Report Header & Actions (match reference: title + From/To left, Export CSV | Print PDF right) -->
-                    <div class="px-4 sm:px-6 py-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 border-b border-gray-100 dark:border-gray-700 shrink-0">
-                        <div class="min-w-0">
-                            <h2 class="text-base sm:text-lg font-bold text-gray-800 dark:text-white truncate" id="reportTitle">Report</h2>
-                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5" id="reportSubtitle">Generated on ${new Date().toLocaleDateString()}</p>
-                        </div>
-                        <div class="flex gap-2 shrink-0">
-                            <button onclick="window.exportReport('csv')" class="min-h-[44px] px-4 py-2.5 text-sm font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-200 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors touch-manipulation">Export CSV</button>
-                            <button onclick="window.exportReport('print')" class="min-h-[44px] px-4 py-2.5 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-sm shadow-indigo-200 dark:shadow-none touch-manipulation">Print PDF</button>
-                        </div>
-                    </div>
-
-                    <!-- Formal report block (Daily/Monthly Inflow: school header, Typewise/Datewise total, Fee Collection In Cash) -->
-                    <div id="reportFormalBlock" class="px-4 md:px-6 py-3 border-b border-gray-100 dark:border-gray-700/50 hidden"></div>
-
-                    <!-- Data Table: tall preview; mobile: horizontal scroll when needed -->
-                    <div class="flex-1 flex flex-col relative rounded-b-xl overflow-hidden bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 shadow-inner min-w-0" style="min-height: min(480px, 60vh);">
-                        <div id="reportLoader" class="absolute inset-0 bg-white/80 dark:bg-gray-800/80 flex items-center justify-center z-10 hidden">
-                            <div class="flex flex-col items-center">
-                                <div class="w-8 h-8 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-                                <span class="text-xs font-medium text-indigo-600 mt-2">Generating Report...</span>
+                    <!-- Report body: below filters in stack so dropdowns are never covered -->
+                    <div id="reportScrollBody" class="relative z-0 flex flex-col min-w-0">
+                        <!-- Report Header & Actions -->
+                        <div class="px-4 sm:px-6 py-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 border-b border-gray-100 dark:border-gray-700 shrink-0">
+                            <div class="min-w-0">
+                                <h2 class="text-base sm:text-lg font-bold text-gray-800 dark:text-white truncate" id="reportTitle">Report</h2>
+                                <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5" id="reportSubtitle">Generated on ${new Date().toLocaleDateString()}</p>
+                            </div>
+                            <div class="flex gap-2 shrink-0">
+                                <button onclick="window.exportReport('csv')" class="min-h-[44px] px-4 py-2.5 text-sm font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-200 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors touch-manipulation">Export CSV</button>
+                                <button onclick="window.exportReport('print')" class="min-h-[44px] px-4 py-2.5 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-sm shadow-indigo-200 dark:shadow-none touch-manipulation">Print PDF</button>
                             </div>
                         </div>
-                        <div class="flex-1 min-h-0 overflow-auto overscroll-auto" id="reportTableScroll">
-                            <table class="w-full text-left text-sm border-collapse report-data-table" style="min-width: max-content;">
-                                <thead class="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-semibold sticky top-0 z-[1] shadow-sm">
-                                    <tr id="tableHeaderRow">
-                                        <!-- Headers injected -->
-                                    </tr>
-                                </thead>
-                                <tbody id="tableBody" class="text-gray-800 dark:text-gray-200">
-                                    <!-- Rows injected -->
-                                </tbody>
-                                <tfoot id="tableFooter" class="bg-gray-100 dark:bg-gray-700 font-bold hidden">
-                                    <!-- Footer totals -->
-                                </tfoot>
-                            </table>
+
+                        <!-- Formal report block (Daily/Monthly Inflow: school header, Typewise/Datewise total, Fee Collection In Cash) -->
+                        <div id="reportFormalBlock" class="px-4 md:px-6 py-3 border-b border-gray-100 dark:border-gray-700/50 hidden"></div>
+
+                        <!-- Data Table: no inner vertical scroll, part of the one page scroll -->
+                        <div class="relative rounded-b-xl bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 shadow-inner min-w-0">
+                            <div id="reportLoader" class="absolute inset-0 bg-white/80 dark:bg-gray-800/80 flex items-center justify-center z-10 hidden">
+                                <div class="flex flex-col items-center">
+                                    <div class="w-8 h-8 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+                                    <span class="text-xs font-medium text-indigo-600 mt-2">Generating Report...</span>
+                                </div>
+                            </div>
+                            <div class="overflow-x-auto" id="reportTableScroll">
+                                <table class="w-full text-left text-sm border-collapse report-data-table" style="min-width: max-content;">
+                                    <thead class="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-semibold shadow-sm">
+                                        <tr id="tableHeaderRow">
+                                            <!-- Headers injected -->
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tableBody" class="text-gray-800 dark:text-gray-200">
+                                        <!-- Rows injected -->
+                                    </tbody>
+                                    <tfoot id="tableFooter" class="bg-gray-100 dark:bg-gray-700 font-bold hidden">
+                                        <!-- Footer totals -->
+                                    </tfoot>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -241,6 +245,7 @@ window.selectReport = (reportIds) => {
 
 // Modern, spacious Report Options – input/button styles
 const RO_INPUT = 'w-full min-w-[120px] border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-shadow';
+const RO_SELECT = RO_INPUT + ' app-select';
 const RO_LABEL = 'block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1';
 const RO_BTN = 'inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-gray-800';
 
@@ -266,11 +271,11 @@ function getReportOptionsHTML(reportId) {
                 </div>
                 <div class="min-w-0">
                     <label class="${RO_LABEL}">Class</label>
-                    <select id="f_class" class="${RO_INPUT}"><option value="">All classes</option>${classOptions}</select>
+                    <select id="f_class" class="${RO_SELECT}" style="color-scheme: dark;"><option value="">All classes</option>${classOptions}</select>
                 </div>
                 <div class="min-w-0">
                     <label class="${RO_LABEL}">Section</label>
-                    <select id="f_section" class="${RO_INPUT}"><option value="">All</option></select>
+                    <select id="f_section" class="${RO_SELECT}" style="color-scheme: dark;"><option value="">All</option></select>
                 </div>
             </div>`;
         optionalRow = '';
@@ -279,6 +284,13 @@ function getReportOptionsHTML(reportId) {
             <div class="w-full">
                 <label class="${RO_LABEL}">Date <span class="text-gray-500 dark:text-gray-400 font-normal">(Income &amp; expense today)</span></label>
                 <input type="date" id="f_date" value="${today}" class="${RO_INPUT} max-w-xs" title="Pick date for income & expense">
+            </div>`;
+        optionalRow = '';
+    } else if (reportId === 'daily_voucher_detail') {
+        filtersRow = `
+            <div class="w-full">
+                <label class="${RO_LABEL}">Voucher Date</label>
+                <input type="date" id="f_date" value="${today}" class="${RO_INPUT} max-w-xs" title="Pick date for voucher detail">
             </div>`;
         optionalRow = '';
     } else if (reportId === 'monthly_collection' || reportId === 'class_collection') {
@@ -290,11 +302,11 @@ function getReportOptionsHTML(reportId) {
                 </div>
                 <div class="min-w-0">
                     <label class="${RO_LABEL}">Class</label>
-                    <select id="f_class" class="${RO_INPUT}"><option value="">All classes</option>${classOptions}</select>
+                    <select id="f_class" class="${RO_SELECT}" style="color-scheme: dark;"><option value="">All classes</option>${classOptions}</select>
                 </div>
                 <div class="min-w-0">
                     <label class="${RO_LABEL}">Section</label>
-                    <select id="f_section" class="${RO_INPUT}"><option value="">All</option></select>
+                    <select id="f_section" class="${RO_SELECT}" style="color-scheme: dark;"><option value="">All</option></select>
                 </div>
             </div>`;
         optionalRow = htmlCommonHidden();
@@ -311,11 +323,11 @@ function getReportOptionsHTML(reportId) {
                 </div>
                 <div class="min-w-0">
                     <label class="${RO_LABEL}">Class</label>
-                    <select id="f_class" class="${RO_INPUT}"><option value="">All</option>${classOptions}</select>
+                    <select id="f_class" class="${RO_SELECT}" style="color-scheme: dark;"><option value="">All</option>${classOptions}</select>
                 </div>
                 <div class="min-w-0">
                     <label class="${RO_LABEL}">Section</label>
-                    <select id="f_section" class="${RO_INPUT}"><option value="">All</option></select>
+                    <select id="f_section" class="${RO_SELECT}" style="color-scheme: dark;"><option value="">All</option></select>
                 </div>
             </div>`;
         optionalRow = htmlCommonHidden();
@@ -324,7 +336,7 @@ function getReportOptionsHTML(reportId) {
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
                 <div class="min-w-0">
                     <label class="${RO_LABEL}">Fee type</label>
-                    <select id="f_feetype" class="${RO_INPUT}"><option value="">All</option>${(feeTypes || []).map(t => `<option value="${t.name}">${t.name}</option>`).join('')}</select>
+                    <select id="f_feetype" class="${RO_SELECT}" style="color-scheme: dark;"><option value="">All</option>${(feeTypes || []).map(t => `<option value="${t.name}">${t.name}</option>`).join('')}</select>
                 </div>
                 <div class="min-w-0">
                     <label class="${RO_LABEL}">Month</label>
@@ -332,11 +344,11 @@ function getReportOptionsHTML(reportId) {
                 </div>
                 <div class="min-w-0">
                     <label class="${RO_LABEL}">Class</label>
-                    <select id="f_class" class="${RO_INPUT}"><option value="">All</option>${classOptions}</select>
+                    <select id="f_class" class="${RO_SELECT}" style="color-scheme: dark;"><option value="">All</option>${classOptions}</select>
                 </div>
                 <div class="min-w-0">
                     <label class="${RO_LABEL}">Section</label>
-                    <select id="f_section" class="${RO_INPUT}"><option value="">All</option></select>
+                    <select id="f_section" class="${RO_SELECT}" style="color-scheme: dark;"><option value="">All</option></select>
                 </div>
             </div>`;
         optionalRow = htmlCommonHidden();
@@ -349,11 +361,11 @@ function getReportOptionsHTML(reportId) {
                 </div>
                 <div class="min-w-0">
                     <label class="${RO_LABEL}">Class</label>
-                    <select id="f_class" class="${RO_INPUT}"><option value="">All</option>${classOptions}</select>
+                    <select id="f_class" class="${RO_SELECT}" style="color-scheme: dark;"><option value="">All</option>${classOptions}</select>
                 </div>
                 <div class="min-w-0">
                     <label class="${RO_LABEL}">Section</label>
-                    <select id="f_section" class="${RO_INPUT}"><option value="">All</option></select>
+                    <select id="f_section" class="${RO_SELECT}" style="color-scheme: dark;"><option value="">All</option></select>
                 </div>
             </div>`;
         optionalRow = htmlCommonHidden();
@@ -366,11 +378,11 @@ function getReportOptionsHTML(reportId) {
                 </div>
                 <div class="min-w-0">
                     <label class="${RO_LABEL}">Class</label>
-                    <select id="f_class" class="${RO_INPUT}"><option value="">All</option>${classOptions}</select>
+                    <select id="f_class" class="${RO_SELECT}" style="color-scheme: dark;"><option value="">All</option>${classOptions}</select>
                 </div>
                 <div class="min-w-0">
                     <label class="${RO_LABEL}">Section</label>
-                    <select id="f_section" class="${RO_INPUT}"><option value="">All</option></select>
+                    <select id="f_section" class="${RO_SELECT}" style="color-scheme: dark;"><option value="">All</option></select>
                 </div>
                 <div class="min-w-0">
                     <label class="${RO_LABEL}">Min outstanding</label>
@@ -392,11 +404,11 @@ function getReportOptionsHTML(reportId) {
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
                 <div class="min-w-0">
                     <label class="${RO_LABEL}">Class</label>
-                    <select id="f_class" class="${RO_INPUT}"><option value="">All</option>${classOptions}</select>
+                    <select id="f_class" class="${RO_SELECT}" style="color-scheme: dark;"><option value="">All</option>${classOptions}</select>
                 </div>
                 <div class="min-w-0">
                     <label class="${RO_LABEL}">Section</label>
-                    <select id="f_section" class="${RO_INPUT}"><option value="">All</option></select>
+                    <select id="f_section" class="${RO_SELECT}" style="color-scheme: dark;"><option value="">All</option></select>
                 </div>
             </div>`;
         optionalRow = htmlCommonHidden();
@@ -580,6 +592,11 @@ window.runReport = async () => {
             }
             case 'class_collection': {
                 const res = await reportClassCollection(filters);
+                ({ headers, rows, footer, reportMeta } = res);
+                break;
+            }
+            case 'daily_voucher_detail': {
+                const res = await reportDailyVoucherDetail(filters);
                 ({ headers, rows, footer, reportMeta } = res);
                 break;
             }
@@ -768,6 +785,79 @@ async function reportDailySummary(filters) {
         rows: rows.length ? rows : [['–', 'No income or expense recorded for ' + dateLabel, '–', '–']],
         footer: { label: 'Net Today', value: formatMoney(net) },
         reportMeta: buildStandardReportMeta('Income & Expense Today (Profit)', { date: queryDate }, rowCount, net, 'Report Data', `Date: ${dateLabel} | Records: ${rowCount}`)
+    };
+}
+
+// 1c. Daily Voucher Detail Report (Ledger Style)
+async function reportDailyVoucherDetail(filters) {
+    const queryDate = (filters.date && String(filters.date).trim()) ? String(filters.date).trim() : getLocalDateString();
+    const d = new Date(queryDate + 'T12:00:00'); // set noon to avoid timezone shift
+    const dateLabel = d.toLocaleDateString('en-PK', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+
+    // Fetch Income (Fees) & Expenses
+    const [{ data: payments }, { data: expenses }] = await Promise.all([
+        supabase.from('fee_payments').select('id, amount_paid, payment_method, payment_date, student_id, students(name, roll_no, class)').eq('payment_date', queryDate).order('created_at', { ascending: true }),
+        supabase.from('expenses').select('id, title, category, amount, date').eq('date', queryDate).order('created_at', { ascending: true })
+    ]);
+
+    const rows = [];
+    let totalDebit = 0; // Expenses
+    let totalCredit = 0; // Income
+
+    // 1. Process Expenses (Debit)
+    (expenses || []).forEach((e, idx) => {
+        const amt = parseFloat(e.amount) || 0;
+        totalDebit += amt;
+        const vrNo = (2000 + idx).toString(); // Simulated Voucher No
+        const headCode = '003-0001-' + String(idx).padStart(5, '0');
+        const accountTitle = e.category || 'General Expense';
+        const desc = e.title || '-';
+
+        rows.push([
+            vrNo,
+            headCode,
+            accountTitle,
+            desc,
+            formatMoney(amt), // Debit
+            '-'               // Credit
+        ]);
+    });
+
+    // 2. Process Income (Credit)
+    (payments || []).forEach((p, idx) => {
+        const amt = parseFloat(p.amount_paid) || 0;
+        totalCredit += amt;
+        const vrNo = (5000 + idx).toString();
+        const headCode = '001-0001-' + String(idx).padStart(5, '0');
+        const accountTitle = 'Fee Received (' + (p.payment_method || 'Cash') + ')';
+        const stName = (p.students && p.students.name) ? p.students.name : 'Unknown';
+        const stClass = (p.students && p.students.class) ? p.students.class : '';
+        const desc = `Fee: ${stName} (${stClass})`;
+
+        rows.push([
+            vrNo,
+            headCode,
+            accountTitle,
+            desc,
+            '-',              // Debit
+            formatMoney(amt)  // Credit
+        ]);
+    });
+
+    // Summary Row
+    const grandTotalDebit = formatMoney(totalDebit);
+    const grandTotalCredit = formatMoney(totalCredit);
+
+    // If empty
+    if (rows.length === 0) {
+        rows.push(['-', '-', '-', 'No records found for this date', '-', '-']);
+    }
+
+    return {
+        headers: ['Vr No', 'Head Code', 'Account Title', 'Description / Cheque No', 'Debit (PKR)', 'Credit (PKR)'],
+        rows: rows,
+        footer: { label: 'Datewise Total', value: `Debit: ${grandTotalDebit} | Credit: ${grandTotalCredit}` },
+        reportMeta: buildStandardReportMeta('Daily Voucher Detail Report', { date: queryDate }, rows.length, 0, 'Voucher Data', `Date: ${dateLabel}`)
     };
 }
 
@@ -1809,7 +1899,7 @@ function drRenderTable(rows) {
         gr.forEach(r => {
             const rbg = r.remarks === 0 ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
                 : r.remarks === 1 ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300'
-                : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300';
+                    : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300';
 
             html += `<tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
                 <td class="px-1 py-1 text-gray-400 dark:text-gray-500">${r.rowNum}</td>
@@ -1908,7 +1998,7 @@ window.drExport = function () {
         csv += `"Session: ${filters.session} | Upto Month: ${filters.uptoMonth}"\n"Generated: ${new Date().toLocaleString()}"\n\n`;
     }
 
-    const headers = ['#','Family #','File #','Student Name','Father Name','CNIC','Class / Section','Contact #','Arrears','Monthly Fees','Other Fees','Sibling Discount','Special Discount','Current Dues','Total Dues','Paid Adjusted','Paid','Balance','Paid Date','Remarks'];
+    const headers = ['#', 'Family #', 'File #', 'Student Name', 'Father Name', 'CNIC', 'Class / Section', 'Contact #', 'Arrears', 'Monthly Fees', 'Other Fees', 'Sibling Discount', 'Special Discount', 'Current Dues', 'Total Dues', 'Paid Adjusted', 'Paid', 'Balance', 'Paid Date', 'Remarks'];
     csv += headers.map(h => `"${h}"`).join(',') + '\n';
 
     const groups = new Map();
@@ -1932,7 +2022,7 @@ window.drExport = function () {
         const gr = groups.get(key);
         csv += `\n"${cn}${sec ? ' - ' + sec : ''} (${gr.length} students)"\n`;
         gr.forEach(r => {
-            csv += [r.rowNum,`"${r.familyCode}"`,`"${r.fileNo}"`,`"${r.studentName}"`,`"${r.fatherName}"`,`"${r.cnic}"`,`"${r.classSection}"`,`"${r.contact}"`,r.arrears,r.monthlyFees,r.otherFees,r.siblingDiscount,r.specialDiscount,r.currentMonthDues,r.totalDues,r.paidAdj,r.paid,r.balance,`"${r.paidDate || ''}"`,r.remarks].join(',') + '\n';
+            csv += [r.rowNum, `"${r.familyCode}"`, `"${r.fileNo}"`, `"${r.studentName}"`, `"${r.fatherName}"`, `"${r.cnic}"`, `"${r.classSection}"`, `"${r.contact}"`, r.arrears, r.monthlyFees, r.otherFees, r.siblingDiscount, r.specialDiscount, r.currentMonthDues, r.totalDues, r.paidAdj, r.paid, r.balance, `"${r.paidDate || ''}"`, r.remarks].join(',') + '\n';
             gt.arrears += r.arrears; gt.monthlyFees += r.monthlyFees; gt.otherFees += r.otherFees;
             gt.siblingDiscount += r.siblingDiscount; gt.specialDiscount += r.specialDiscount;
             gt.currentMonthDues += r.currentMonthDues; gt.totalDues += r.totalDues;

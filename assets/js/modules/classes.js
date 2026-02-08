@@ -32,6 +32,22 @@ let studentsTabStatusFilter = '';
 let studentsTabSelectedIds = new Set();
 
 export async function render(container) {
+    // Shared listener for global data changes
+    if (!window.hasClassesDataListener) {
+        window.addEventListener('appDataChange', async (e) => {
+            if (e.detail?.type === 'student' || e.detail?.type === 'class') {
+                console.log(`[Classes] Refreshing due to change: ${e.detail?.type}`);
+                if (state.viewMode === 'detail') {
+                    const main = document.getElementById('mainContent');
+                    if (main) await renderDetailView(main);
+                } else {
+                    await fetchClasses();
+                }
+            }
+        });
+        window.hasClassesDataListener = true;
+    }
+
     try {
         const savedClassId = sessionStorage.getItem('suffah_class_detail_id');
         const savedClassName = sessionStorage.getItem('suffah_class_detail_name');
@@ -44,7 +60,7 @@ export async function render(container) {
             state.selectedClassId = null;
             state.selectedClassName = null;
         }
-    } catch (_) {}
+    } catch (_) { }
     await resolveCurrentUserContext();
     if (state.viewMode === 'detail') {
         await renderDetailView(container);
@@ -461,6 +477,7 @@ async function openEditClassModal(classId) {
         toast.success('Class updated.');
         closeEdit();
         await fetchClasses();
+        if (window.broadcastDataChange) window.broadcastDataChange('class');
         if (state.viewMode === 'detail' && state.selectedClassId === id) {
             state.selectedClassName = class_name;
             const container = document.getElementById('mainContent');
@@ -580,17 +597,30 @@ async function fetchClasses() {
     classesListData = classesData || [];
     if (window.sortClassesNatural) window.sortClassesNatural(classesListData, 'class_name');
 
-    const { data: studentsData } = await supabase.from('students').select('class');
+    const visibleClassNames = classesListData.map(c => c.class_name);
+    const { data: studentsData } = await supabase.from('students').select('class, section').in('class', visibleClassNames);
     classStudentCountMap = {};
+    const classActualSectionsMap = {};
     let totalStudents = 0;
     (studentsData || []).forEach(s => {
         if (s.class) {
             classStudentCountMap[s.class] = (classStudentCountMap[s.class] || 0) + 1;
             totalStudents++;
+            if (s.section) {
+                if (!classActualSectionsMap[s.class]) classActualSectionsMap[s.class] = new Set();
+                classActualSectionsMap[s.class].add(s.section);
+            }
         }
     });
     listStats.totalStudents = totalStudents;
-    listStats.totalSections = classesListData.reduce((acc, c) => acc + ((c.sections && Array.isArray(c.sections)) ? c.sections.length : 0), 0);
+
+    // Merge defined sections with actual student sections for true count
+    listStats.totalSections = classesListData.reduce((acc, c) => {
+        const defined = (c.sections && Array.isArray(c.sections)) ? c.sections : [];
+        const actual = classActualSectionsMap[c.class_name] || new Set();
+        const merged = new Set([...defined, ...actual]);
+        return acc + merged.size;
+    }, 0);
 
     const searchLower = listSearch.trim().toLowerCase();
     const filtered = searchLower
@@ -680,7 +710,9 @@ async function fetchClasses() {
     }
 
     const tableRows = pageRows.map(cls => {
-        const sections = cls.sections && Array.isArray(cls.sections) ? cls.sections : [];
+        const strSections = (cls.sections && Array.isArray(cls.sections)) ? cls.sections : [];
+        const actualSet = classActualSectionsMap[cls.class_name] || new Set();
+        const sections = [...new Set([...strSections, ...actualSet])].sort();
         const studentCount = classStudentCountMap[cls.class_name] || 0;
         const escapedName = escapeHtml(cls.class_name || '');
         const badgeNum = (cls.class_name || '').replace(/[^0-9]/g, '') || (cls.class_name || '').charAt(0);
@@ -859,7 +891,11 @@ async function renderDetailView(container) {
     const classTeacherName = classTeacher?.teachers?.name || '—';
     const distinctTeachers = [...new Set(assignments.map(a => a.teachers?.name).filter(Boolean))].length;
     const { data: classRow } = await supabase.from('classes').select('*').eq('id', classId).single();
-    const sectionsCount = (classRow?.sections && Array.isArray(classRow.sections)) ? classRow.sections.length : 0;
+    const { data: studentSections } = await supabase.from('students').select('section').eq('class', className);
+    const definedSecs = (classRow?.sections && Array.isArray(classRow.sections)) ? classRow.sections : [];
+    const actualSecs = [...new Set((studentSections || []).map(s => s.section).filter(Boolean))];
+    const mergedSections = [...new Set([...definedSecs, ...actualSecs])].sort();
+    const sectionsCount = mergedSections.length;
     const academicYearDisplay = (classRow?.academic_year && String(classRow.academic_year).trim()) ? String(classRow.academic_year) : '—';
     const streamDisplay = (classRow?.stream && String(classRow.stream).trim()) ? String(classRow.stream) : '—';
     const subjectsCount = [...new Set(assignments.map(a => a.subject).filter(Boolean))].length;
@@ -1005,8 +1041,11 @@ async function loadSections(content) {
     const className = state.selectedClassName;
 
     const { data: classRow } = await supabase.from('classes').select('sections').eq('id', classId).single();
-    const sections = (classRow?.sections && Array.isArray(classRow.sections)) ? classRow.sections : [];
     const { data: students } = await supabase.from('students').select('section').eq('class', className);
+
+    const definedSecs = (classRow?.sections && Array.isArray(classRow.sections)) ? classRow.sections : [];
+    const actualSecs = [...new Set((students || []).map(s => s.section).filter(Boolean))];
+    const sections = [...new Set([...definedSecs, ...actualSecs])].sort();
 
     const countBySection = {};
     sections.forEach(sec => { countBySection[sec] = 0; });
@@ -1076,9 +1115,9 @@ async function loadSubjects(content) {
                 </thead>
                 <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
                     ${list.map(r => {
-                        const teacherName = r.teachers?.name ?? '—';
-                        const status = r.is_active !== false ? 'Active' : 'Disabled';
-                        return `
+        const teacherName = r.teachers?.name ?? '—';
+        const status = r.is_active !== false ? 'Active' : 'Disabled';
+        return `
                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50">
                             <td class="p-3 font-medium text-gray-900 dark:text-white">${escapeHtml(r.subject || '—')}</td>
                             <td class="p-3 text-gray-600 dark:text-gray-400">${escapeHtml(r.section || '—')}</td>
@@ -1086,7 +1125,7 @@ async function loadSubjects(content) {
                             <td class="p-3"><span class="px-2 py-0.5 rounded text-xs font-medium ${r.is_active !== false ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400'}">${status}</span></td>
                             ${state.isTeacherReadOnly ? '' : `<td class="p-3 text-right"><button type="button" class="subject-toggle-active text-indigo-600 dark:text-indigo-400 hover:underline text-sm" data-id="${r.id}" data-active="${r.is_active !== false}">${r.is_active !== false ? 'Disable' : 'Enable'}</button></td>`}
                         </tr>`;
-                    }).join('')}
+    }).join('')}
                 </tbody>
             </table>
         </div>
@@ -1131,7 +1170,9 @@ async function loadStudents(content) {
     }
     studentsTabList = students || [];
     const { data: classRow } = await supabase.from('classes').select('sections').eq('id', state.selectedClassId).single();
-    const sections = (classRow?.sections && Array.isArray(classRow.sections)) ? classRow.sections : [];
+    const definedSecs = (classRow?.sections && Array.isArray(classRow.sections)) ? classRow.sections : [];
+    const actualSecs = [...new Set((students || []).map(s => s.section).filter(Boolean))];
+    const sections = [...new Set([...definedSecs, ...actualSecs])].sort();
 
     renderStudentsTabContent(content, sections, className);
 }
@@ -1202,13 +1243,13 @@ function renderStudentsTabContent(content, sections, className) {
                 </thead>
                 <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
                     ${pageList.length === 0 ? `<tr><td colspan="${state.isTeacherReadOnly ? 6 : 8}" class="p-6 text-center text-gray-500 dark:text-gray-400">No students found.</td></tr>` : pageList.map(s => {
-                        const status = s.status || 'active';
-                        const statusLabel = status.charAt(0).toUpperCase() + status.slice(1);
-                        const checked = studentsTabSelectedIds.has(s.id);
-                        const nameCell = s.photo_url
-                            ? `<img src="${escapeHtml(s.photo_url)}" alt="" class="w-9 h-9 rounded-full object-cover flex-shrink-0">`
-                            : `<span class="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 text-sm font-medium">${escapeHtml(studentInitials(s))}</span>`;
-                        return `
+        const status = s.status || 'active';
+        const statusLabel = status.charAt(0).toUpperCase() + status.slice(1);
+        const checked = studentsTabSelectedIds.has(s.id);
+        const nameCell = s.photo_url
+            ? `<img src="${escapeHtml(s.photo_url)}" alt="" class="w-9 h-9 rounded-full object-cover flex-shrink-0">`
+            : `<span class="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 text-sm font-medium">${escapeHtml(studentInitials(s))}</span>`;
+        return `
                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50" data-student-id="${s.id}">
                             ${state.isTeacherReadOnly ? '' : `<td class="p-3"><input type="checkbox" class="student-row-cb rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500 dark:bg-gray-800" data-id="${s.id}" ${checked ? 'checked' : ''}></td>`}
                             <td class="p-3 font-mono text-gray-900 dark:text-white">${escapeHtml(s.roll_no || '—')}</td>
@@ -1230,7 +1271,8 @@ function renderStudentsTabContent(content, sections, className) {
                                 <button type="button" class="student-change-roll text-indigo-600 dark:text-indigo-400 hover:underline text-xs mr-2" data-id="${s.id}">Roll No</button>
                                 <button type="button" class="student-transfer text-indigo-600 dark:text-indigo-400 hover:underline text-xs" data-id="${s.id}">Transfer</button>
                             </td>`}
-                        </tr>`; }).join('')}
+                        </tr>`;
+    }).join('')}
                 </tbody>
             </table>
         </div>
@@ -1247,15 +1289,15 @@ function renderStudentsTabContent(content, sections, className) {
             <div class="flex items-center gap-1">
                 <button type="button" class="class-detail-students-prev px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50" ${studentsTabPage <= 1 ? 'disabled' : ''}>Previous</button>
                 ${(() => {
-                    const start = Math.max(1, Math.min(studentsTabPage - 2, totalPages - 4));
-                    const end = Math.min(totalPages, start + 4);
-                    const range = Math.max(1, end - start + 1);
-                    return Array.from({ length: range }, (_, i) => {
-                        const p = start + i;
-                        const active = p === studentsTabPage;
-                        return `<button type="button" class="class-detail-students-page px-3 py-1.5 rounded-lg text-sm font-medium ${active ? 'bg-indigo-600 dark:bg-indigo-600 text-white' : 'border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}" data-page="${p}">${p}</button>`;
-                    }).join('');
-                })()}
+            const start = Math.max(1, Math.min(studentsTabPage - 2, totalPages - 4));
+            const end = Math.min(totalPages, start + 4);
+            const range = Math.max(1, end - start + 1);
+            return Array.from({ length: range }, (_, i) => {
+                const p = start + i;
+                const active = p === studentsTabPage;
+                return `<button type="button" class="class-detail-students-page px-3 py-1.5 rounded-lg text-sm font-medium ${active ? 'bg-indigo-600 dark:bg-indigo-600 text-white' : 'border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}" data-page="${p}">${p}</button>`;
+            }).join('');
+        })()}
                 <button type="button" class="class-detail-students-next px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50" ${studentsTabPage >= totalPages ? 'disabled' : ''}>Next</button>
             </div>
         </div>
@@ -1503,7 +1545,7 @@ async function openClassDetail(id, name) {
     try {
         sessionStorage.setItem('suffah_class_detail_id', id);
         sessionStorage.setItem('suffah_class_detail_name', name);
-    } catch (_) {}
+    } catch (_) { }
     const container = document.getElementById('mainContent');
     if (container) await renderDetailView(container);
 }
@@ -1515,7 +1557,7 @@ function backToList() {
     try {
         sessionStorage.removeItem('suffah_class_detail_id');
         sessionStorage.removeItem('suffah_class_detail_name');
-    } catch (_) {}
+    } catch (_) { }
     const container = document.getElementById('mainContent');
     if (container) render(container);
 }
@@ -1532,7 +1574,11 @@ window.deleteClass = async (id) => {
     if (!await confirm('Are you sure? This will not delete students in this class.')) return;
     const { error } = await supabase.from('classes').delete().eq('id', id);
     if (error) toast.error(error.message);
-    else { toast.success('Class deleted.'); await fetchClasses(); }
+    else {
+        toast.success('Class deleted.');
+        await fetchClasses();
+        if (window.broadcastDataChange) window.broadcastDataChange('class');
+    }
 };
 
 function openModal() {
@@ -1743,6 +1789,7 @@ async function handleFormSubmit(e) {
     }
     toast.success('Class added.');
     await fetchClasses();
+    if (window.broadcastDataChange) window.broadcastDataChange('class');
     if (createAnother) {
         resetAddClassForm();
         document.getElementById('className').focus();

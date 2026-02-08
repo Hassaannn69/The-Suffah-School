@@ -1166,9 +1166,12 @@ window.viewProfile = async (id) => {
         }
 
         try {
-            await fetchStudentFees(student.id);
+            await Promise.all([
+                fetchStudentFees(student.id),
+                fetchStudentAttendanceProfile(student.id)
+            ]);
         } catch (err) {
-            console.error('Secondary error in fee fetching:', err);
+            console.error('Secondary error in async fetching:', err);
         }
     };
 
@@ -1243,6 +1246,7 @@ window.deleteStudent = async (id) => {
     } else {
         closeProfileModal(); // Close profile modal
         fetchStudents();
+        if (window.broadcastDataChange) window.broadcastDataChange('student');
     }
 };
 
@@ -1298,6 +1302,67 @@ async function fetchStudentFees(studentId) {
         console.error('Error fetching fees:', err);
         const el = document.getElementById('feeTotal');
         if (el) el.textContent = 'Error';
+    }
+}
+
+async function fetchStudentAttendanceProfile(studentId) {
+    const tab = document.getElementById('tab-attendance');
+    if (!tab) return;
+
+    try {
+        const { data: attendance, error } = await supabase
+            .from('student_attendance')
+            .select('*')
+            .eq('student_id', studentId)
+            .order('date', { ascending: false })
+            .limit(30);
+
+        if (error) throw error;
+
+        const total = attendance.length;
+        const present = attendance.filter(a => a.status === 'Present' || a.status === 'Late').length;
+        const percent = total > 0 ? Math.round((present / total) * 100) : 0;
+
+        // Update Gauge
+        const gaugeText = tab.querySelector('.text-2xl.font-bold.text-white');
+        const gaugePath = tab.querySelector('.text-green-500');
+        if (gaugeText) gaugeText.textContent = `${percent}%`;
+        if (gaugePath) {
+            const dashArray = `${percent}, 100`;
+            gaugePath.setAttribute('stroke-dasharray', dashArray);
+        }
+
+        // Update Summary Cards
+        const presentCard = tab.querySelector('.bg-green-900\\/20');
+        const absentCard = tab.querySelector('.bg-red-900\\/20');
+        if (presentCard) presentCard.textContent = `${present} Present`;
+        if (absentCard) absentCard.textContent = `${total - present} Absent`;
+
+        // Update List
+        const listContainer = tab.querySelector('.divide-y');
+        if (listContainer) {
+            if (attendance.length === 0) {
+                listContainer.innerHTML = '<div class="px-6 py-8 text-center text-gray-500">No attendance records found.</div>';
+            } else {
+                listContainer.innerHTML = attendance.map(a => `
+                    <div class="px-6 py-4 flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-white">${new Date(a.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                            <p class="text-xs text-gray-500">${a.remarks || 'No remarks'}</p>
+                        </div>
+                        <span class="px-2.5 py-1 rounded-full text-xs font-bold ${a.status === 'Present' ? 'bg-green-900/30 text-green-400 border border-green-900/50' :
+                        a.status === 'Late' ? 'bg-yellow-900/30 text-yellow-400 border border-yellow-900/50' :
+                            'bg-red-900/30 text-red-400 border border-red-900/50'
+                    }">
+                            ${a.status}
+                        </span>
+                    </div>
+                `).join('');
+            }
+        }
+
+    } catch (err) {
+        console.error('Error fetching student attendance profile:', err);
     }
 }
 
@@ -2065,6 +2130,7 @@ async function handleFormSubmit(e) {
 
         closeModal();
         fetchStudents();
+        if (window.broadcastDataChange) window.broadcastDataChange('student');
     } catch (error) {
         console.error('Error saving student:', error);
         alert('Error saving student: ' + error.message);
