@@ -466,9 +466,11 @@
                     <div class="border-t border-white/20 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-white/60">
                         <span>© ${new Date().getFullYear()} ${escapeHtml(schoolName())}. All rights reserved.</span>
                     </div>
+                    <p class="landing-version-note mt-4 text-xs text-white/40 text-center md:text-right" id="landing-version-note" aria-hidden="true"></p>
                 </div>
             </footer>
         `;
+        loadVersionNote();
     }
 
     function escapeHtml(s) {
@@ -490,6 +492,23 @@
         if (!d) return '';
         const date = new Date(d);
         return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    }
+
+    /** Load website version and last-updated from version.json and show in footer. Update version.json whenever the site is updated (by you or any AI). */
+    function loadVersionNote() {
+        const el = document.getElementById('landing-version-note');
+        if (!el) return;
+        fetch('version.json?t=' + Date.now())
+            .then(r => r.ok ? r.json() : null)
+            .then(data => {
+                if (!data || (!data.version && !data.updated_at)) return;
+                const v = data.version ? 'v' + String(data.version).trim() : '';
+                const raw = data.updated_at ? new Date(data.updated_at) : null;
+                const dateStr = raw ? raw.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) + ', ' + raw.toLocaleTimeString('en-GB', { hour: 'numeric', minute: '2-digit', hour12: true }) : '';
+                const parts = [v, dateStr ? 'Updated ' + dateStr : ''].filter(Boolean);
+                el.textContent = parts.length ? 'Website ' + parts.join(' · ') : '';
+            })
+            .catch(() => {});
     }
 
     function setupScrollFade() {
