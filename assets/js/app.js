@@ -313,31 +313,26 @@ function startHeaderClock() {
 
 async function loadHeaderVersion() {
     const headerVersionEl = document.getElementById('headerAppVersion');
-    const footerVersionEl = document.getElementById('footerAppVersion');
-    const footerLastUpdatedEl = document.getElementById('footerAppLastUpdated');
+    const headerLastUpdatedEl = document.getElementById('headerAppLastUpdated');
 
     try {
         const response = await fetch(`version.json?t=${Date.now()}`, { cache: 'no-store' });
         if (!response.ok) throw new Error('Failed to fetch version');
 
         const data = await response.json();
-        if (data.version) {
-            if (headerVersionEl) headerVersionEl.textContent = data.version;
-            if (footerVersionEl) footerVersionEl.textContent = data.version;
-        }
+        if (data.version && headerVersionEl) headerVersionEl.textContent = data.version;
 
-        // Update last updated time in footer (exact date and time, 12-hour with AM/PM)
-        if (footerLastUpdatedEl && data.updated_at) {
+        // Website updated: exact date and time in header (12-hour with AM/PM)
+        if (headerLastUpdatedEl && data.updated_at) {
             const updatedDate = new Date(data.updated_at);
             const dateStr = updatedDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
             const timeStr = updatedDate.toLocaleTimeString('en-GB', { hour: 'numeric', minute: '2-digit', hour12: true });
-            footerLastUpdatedEl.textContent = `${dateStr}, ${timeStr}`;
+            headerLastUpdatedEl.textContent = `${dateStr}, ${timeStr}`;
         }
     } catch (error) {
         console.error('Error loading version:', error);
         if (headerVersionEl) headerVersionEl.textContent = '1.0.0';
-        if (footerVersionEl) footerVersionEl.textContent = '1.0.0';
-        if (footerLastUpdatedEl) footerLastUpdatedEl.textContent = 'unknown';
+        if (headerLastUpdatedEl) headerLastUpdatedEl.textContent = 'unknown';
     }
 }
 

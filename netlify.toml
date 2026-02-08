@@ -1,6 +1,7 @@
 [build]
+  command = "npm run build"
   publish = "."
-  
+
 # Exclude static assets from SPA redirect - serve them directly
 [[redirects]]
   from = "/assets/*"
@@ -18,6 +19,19 @@
 [[redirects]]
   from = "/apply.html"
   to = "/apply.html"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/login.html"
+  to = "/login.html"
+  status = 200
+  force = true
+
+# Serve version.json directly (used for "Website updated" time; must not be SPA)
+[[redirects]]
+  from = "/version.json"
+  to = "/version.json"
   status = 200
   force = true
 
@@ -57,3 +71,9 @@
   for = "/*.html"
   [headers.values]
     Cache-Control = "public, max-age=0, must-revalidate"
+
+# version.json: no cache so "Website updated" time is always current after deploy
+[[headers]]
+  for = "/version.json"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"

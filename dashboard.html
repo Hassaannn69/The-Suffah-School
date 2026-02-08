@@ -15,7 +15,8 @@
 <body class="bg-gray-50 dark:bg-gray-950 min-h-screen flex transition-colors duration-200 overflow-x-hidden">
 
     <!-- Mobile sidebar backdrop (shown when sidebar is open on small screens) -->
-    <div id="sidebarBackdrop" class="fixed inset-0 bg-black/50 z-10 hidden transition-opacity duration-200" aria-hidden="true"></div>
+    <div id="sidebarBackdrop" class="fixed inset-0 bg-black/50 z-10 hidden transition-opacity duration-200"
+        aria-hidden="true"></div>
 
     <!-- Sidebar -->
     <aside
@@ -95,24 +96,41 @@
                     <span class="text-gray-300 dark:text-gray-600">|</span>
                     <span id="currentDate" class="font-medium">---, -- ---</span>
                 </div>
+                <div id="headerVersion"
+                    class="hidden md:flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800/50 px-3 py-1 rounded-full border border-gray-200 dark:border-gray-700/50">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                    </svg>
+                    <span class="font-medium">v<span id="headerAppVersion">...</span></span>
+                    <span class="text-gray-400 dark:text-gray-600">·</span>
+                    <span class="text-[11px]">Website updated <span id="headerAppLastUpdated" class="font-semibold text-gray-700 dark:text-gray-300">...</span></span>
+                </div>
             </div>
             <div class="flex items-center space-x-4">
                 <!-- Notifications (admin: pending applications) -->
                 <div id="adminNotificationsContainer" class="relative hidden">
-                    <button id="adminNotificationsBtn" type="button" class="relative p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 transition-colors" aria-label="Notifications">
+                    <button id="adminNotificationsBtn" type="button"
+                        class="relative p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 transition-colors"
+                        aria-label="Notifications">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                         </svg>
-                        <span id="adminNotificationsBadge" class="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-red-500 text-white text-xs font-bold hidden">0</span>
+                        <span id="adminNotificationsBadge"
+                            class="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-red-500 text-white text-xs font-bold hidden">0</span>
                     </button>
-                    <div id="adminNotificationsDropdown" class="hidden absolute right-0 mt-2 w-72 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 z-50 py-2">
+                    <div id="adminNotificationsDropdown"
+                        class="hidden absolute right-0 mt-2 w-72 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 z-50 py-2">
                         <div class="px-4 py-2 border-b border-gray-100 dark:border-gray-700">
                             <p class="text-sm font-semibold text-gray-900 dark:text-white">Notifications</p>
                         </div>
                         <div id="adminNotificationsList" class="max-h-64 overflow-y-auto">
                             <p class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">Loading...</p>
                         </div>
-                        <a id="adminNotificationsViewAll" href="#" data-module="admissions" class="block px-4 py-3 text-sm font-medium text-primary-600 dark:text-primary-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 border-t border-gray-100 dark:border-gray-700">View all applications</a>
+                        <a id="adminNotificationsViewAll" href="#" data-module="admissions"
+                            class="block px-4 py-3 text-sm font-medium text-primary-600 dark:text-primary-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 border-t border-gray-100 dark:border-gray-700">View
+                            all applications</a>
                     </div>
                 </div>
                 <!-- Dark Mode Toggle -->
@@ -146,6 +164,7 @@
                 </div>
             </div>
         </div>
+
     </main>
 
     <!-- UI Components MUST load before app.js -->
@@ -155,7 +174,7 @@
     <!-- Initialize Supabase client -->
     <script src="assets/js/supabase-init.js?v=1770495781648"></script>
     <!-- Load app as ES6 module -->
-    <script type="module" src="assets/js/app.js?v=1770495781648"></script>
+    <script type="module" src="assets/js/app.js?v=1.0.0"></script>
 </body>
 
 </html>
