@@ -126,7 +126,7 @@ export async function render(container) {
                     <!-- Regenerate Option -->
                     <div class="flex items-center">
                         <input type="checkbox" id="regenerateExisting" 
-                            class="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                            class="app-checkbox-circular">
                         <label for="regenerateExisting" class="ml-2 text-sm text-gray-700 dark:text-gray-300">
                             Regenerate fees if already generated for this month
                         </label>
@@ -167,7 +167,7 @@ export async function render(container) {
                         <thead>
                             <tr class="bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-sm uppercase tracking-wider">
                                 <th class="p-4 font-semibold w-12">
-                                    <input type="checkbox" id="selectAllCheckbox" class="w-4 h-4 text-indigo-600 rounded">
+                                    <input type="checkbox" id="selectAllCheckbox" class="app-checkbox-circular">
                                 </th>
                                 <th class="p-4 font-semibold">Student</th>
                                 <th class="p-4 font-semibold">Class</th>
@@ -616,7 +616,7 @@ async function handlePreview() {
         return `
         <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors group">
             <td class="p-4 align-top">
-                <input type="checkbox" class="student-checkbox w-4 h-4 text-indigo-600 rounded" 
+                <input type="checkbox" class="student-checkbox app-checkbox-circular" 
                     data-student-id="${item.student.id}" 
                     data-student-class="${item.student.class}"
                     ${(!item.hasAnyExisting || regenerateChecked) ? 'checked' : ''}>

@@ -217,7 +217,7 @@ function getClassModalHtml() {
                     </div>
                     <div class="p-6 pt-4 border-t border-gray-200 dark:border-gray-800 flex-shrink-0 space-y-4">
                         <label class="flex items-center gap-2 cursor-pointer">
-                            <input type="checkbox" id="createAnotherClass" class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500 dark:bg-gray-800">
+                            <input type="checkbox" id="createAnotherClass" class="app-checkbox-circular">
                             <span class="text-sm text-gray-700 dark:text-gray-300">Create another class</span>
                         </label>
                         <div class="flex justify-end gap-3">
@@ -1231,7 +1231,7 @@ function renderStudentsTabContent(content, sections, className) {
             <table class="w-full text-sm">
                 <thead class="bg-gray-50 dark:bg-gray-800">
                     <tr>
-                        ${state.isTeacherReadOnly ? '' : '<th class="p-3 text-left"><input type="checkbox" id="classDetailStudentSelectAll" class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500 dark:bg-gray-800"></th>'}
+                        ${state.isTeacherReadOnly ? '' : '<th class="p-3 text-left"><input type="checkbox" id="classDetailStudentSelectAll" class="app-checkbox-circular"></th>'}
                         <th class="p-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Roll No</th>
                         <th class="p-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Student Name</th>
                         <th class="p-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Section</th>
@@ -1251,7 +1251,7 @@ function renderStudentsTabContent(content, sections, className) {
             : `<span class="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 text-sm font-medium">${escapeHtml(studentInitials(s))}</span>`;
         return `
                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50" data-student-id="${s.id}">
-                            ${state.isTeacherReadOnly ? '' : `<td class="p-3"><input type="checkbox" class="student-row-cb rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500 dark:bg-gray-800" data-id="${s.id}" ${checked ? 'checked' : ''}></td>`}
+                            ${state.isTeacherReadOnly ? '' : `<td class="p-3"><input type="checkbox" class="student-row-cb app-checkbox-circular" data-id="${s.id}" ${checked ? 'checked' : ''}></td>`}
                             <td class="p-3 font-mono text-gray-900 dark:text-white">${escapeHtml(s.roll_no || '—')}</td>
                             <td class="p-3">
                                 <div class="flex items-center gap-3">

@@ -393,9 +393,9 @@ function getReportOptionsHTML(reportId) {
                     <input type="number" id="f_months_def" min="0" placeholder="Any" class="${RO_INPUT}">
                 </div>
                 <div class="min-w-0 flex flex-wrap gap-3 items-center sm:col-span-2 lg:col-span-1">
-                    <label class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300 cursor-pointer whitespace-nowrap"><input type="checkbox" id="f_exclude_paid" class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"> Excl. paid</label>
-                    <label class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300 cursor-pointer whitespace-nowrap"><input type="checkbox" id="f_exclude_pending" class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"> Excl. pending</label>
-                    <label class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300 cursor-pointer whitespace-nowrap"><input type="checkbox" id="f_non_defaulters" class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"> Non-def. only</label>
+                    <label class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300 cursor-pointer whitespace-nowrap"><input type="checkbox" id="f_exclude_paid" class="app-checkbox-circular"> Excl. paid</label>
+                    <label class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300 cursor-pointer whitespace-nowrap"><input type="checkbox" id="f_exclude_pending" class="app-checkbox-circular"> Excl. pending</label>
+                    <label class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 cursor-pointer whitespace-nowrap"><input type="checkbox" id="f_non_defaulters" class="app-checkbox-circular"> Non-def. only</label>
                 </div>
             </div>`;
         optionalRow = htmlCommonHidden();
@@ -1435,15 +1435,15 @@ function getDefaultersHTML() {
                 </div>
                 <div class="flex items-end gap-1.5 col-span-2">
                     <label class="flex items-center gap-1 text-[10px] text-gray-600 dark:text-gray-300 cursor-pointer whitespace-nowrap">
-                        <input type="checkbox" id="dr_exclude_paid" class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500 w-3 h-3">
+                        <input type="checkbox" id="dr_exclude_paid" class="app-checkbox-circular" style="width: 1rem; height: 1rem;">
                         Excl. paid
                     </label>
                     <label class="flex items-center gap-1 text-[10px] text-gray-600 dark:text-gray-300 cursor-pointer whitespace-nowrap">
-                        <input type="checkbox" id="dr_exclude_pending" class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500 w-3 h-3">
+                        <input type="checkbox" id="dr_exclude_pending" class="app-checkbox-circular" style="width: 1rem; height: 1rem;">
                         Excl. pending
                     </label>
                     <label class="flex items-center gap-1 text-[10px] text-gray-600 dark:text-gray-300 cursor-pointer whitespace-nowrap">
-                        <input type="checkbox" id="dr_non_defaulters" class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500 w-3 h-3">
+                        <input type="checkbox" id="dr_non_defaulters" class="app-checkbox-circular" style="width: 1rem; height: 1rem;">
                         Non-def. only
                     </label>
                 </div>

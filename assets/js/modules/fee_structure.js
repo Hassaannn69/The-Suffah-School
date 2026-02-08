@@ -113,7 +113,7 @@ export async function render(container) {
                 <div id="discountRulesContent" class="space-y-4">
                     <div class="flex flex-wrap items-center gap-4 p-4 rounded-lg bg-gray-50 dark:bg-gray-700/50">
                         <label class="flex items-center gap-2 cursor-pointer">
-                            <input type="checkbox" id="discountSiblingEnabled" class="w-4 h-4 text-indigo-600 rounded">
+                            <input type="checkbox" id="discountSiblingEnabled" class="app-checkbox-circular">
                             <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Sibling discount</span>
                         </label>
                         <span class="text-sm text-gray-500">Applies to second and subsequent siblings.</span>
@@ -122,7 +122,7 @@ export async function render(container) {
                     </div>
                     <div class="flex flex-wrap items-center gap-4 p-4 rounded-lg bg-gray-50 dark:bg-gray-700/50">
                         <label class="flex items-center gap-2 cursor-pointer">
-                            <input type="checkbox" id="discountStaffEnabled" class="w-4 h-4 text-indigo-600 rounded">
+                            <input type="checkbox" id="discountStaffEnabled" class="app-checkbox-circular">
                             <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Staff child discount</span>
                         </label>
                         <span class="text-sm text-gray-500">Applies to children of staff members.</span>
@@ -131,7 +131,7 @@ export async function render(container) {
                     </div>
                     <div class="flex flex-wrap items-center gap-4 p-4 rounded-lg bg-gray-50 dark:bg-gray-700/50">
                         <label class="flex items-center gap-2 cursor-pointer">
-                            <input type="checkbox" id="discountEarlyEnabled" class="w-4 h-4 text-indigo-600 rounded">
+                            <input type="checkbox" id="discountEarlyEnabled" class="app-checkbox-circular">
                             <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Early admission discount</span>
                         </label>
                         <input type="number" id="discountEarlyPercent" min="0" max="100" step="0.5" placeholder="0" class="w-20 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm">

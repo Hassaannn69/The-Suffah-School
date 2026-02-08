@@ -24,6 +24,10 @@ const openSidebarBtn = document.getElementById('openSidebar');
 const closeSidebarBtn = document.getElementById('closeSidebar');
 const sidebarBackdrop = document.getElementById('sidebarBackdrop');
 
+const SIDEBAR_COLLAPSED_KEY = 'suffah_sidebar_collapsed';
+const SIDEBAR_MODE_KEY = 'suffah_sidebar_mode'; // 'toggle' or 'hover'
+let currentSidebarMode = localStorage.getItem(SIDEBAR_MODE_KEY) || 'toggle';
+
 function isMobileView() {
     return window.matchMedia('(max-width: 767px)').matches;
 }
@@ -102,6 +106,10 @@ async function initApp() {
         renderSidebar();
         startHeaderClock();
         loadHeaderVersion();
+
+        // Apply sidebar mode from localStorage (persistence)
+        window.updateSidebarMode(currentSidebarMode);
+
         if (currentRole === 'admin') {
             showAdminNotificationsContainer();
             fetchAndUpdateAdminNotificationCount();
@@ -215,7 +223,7 @@ const menuItems = [
     { id: 'staff', label: 'Staff & Users', icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z', roles: ['admin'] },
     { id: 'landing_page_editor', label: 'Landing Page', icon: 'M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0h.5a2.5 2.5 0 001.5-4.065M3.055 11H3a2 2 0 00-2 2v2a2 2 0 002 2h2.945M21 12v.5a2.5 2.5 0 01-2.5 2.5h-.5a2 2 0 01-2-2v-1.055M21 12V10a2 2 0 00-2-2h-2.945', roles: ['admin'] },
     { id: 'teacher-profile', label: 'My Profile', icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z', roles: ['teacher'] },
-    { id: 'settings', label: 'Settings', icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z', roles: ['admin'] }
+    { id: 'settings', label: 'Settings', icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z', roles: ['admin', 'teacher', 'accountant', 'student', 'parent'] }
 ];
 
 function renderSidebar() {
@@ -228,34 +236,33 @@ function renderSidebar() {
                 dropdownContainer.className = 'relative dropdown-group group';
 
                 const dropdownBtn = document.createElement('button');
-                dropdownBtn.className = 'w-full flex items-center justify-between px-4 py-3 text-gray-400 hover:bg-gray-800 hover:text-white rounded-lg transition-all group border-l-4 border-transparent';
+                dropdownBtn.className = 'w-full flex items-center justify-between px-3 py-2 text-gray-400 hover:text-white rounded-xl transition-all group border-l-4 border-transparent';
                 dropdownBtn.innerHTML = `
-                    <div class="flex items-center space-x-3 min-w-0">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 flex-shrink-0 text-gray-500 group-hover:text-primary-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${item.icon}" />
-                        </svg>
-                        <span class="sidebar-label font-medium tracking-wide truncate">${item.label}</span>
+                    <div class="flex items-center space-x-2 min-w-0">
+                        <div class="sidebar-icon-container">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${item.icon}" />
+                            </svg>
+                        </div>
+                        <span class="sidebar-label font-semibold tracking-wide truncate text-[14.5px]">${item.label}</span>
                     </div>
-                    <svg class="h-4 w-4 flex-shrink-0 transition-transform dropdown-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="h-3.5 w-3.5 flex-shrink-0 transition-transform dropdown-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                     </svg>
                 `;
 
                 const submenuContainer = document.createElement('div');
-                submenuContainer.className = 'submenu-wrapper pl-4 space-y-1 overflow-hidden transition-all duration-300 max-h-0 opacity-0';
+                submenuContainer.className = 'submenu-wrapper pl-2 space-y-1 overflow-hidden transition-all duration-300 max-h-0 opacity-0';
 
                 // Add submenu items
                 item.submenu.forEach(subitem => {
                     if (subitem.roles.includes(currentRole)) {
                         const sublink = document.createElement('a');
                         sublink.href = '#';
-                        sublink.className = 'flex items-center space-x-3 px-4 py-2 text-gray-400 hover:bg-gray-800 hover:text-white rounded-lg transition-all text-sm border-l-4 border-transparent';
+                        sublink.className = 'flex items-center pl-9 pr-4 py-2 text-gray-400 hover:text-white rounded-lg transition-all text-[13.5px] relative group/sub';
                         sublink.dataset.module = subitem.id;
                         sublink.innerHTML = `
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 flex-shrink-0 text-gray-500 group-hover:text-primary-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${subitem.icon}" />
-                            </svg>
-                            <span class="sidebar-label font-medium tracking-wide truncate">${subitem.label}</span>
+                            <span class="sidebar-label font-medium truncate">${subitem.label}</span>
                         `;
                         sublink.addEventListener('click', (e) => {
                             e.preventDefault();
@@ -276,19 +283,23 @@ function renderSidebar() {
                 });
 
                 dropdownContainer.appendChild(dropdownBtn);
-                dropdownContainer.appendChild(submenuContainer);
                 navLinksContainer.appendChild(dropdownContainer);
+                dropdownContainer.appendChild(submenuContainer);
             } else {
                 // Regular menu item
                 const link = document.createElement('a');
                 link.href = '#';
-                link.className = 'flex items-center space-x-3 px-4 py-3 text-gray-400 hover:bg-gray-800 hover:text-white rounded-lg transition-all group border-l-4 border-transparent';
+                link.className = 'flex items-center px-3 py-2 text-gray-400 hover:text-white rounded-xl transition-all group border-l-4 border-transparent';
                 link.dataset.module = item.id;
                 link.innerHTML = `
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 flex-shrink-0 text-gray-500 group-hover:text-primary-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${item.icon}" />
-                    </svg>
-                    <span class="sidebar-label font-medium tracking-wide truncate">${item.label}</span>
+                    <div class="flex items-center space-x-2 min-w-0">
+                        <div class="sidebar-icon-container">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${item.icon}" />
+                            </svg>
+                        </div>
+                        <span class="sidebar-label font-semibold tracking-wide truncate text-[14.5px]">${item.label}</span>
+                    </div>
                 `;
                 link.addEventListener('click', (e) => {
                     e.preventDefault();
@@ -1061,7 +1072,6 @@ if (sidebarBackdrop) {
 }
 
 // Collapsible sidebar (desktop only): persist state in localStorage, resize main content
-const SIDEBAR_COLLAPSED_KEY = 'suffah_sidebar_collapsed';
 function applySidebarCollapsed(collapsed) {
     const iconOpen = document.getElementById('sidebarCollapseIconOpen');
     const iconClosed = document.getElementById('sidebarCollapseIconClosed');
@@ -1099,6 +1109,39 @@ window.expandSidebar = function () {
         localStorage.setItem(SIDEBAR_COLLAPSED_KEY, 'false');
     }
 };
+
+/**
+ * Update the sidebar interaction mode (hover vs toggle)
+ * @param {'hover' | 'toggle'} mode 
+ */
+window.updateSidebarMode = function (mode) {
+    currentSidebarMode = mode;
+    localStorage.setItem(SIDEBAR_MODE_KEY, mode);
+
+    // Remove old listeners to avoid duplicates
+    sidebar.removeEventListener('mouseenter', handleSidebarHoverEnter);
+    sidebar.removeEventListener('mouseleave', handleSidebarHoverLeave);
+
+    if (mode === 'hover') {
+        sidebar.addEventListener('mouseenter', handleSidebarHoverEnter);
+        sidebar.addEventListener('mouseleave', handleSidebarHoverLeave);
+    }
+};
+
+function handleSidebarHoverEnter() {
+    if (isMobileView()) return;
+    if (document.body.classList.contains('sidebar-collapsed')) {
+        applySidebarCollapsed(false);
+    }
+}
+
+function handleSidebarHoverLeave() {
+    if (isMobileView()) return;
+    const wasCollapsed = localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === 'true';
+    if (wasCollapsed && !document.body.classList.contains('sidebar-collapsed')) {
+        applySidebarCollapsed(true);
+    }
+}
 
 // Theme Toggle Logic
 // Theme Toggle Logic

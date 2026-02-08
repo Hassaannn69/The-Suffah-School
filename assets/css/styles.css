@@ -642,3 +642,60 @@ input:-webkit-autofill:active {
     padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
   }
 }
+
+/* Premium Circular Checkbox */
+.app-checkbox-circular {
+  width: 1.15rem;
+  height: 1.15rem;
+  appearance: none;
+  -webkit-appearance: none;
+  border-radius: 50% !important;
+  border: 2px solid #cbd5e1;
+  background-color: transparent !important;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.dark .app-checkbox-circular {
+  border-color: #475569;
+}
+
+.app-checkbox-circular:checked {
+  background-color: #6366f1 !important;
+  border-color: #6366f1 !important;
+  box-shadow: 0 0 10px rgba(99, 102, 241, 0.4);
+}
+
+.dark .app-checkbox-circular:checked {
+  background-color: #818cf8 !important;
+  border-color: #818cf8 !important;
+  box-shadow: 0 0 12px rgba(129, 140, 248, 0.3);
+}
+
+.app-checkbox-circular:checked::after {
+  content: "";
+  width: 0.5rem;
+  height: 0.25rem;
+  border-left: 2px solid white;
+  border-bottom: 2px solid white;
+  transform: rotate(-45deg) translateY(-1px);
+}
+
+.app-checkbox-circular:hover {
+  border-color: #6366f1;
+  transform: scale(1.1);
+}
+
+.dark .app-checkbox-circular:hover {
+  border-color: #818cf8;
+}
+
+.app-checkbox-circular:focus {
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15);
+}

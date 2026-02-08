@@ -198,6 +198,15 @@
             margin-left: 5rem;
         }
 
+        #navLinks {
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+
+        #navLinks::-webkit-scrollbar {
+            display: none;
+        }
+
         body.sidebar-collapsed #sidebar .sidebar-label {
             display: none;
         }
@@ -219,10 +228,6 @@
         body.sidebar-collapsed #sidebar>div:first-of-type>div:first-child {
             padding: 0;
             justify-content: center;
-        }
-
-        body.sidebar-collapsed #sidebarCollapseBtn {
-            /* Transform removed to use consistent gap */
         }
 
         /* Hover-based Sidebar Dropdowns */
@@ -256,6 +261,122 @@
 
         body.sidebar-collapsed #navLinks .relative>div {
             display: none !important;
+        }
+
+        /* Circular Icon Containers */
+        .sidebar-icon-container {
+            width: 2.25rem;
+            height: 2.25rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background-color: transparent;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            flex-shrink: 0;
+        }
+
+        .group:hover .sidebar-icon-container,
+        a:hover .sidebar-icon-container {
+            background-color: rgba(99, 102, 241, 0.1);
+            color: #6366f1;
+            transform: scale(1.05);
+        }
+
+        .dark .group:hover .sidebar-icon-container,
+        .dark a:hover .sidebar-icon-container {
+            background-color: rgba(129, 140, 248, 0.15);
+            color: #818cf8;
+        }
+
+        /* When sidebar is EXPANDED: Full background highlight for active/hover */
+        #navLinks a:hover,
+        #navLinks .relative>button:hover {
+            background-color: rgba(99, 102, 241, 0.05);
+        }
+
+        .dark #navLinks a:hover,
+        .dark #navLinks .relative>button:hover {
+            background-color: rgba(129, 140, 248, 0.08);
+        }
+
+        /* Update Expanded Sidebar Active Styling (Override bg-gray-800) */
+        #navLinks a.bg-gray-800,
+        #navLinks .relative>button.bg-gray-800 {
+            background-color: rgba(99, 102, 241, 0.1) !important;
+            color: #6366f1 !important;
+            border-left-color: #6366f1 !important;
+        }
+
+        #navLinks a.bg-gray-800 .sidebar-icon-container,
+        #navLinks .relative>button.bg-gray-800 .sidebar-icon-container {
+            color: #6366f1 !important;
+        }
+
+        .dark #navLinks a.bg-gray-800,
+        .dark #navLinks .relative>button.bg-gray-800 {
+            background-color: rgba(129, 140, 248, 0.12) !important;
+            color: #818cf8 !important;
+            border-left-color: #818cf8 !important;
+        }
+
+        .dark #navLinks a.bg-gray-800 .sidebar-icon-container,
+        .dark #navLinks .relative>button.bg-gray-800 .sidebar-icon-container {
+            color: #818cf8 !important;
+        }
+
+        /* When sidebar is COLLAPSED: Only highlight the icon circle, not the full background */
+        body.sidebar-collapsed #navLinks a:hover,
+        body.sidebar-collapsed #navLinks .relative>button:hover,
+        body.sidebar-collapsed #navLinks a.bg-gray-100,
+        body.sidebar-collapsed #navLinks a.bg-gray-800,
+        body.sidebar-collapsed #navLinks .relative>button.bg-gray-100,
+        body.sidebar-collapsed #navLinks .relative>button.bg-gray-800 {
+            background-color: transparent !important;
+            border-left-color: transparent !important;
+        }
+
+        body.sidebar-collapsed #navLinks a,
+        body.sidebar-collapsed #navLinks .relative>button {
+            border-left-color: transparent !important;
+        }
+
+        body.sidebar-collapsed #navLinks a:hover .sidebar-icon-container,
+        body.sidebar-collapsed #navLinks .relative>button:hover .sidebar-icon-container,
+        body.sidebar-collapsed #navLinks a.bg-gray-100 .sidebar-icon-container,
+        body.sidebar-collapsed #navLinks a.bg-gray-800 .sidebar-icon-container,
+        body.sidebar-collapsed #navLinks .relative>button.bg-gray-100 .sidebar-icon-container,
+        body.sidebar-collapsed #navLinks .relative>button.bg-gray-800 .sidebar-icon-container {
+            background-color: rgba(99, 102, 241, 0.2);
+            color: #6366f1 !important;
+            transform: scale(1.1);
+        }
+
+        body.sidebar-collapsed .dark #navLinks a:hover .sidebar-icon-container,
+        body.sidebar-collapsed .dark #navLinks .relative>button:hover .sidebar-icon-container,
+        body.sidebar-collapsed .dark #navLinks a.bg-gray-800 .sidebar-icon-container,
+        body.sidebar-collapsed .dark #navLinks .relative>button.bg-gray-800 .sidebar-icon-container {
+            background-color: rgba(129, 140, 248, 0.25);
+            color: #818cf8 !important;
+        }
+
+        /* Active state for sub-menu bullet */
+        .submenu-wrapper a::before {
+            content: '';
+            position: absolute;
+            left: 1.15rem;
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+            background-color: #94a3b8;
+            opacity: 0.5;
+            transition: all 0.2s;
+        }
+
+        .submenu-wrapper a:hover::before {
+            background-color: #6366f1;
+            opacity: 1;
+            transform: scale(1.5);
         }
     </style>
     <!-- UI Components MUST load before app.js -->
