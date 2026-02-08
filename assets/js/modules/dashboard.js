@@ -19,34 +19,34 @@ export async function render(container) {
                 <!-- Top Stats Grid (6 Individual Tiles) -->
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     <!-- Tile 1: Total Students -->
-                    <div class="bg-[#1e293b] border border-[#334155]/50 rounded-2xl p-5 relative overflow-hidden group hover:border-[#475569] transition-all shadow-sm">
+                    <div class="bg-white dark:bg-[#1e293b] border border-gray-200 dark:border-[#334155]/50 rounded-2xl p-5 relative overflow-hidden group hover:border-gray-300 dark:hover:border-[#475569] transition-all shadow-sm">
                         <div class="flex justify-between items-start">
                             <div>
                                 <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Total Students</p>
-                                <p class="text-4xl font-bold text-white mt-1" id="statTotalStudents">...</p>
+                                <p class="text-4xl font-bold text-gray-900 dark:text-white mt-1" id="statTotalStudents">...</p>
                             </div>
                             <!-- Circular Progress -->
                             <div class="relative w-16 h-16">
                                 <svg class="w-full h-full transform -rotate-90">
-                                    <circle cx="32" cy="32" r="28" stroke="currentColor" stroke-width="6" fill="none" class="text-gray-800" />
+                                    <circle cx="32" cy="32" r="28" stroke="currentColor" stroke-width="6" fill="none" class="text-gray-100 dark:text-gray-800" />
                                     <circle id="attendanceCircle" cx="32" cy="32" r="28" stroke="currentColor" stroke-width="6" fill="none" class="text-blue-500 transition-all duration-1000" stroke-dasharray="175.93" stroke-dashoffset="175.93" stroke-linecap="round" />
                                 </svg>
                                 <div class="absolute inset-0 flex items-center justify-center">
-                                    <span class="text-sm font-bold text-white" id="attendanceGaugeText">0%</span>
+                                    <span class="text-sm font-bold text-gray-900 dark:text-white" id="attendanceGaugeText">0%</span>
                                 </div>
                             </div>
                         </div>
                         
-                        <div class="h-px bg-gray-700/50 my-4 w-full"></div>
+                        <div class="h-px bg-gray-100 dark:bg-gray-700/50 my-4 w-full"></div>
 
                         <div class="flex items-center justify-between">
                             <div>
                                 <p class="text-[10px] text-gray-500 mb-0.5">Attendance</p>
                                 <div class="flex items-center gap-1">
-                                    <p class="text-base font-bold text-blue-400 leading-none" id="attendanceCount">0 / 0</p>
+                                    <p class="text-base font-bold text-blue-500 dark:text-blue-400 leading-none" id="attendanceCount">0 / 0</p>
                                 </div>
                             </div>
-                             <button onclick="window.loadModule('students')" class="bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 px-3 py-1.5 rounded-full text-xs font-semibold flex items-center transition-colors cursor-pointer group-hover:bg-blue-500/20">
+                             <button onclick="window.loadModule('students')" class="bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 px-3 py-1.5 rounded-full text-xs font-semibold flex items-center transition-colors cursor-pointer group-hover:bg-blue-100 dark:group-hover:bg-blue-500/20">
                                 Details
                                 <svg class="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
                             </button>
@@ -54,24 +54,24 @@ export async function render(container) {
                     </div>
 
                     <!-- Tile 2: Monthly Fees -->
-                    <div onclick="window.openDashboardReport && window.openDashboardReport('monthly_collection')" class="bg-[#1e293b] border border-[#334155]/50 rounded-2xl p-5 relative overflow-hidden cursor-pointer group hover:border-[#475569] transition-all shadow-sm">
+                    <div onclick="window.openDashboardReport && window.openDashboardReport('monthly_collection')" class="bg-white dark:bg-[#1e293b] border border-gray-200 dark:border-[#334155]/50 rounded-2xl p-5 relative overflow-hidden cursor-pointer group hover:border-gray-300 dark:hover:border-[#475569] transition-all shadow-sm">
                         <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1" id="feesPeriodLabel">Monthly Fees</p>
                         <div class="mt-1 mb-4 flex items-baseline gap-1">
                             <p class="text-[10px] text-gray-500 font-semibold mb-0.5">PKR</p>
-                            <p class="text-4xl font-bold text-white leading-none" id="statFeesCollectedVal">0</p>
+                            <p class="text-4xl font-bold text-gray-900 dark:text-white leading-none" id="statFeesCollectedVal">0</p>
                         </div>
-                        <div class="w-full bg-gray-700 rounded-full h-1.5 mb-2 overflow-hidden">
+                        <div class="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-1.5 mb-2 overflow-hidden">
                             <div id="feeProgressBar" class="bg-indigo-500 h-1.5 rounded-full transition-all duration-1000" style="width: 0%"></div>
                         </div>
                         <p class="text-[10px] text-gray-500 text-right"><span id="feePercentage">0%</span> collected</p>
                     </div>
 
                     <!-- Tile 3: Monthly Expenses -->
-                    <div class="bg-[#1e293b] border border-[#334155]/50 rounded-2xl p-5 relative overflow-hidden group hover:border-[#475569] transition-all shadow-sm">
+                    <div class="bg-white dark:bg-[#1e293b] border border-gray-200 dark:border-[#334155]/50 rounded-2xl p-5 relative overflow-hidden group hover:border-gray-300 dark:hover:border-[#475569] transition-all shadow-sm">
                         <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1" id="expensesPeriodLabel">Monthly Expenses</p>
                         <div class="mt-1 mb-4 flex items-baseline gap-1">
                             <p class="text-[10px] text-gray-500 font-semibold mb-0.5">PKR</p>
-                            <p class="text-4xl font-bold text-white leading-none" id="statMonthlyExpensesVal">0</p>
+                            <p class="text-4xl font-bold text-gray-900 dark:text-white leading-none" id="statMonthlyExpensesVal">0</p>
                         </div>
                         <div class="flex items-center text-xs text-red-500 font-medium">
                             <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" /></svg>
@@ -80,7 +80,7 @@ export async function render(container) {
                     </div>
 
                     <!-- Tile 4: Income Today -->
-                    <div onclick="window.openDashboardReport && window.openDashboardReport('daily_collection')" class="bg-[#1e293b] border border-[#334155]/50 rounded-2xl p-5 relative overflow-hidden cursor-pointer group hover:border-[#475569] transition-all shadow-sm">
+                    <div onclick="window.openDashboardReport && window.openDashboardReport('daily_collection')" class="bg-white dark:bg-[#1e293b] border border-gray-200 dark:border-[#334155]/50 rounded-2xl p-5 relative overflow-hidden cursor-pointer group hover:border-gray-300 dark:hover:border-[#475569] transition-all shadow-sm">
                         <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1" id="todayIncomeLabel">Income Today</p>
                         <div class="mb-3 flex items-baseline gap-1">
                             <span class="text-xs font-bold text-emerald-600/70">PKR</span>
@@ -93,7 +93,7 @@ export async function render(container) {
                     </div>
 
                     <!-- Tile 5: Expense Today -->
-                    <div onclick="window.openDashboardReport && window.openDashboardReport('daily_voucher_detail')" class="bg-[#1e293b] border border-[#334155]/50 rounded-2xl p-5 relative overflow-hidden cursor-pointer group hover:border-[#475569] transition-all shadow-sm">
+                    <div onclick="window.openDashboardReport && window.openDashboardReport('daily_voucher_detail')" class="bg-white dark:bg-[#1e293b] border border-gray-200 dark:border-[#334155]/50 rounded-2xl p-5 relative overflow-hidden cursor-pointer group hover:border-gray-300 dark:hover:border-[#475569] transition-all shadow-sm">
                         <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1" id="todayExpenseLabel">Expense Today</p>
                         <div class="mb-3 flex items-baseline gap-1">
                             <span class="text-xs font-bold text-rose-600/70">PKR</span>
@@ -106,11 +106,11 @@ export async function render(container) {
                     </div>
 
                     <!-- Tile 6: Net Today -->
-                    <div id="netTodayCard" onclick="window.openDashboardReport && window.openDashboardReport('daily_summary')" class="bg-[#1e293b] border border-[#334155]/50 rounded-2xl p-5 relative overflow-hidden cursor-pointer group hover:border-[#475569] transition-all shadow-sm">
+                    <div id="netTodayCard" onclick="window.openDashboardReport && window.openDashboardReport('daily_summary')" class="bg-white dark:bg-[#1e293b] border border-gray-200 dark:border-[#334155]/50 rounded-2xl p-5 relative overflow-hidden cursor-pointer group hover:border-gray-300 dark:hover:border-[#475569] transition-all shadow-sm">
                         <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1" id="todayNetLabel">Net Today</p>
                         <div class="mb-3 flex items-baseline gap-1">
                             <span class="text-xs font-bold text-gray-500">PKR</span>
-                            <p class="text-4xl font-bold text-white" id="statNetToday">0</p>
+                            <p class="text-4xl font-bold text-gray-900 dark:text-white" id="statNetToday">0</p>
                         </div>
                         <div class="flex items-center text-xs text-gray-500 font-medium">
                             <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
@@ -147,7 +147,7 @@ export async function render(container) {
                             <button data-period="weekly" class="chart-filter-btn px-4 py-1.5 text-xs font-bold rounded-lg transition-all text-[#E2E8F0] dark:text-[#E2E8F0] hover:text-indigo-600 dark:hover:text-white">Weekly</button>
                             <button data-period="monthly" class="chart-filter-btn px-4 py-1.5 text-xs font-bold rounded-lg transition-all bg-white dark:bg-indigo-600 dark:text-white text-indigo-600 shadow-sm border border-gray-200 dark:border-indigo-500">Monthly</button>
                             <div class="relative group">
-                                <button id="customRangeTrigger" class="px-4 py-1.5 text-xs font-bold rounded-lg text-[#E2E8F0] dark:text-[#E2E8F0] hover:text-indigo-600 dark:hover:text-white flex items-center gap-1">
+                                <button id="customRangeTrigger" class="px-4 py-1.5 text-xs font-bold rounded-lg text-indigo-600 dark:text-[#E2E8F0] hover:text-indigo-800 dark:hover:text-white flex items-center gap-1 transition-colors">
                                     Custom
                                     <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
                                 </button>
@@ -155,12 +155,12 @@ export async function render(container) {
                                 <div id="customRangePicker" class="hidden absolute right-0 mt-2 p-5 bg-white dark:bg-[#1a1f2e] rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-700/50 z-[100] min-w-[240px] animate-fadeIn">
                                     <div class="space-y-4">
                                         <div>
-                                            <label class="block text-[10px] uppercase font-bold text-gray-400 dark:text-[#E2E8F0] mb-2">Start Date</label>
-                                            <input type="date" id="chartStartDate" style="color: #FFFFFF !important; color-scheme: dark !important;" class="w-full px-3 py-2.5 text-xs bg-[#0f172a] border border-gray-700 rounded-xl text-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
+                                            <label class="block text-[10px] uppercase font-bold text-gray-500 dark:text-[#E2E8F0] mb-2">Start Date</label>
+                                            <input type="date" id="chartStartDate" class="w-full px-3 py-2.5 text-xs bg-gray-50 dark:bg-[#0f172a] border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
                                         </div>
                                         <div>
-                                            <label class="block text-[10px] uppercase font-bold text-gray-400 dark:text-[#E2E8F0] mb-2">End Date</label>
-                                            <input type="date" id="chartEndDate" style="color: #FFFFFF !important; color-scheme: dark !important;" class="w-full px-3 py-2.5 text-xs bg-[#0f172a] border border-gray-700 rounded-xl text-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
+                                            <label class="block text-[10px] uppercase font-bold text-gray-500 dark:text-[#E2E8F0] mb-2">End Date</label>
+                                            <input type="date" id="chartEndDate" class="w-full px-3 py-2.5 text-xs bg-gray-50 dark:bg-[#0f172a] border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
                                         </div>
                                         <button id="applyCustomRange" class="w-full py-3 bg-indigo-600 text-white text-xs font-bold rounded-xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-600/20 active:scale-95">Apply Range</button>
                                     </div>
@@ -278,6 +278,25 @@ export async function render(container) {
                     </div>
                 </div>
             </div>
+
+            <!-- Version Info Footer -->
+            <div class="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700/50">
+                <div class="flex items-center justify-end gap-3 text-sm text-gray-600 dark:text-gray-400">
+                    <div class="flex items-center gap-1.5">
+                        <svg class="w-4 h-4 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                        </svg>
+                        <span>Version <span id="appVersion" class="font-bold text-gray-900 dark:text-white">...</span></span>
+                    </div>
+                    <span class="text-gray-400 dark:text-gray-600">•</span>
+                    <div class="flex items-center gap-1.5">
+                        <svg class="w-4 h-4 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span>Last Updated <span id="appLastUpdated" class="font-bold text-gray-900 dark:text-white">...</span></span>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <style>
@@ -305,7 +324,8 @@ export async function render(container) {
         startClock(),
         checkAttendanceSMS(),
         loadUrgentFollowups(),
-        loadRecentActivity()
+        loadRecentActivity(),
+        loadVersionInfo()
     ]);
 
     window.activityChannel = supabase.channel('dashboard-feed')
@@ -367,9 +387,9 @@ export async function render(container) {
             // Update UI - Force light colors and prevent black text inversion
             filterBtns.forEach(b => {
                 b.classList.remove('bg-white', 'dark:bg-indigo-600', 'text-indigo-600', 'dark:text-white', 'shadow-sm', 'border', 'dark:border-indigo-500');
-                b.classList.add('text-[#E2E8F0]', 'dark:text-[#E2E8F0]');
+                b.classList.add('text-gray-500', 'dark:text-[#E2E8F0]');
             });
-            btn.classList.remove('text-[#E2E8F0]', 'dark:text-[#E2E8F0]');
+            btn.classList.remove('text-gray-500', 'dark:text-[#E2E8F0]');
             btn.classList.add('bg-white', 'dark:bg-indigo-600', 'text-indigo-600', 'dark:text-white', 'shadow-sm', 'border', 'border-gray-200', 'dark:border-indigo-500');
 
             const period = btn.dataset.period;
@@ -399,7 +419,7 @@ export async function render(container) {
             // Remove active style from presets
             filterBtns.forEach(b => {
                 b.classList.remove('bg-white', 'dark:bg-indigo-600', 'text-indigo-600', 'dark:text-white', 'shadow-sm', 'border');
-                b.classList.add('text-[#E2E8F0]', 'dark:text-[#E2E8F0]');
+                b.classList.add('text-gray-500', 'dark:text-[#E2E8F0]');
             });
         } else {
             if (window.toast) window.toast.error('Please select both start and end dates');
@@ -569,7 +589,7 @@ async function loadDashboardStats(period = 'monthly', customStart = null, custom
         } else if (netInFocus < 0) {
             netEl.className = 'text-4xl font-bold text-rose-500';
         } else {
-            netEl.className = 'text-4xl font-bold text-white';
+            netEl.className = 'text-4xl font-bold text-gray-900 dark:text-white';
         }
 
         document.getElementById('statTotalStudents').textContent = totalStudents;
@@ -1167,3 +1187,32 @@ function getTimeAgo(date) {
 }
 
 window.formatCurrency = formatCurrency;
+
+// Load and display version information
+async function loadVersionInfo() {
+    try {
+        const response = await fetch(`version.json?t=${Date.now()}`, { cache: 'no-store' });
+        if (!response.ok) throw new Error('Failed to fetch version');
+
+        const data = await response.json();
+
+        // Update version number
+        const versionEl = document.getElementById('appVersion');
+        if (versionEl && data.version) {
+            versionEl.textContent = data.version;
+        }
+
+        // Update last updated time (exact date and time, 12-hour with AM/PM)
+        const lastUpdatedEl = document.getElementById('appLastUpdated');
+        if (lastUpdatedEl && data.updated_at) {
+            const updatedDate = new Date(data.updated_at);
+            const dateStr = updatedDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+            const timeStr = updatedDate.toLocaleTimeString('en-GB', { hour: 'numeric', minute: '2-digit', hour12: true });
+            lastUpdatedEl.textContent = `${dateStr}, ${timeStr}`;
+        }
+    } catch (error) {
+        console.error('Error loading version info:', error);
+        // Silently fail - version info is not critical
+    }
+}
+

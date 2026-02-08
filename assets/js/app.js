@@ -101,6 +101,7 @@ async function initApp() {
 
         renderSidebar();
         startHeaderClock();
+        loadHeaderVersion();
         if (currentRole === 'admin') {
             showAdminNotificationsContainer();
             fetchAndUpdateAdminNotificationCount();
@@ -309,6 +310,37 @@ function startHeaderClock() {
     update();
     setInterval(update, 1000);
 }
+
+async function loadHeaderVersion() {
+    const headerVersionEl = document.getElementById('headerAppVersion');
+    const footerVersionEl = document.getElementById('footerAppVersion');
+    const footerLastUpdatedEl = document.getElementById('footerAppLastUpdated');
+
+    try {
+        const response = await fetch(`version.json?t=${Date.now()}`, { cache: 'no-store' });
+        if (!response.ok) throw new Error('Failed to fetch version');
+
+        const data = await response.json();
+        if (data.version) {
+            if (headerVersionEl) headerVersionEl.textContent = data.version;
+            if (footerVersionEl) footerVersionEl.textContent = data.version;
+        }
+
+        // Update last updated time in footer (exact date and time, 12-hour with AM/PM)
+        if (footerLastUpdatedEl && data.updated_at) {
+            const updatedDate = new Date(data.updated_at);
+            const dateStr = updatedDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+            const timeStr = updatedDate.toLocaleTimeString('en-GB', { hour: 'numeric', minute: '2-digit', hour12: true });
+            footerLastUpdatedEl.textContent = `${dateStr}, ${timeStr}`;
+        }
+    } catch (error) {
+        console.error('Error loading version:', error);
+        if (headerVersionEl) headerVersionEl.textContent = '1.0.0';
+        if (footerVersionEl) footerVersionEl.textContent = '1.0.0';
+        if (footerLastUpdatedEl) footerLastUpdatedEl.textContent = 'unknown';
+    }
+}
+
 
 // Admin notifications: header bell uses in-memory "seen"; sidebar Students/Online Admission badge uses DB (is_seen)
 let adminNotificationsLastSeenTotal = 0;
@@ -551,7 +583,7 @@ async function loadModule(moduleId) {
                 else if (currentRole === 'teacher') actualModuleId = 'teacher-dashboard';
             }
 
-            const APP_VERSION = '1.0.7'; // Increment this when modules change
+            const APP_VERSION = '1.0.1'; // Increment this when modules change
             const module = await import(`./modules/${actualModuleId}.js?v=${APP_VERSION}`);
             if (module && module.render) {
                 await module.render(mainContent);
@@ -891,16 +923,23 @@ document.addEventListener('click', (e) => {
 function getCurrentAppVersion() {
     try {
         const url = new URL(import.meta.url);
-        return url.searchParams.get('v') || '0';
+        const v = url.searchParams.get('v');
+        if (v) return v;
     } catch (e) {
         const script = document.querySelector('script[src*="app.js"]');
         const m = script && script.getAttribute('src') && script.getAttribute('src').match(/[?&]v=([^&]+)/);
-        return (m && m[1]) ? m[1] : '0';
+        if (m && m[1]) return m[1];
     }
+    // Fallback: If we can't find version in URL, check what we last acknowledged
+    return localStorage.getItem('suffah_client_version') || '0';
 }
 
-function showUpdateBanner() {
+function showUpdateBanner(newVersion) {
     if (document.getElementById('suffah-update-banner')) return;
+
+    // Check if valid version provided
+    if (!newVersion) return;
+
     const banner = document.createElement('div');
     banner.id = 'suffah-update-banner';
     banner.setAttribute('role', 'status');
@@ -913,10 +952,21 @@ function showUpdateBanner() {
         </div>
     `;
     document.body.appendChild(banner);
+
     document.getElementById('suffah-update-dismiss').addEventListener('click', () => {
+        // Persist dismissal for this specific version during this session
+        try {
+            sessionStorage.setItem('suffah_update_dismissed_version', newVersion);
+        } catch (e) { }
         banner.remove();
     });
+
     document.getElementById('suffah-update-refresh').addEventListener('click', () => {
+        // Mark this new version as "acknowledged/installed" before reloading
+        // This breaks the loop if the browser cache is stubborn
+        try {
+            localStorage.setItem('suffah_client_version', newVersion);
+        } catch (e) { }
         window.location.reload();
     });
 }
@@ -926,11 +976,31 @@ function startUpdateCheck() {
     let checkInterval;
 
     function check() {
+        if (document.hidden) return; // Don't check if tab is not visible/active
+
+        // If we just reloaded, give browser cache a moment to settle or verify we are "good"
+        // But getCurrentAppVersion() now includes localStorage check, so we are safe.
+
         fetch(`version.json?t=${Date.now()}`, { cache: 'no-store' })
             .then((r) => (r.ok ? r.json() : null))
             .then((data) => {
+                const currentVersion = getCurrentAppVersion(); // Re-read in case it changed (unlikely without reload)
+
                 if (data && data.version && String(data.version) !== String(currentVersion)) {
-                    showUpdateBanner();
+                    // Check if user already dismissed this specific version in THIS session
+                    const dismissedVersion = sessionStorage.getItem('suffah_update_dismissed_version');
+                    if (dismissedVersion === String(data.version)) {
+                        return; // User dismissed this update, don't show again in this session
+                    }
+
+                    // Check if user already acknowledged (refreshed) for this version
+                    // This prevents the loop where the HTML/JS caching keeps 'currentVersion' old
+                    const acknowledgedVersion = localStorage.getItem('suffah_client_version');
+                    if (acknowledgedVersion === String(data.version)) {
+                        return; // User already refreshed for this version, suppress banner
+                    }
+
+                    showUpdateBanner(String(data.version));
                     if (checkInterval) clearInterval(checkInterval);
                 }
             })
@@ -943,14 +1013,14 @@ function startUpdateCheck() {
     });
     // Periodic check every 30 seconds
     checkInterval = setInterval(check, 30000);
-    // First check after 2 seconds so updates are noticed sooner
-    setTimeout(check, 2000);
+    // First check immediately on load
+    setTimeout(check, 1000);
 
-    // Test: show banner on demand (e.g. in console: window.__showUpdateBanner())
-    window.__showUpdateBanner = showUpdateBanner;
+    // Test: show banner on demand
+    window.__showUpdateBanner = (v) => showUpdateBanner(v || '9.9.9');
     // Test: open dashboard with ?testUpdate=1 to see the banner once
     if (new URLSearchParams(window.location.search).get('testUpdate') === '1') {
-        setTimeout(showUpdateBanner, 1000);
+        setTimeout(() => showUpdateBanner('9.9.9'), 1000);
     }
 }
 
