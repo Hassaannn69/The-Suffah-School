@@ -30,11 +30,11 @@ export async function render(container) {
                         <div class="space-y-2">
                             <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300">Teacher</label>
                             <div class="relative">
-                                <select id="selectTeacher" class="w-full h-12 px-4 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all appearance-none cursor-pointer">
+                                <select id="selectTeacher" class="app-select w-full h-12 px-4 pr-12 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all cursor-pointer" style="color-scheme: dark;">
                                     <option value="">Select a teacher...</option>
                                     <option disabled>Loading teachers...</option>
                                 </select>
-                                <div class="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none text-gray-500">
+                                <div class="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none text-gray-500 dark:text-gray-400">
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                                 </div>
                             </div>
@@ -44,11 +44,11 @@ export async function render(container) {
                         <div class="space-y-2">
                             <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300">Class & Section</label>
                             <div class="relative">
-                                <select id="selectClass" class="w-full h-12 px-4 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all appearance-none cursor-pointer">
+                                <select id="selectClass" class="app-select w-full h-12 px-4 pr-12 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all cursor-pointer" style="color-scheme: dark;">
                                     <option value="">Select a class...</option>
                                     <option disabled>Loading classes...</option>
                                 </select>
-                                <div class="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none text-gray-500">
+                                <div class="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none text-gray-500 dark:text-gray-400">
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                                 </div>
                             </div>
@@ -58,10 +58,10 @@ export async function render(container) {
                         <div class="space-y-2">
                             <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300">Subject</label>
                             <div class="relative">
-                                <select id="selectSubject" disabled class="w-full h-12 px-4 bg-gray-100 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all appearance-none cursor-not-allowed opacity-75">
+                                <select id="selectSubject" disabled class="app-select w-full h-12 px-4 pr-12 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all cursor-not-allowed opacity-75" style="color-scheme: dark;">
                                     <option value="">Select a teacher first...</option>
                                 </select>
-                                <div class="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none text-gray-500">
+                                <div class="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none text-gray-500 dark:text-gray-400">
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                                 </div>
                             </div>
@@ -147,8 +147,8 @@ function updateSubjectDropdown(teacherId) {
 
     if (teacher && teacher.subjects && teacher.subjects.length > 0) {
         subjectSelect.disabled = false;
-        subjectSelect.classList.remove('bg-gray-100', 'dark:bg-gray-900', 'cursor-not-allowed', 'opacity-75');
-        subjectSelect.classList.add('bg-gray-50', 'dark:bg-gray-700', 'cursor-pointer');
+        subjectSelect.classList.remove('cursor-not-allowed', 'opacity-75');
+        subjectSelect.classList.add('cursor-pointer');
 
         teacher.subjects.forEach(sub => {
             const option = document.createElement('option');
@@ -158,8 +158,8 @@ function updateSubjectDropdown(teacherId) {
         });
     } else {
         subjectSelect.disabled = true;
-        subjectSelect.classList.add('bg-gray-100', 'dark:bg-gray-900', 'cursor-not-allowed', 'opacity-75');
-        subjectSelect.classList.remove('bg-gray-50', 'dark:bg-gray-700', 'cursor-pointer');
+        subjectSelect.classList.add('cursor-not-allowed', 'opacity-75');
+        subjectSelect.classList.remove('cursor-pointer');
         subjectSelect.innerHTML = '<option value="">No subjects assigned to this teacher</option>';
     }
 }

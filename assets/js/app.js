@@ -225,24 +225,24 @@ function renderSidebar() {
             if (item.isDropdown) {
                 // Create dropdown menu
                 const dropdownContainer = document.createElement('div');
-                dropdownContainer.className = 'relative';
+                dropdownContainer.className = 'relative dropdown-group group';
 
                 const dropdownBtn = document.createElement('button');
                 dropdownBtn.className = 'w-full flex items-center justify-between px-4 py-3 text-gray-400 hover:bg-gray-800 hover:text-white rounded-lg transition-all group border-l-4 border-transparent';
                 dropdownBtn.innerHTML = `
-                    <div class="flex items-center space-x-3">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500 group-hover:text-primary-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <div class="flex items-center space-x-3 min-w-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 flex-shrink-0 text-gray-500 group-hover:text-primary-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${item.icon}" />
                         </svg>
-                        <span class="font-medium tracking-wide">${item.label}</span>
+                        <span class="sidebar-label font-medium tracking-wide truncate">${item.label}</span>
                     </div>
-                    <svg class="h-4 w-4 transition-transform dropdown-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="h-4 w-4 flex-shrink-0 transition-transform dropdown-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                     </svg>
                 `;
 
                 const submenuContainer = document.createElement('div');
-                submenuContainer.className = 'hidden pl-4 mt-1 space-y-1';
+                submenuContainer.className = 'submenu-wrapper pl-4 space-y-1 overflow-hidden transition-all duration-300 max-h-0 opacity-0';
 
                 // Add submenu items
                 item.submenu.forEach(subitem => {
@@ -252,13 +252,14 @@ function renderSidebar() {
                         sublink.className = 'flex items-center space-x-3 px-4 py-2 text-gray-400 hover:bg-gray-800 hover:text-white rounded-lg transition-all text-sm border-l-4 border-transparent';
                         sublink.dataset.module = subitem.id;
                         sublink.innerHTML = `
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-500 group-hover:text-primary-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 flex-shrink-0 text-gray-500 group-hover:text-primary-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${subitem.icon}" />
                             </svg>
-                            <span class="font-medium tracking-wide">${subitem.label}</span>
+                            <span class="sidebar-label font-medium tracking-wide truncate">${subitem.label}</span>
                         `;
                         sublink.addEventListener('click', (e) => {
                             e.preventDefault();
+                            if (typeof window.expandSidebar === 'function') window.expandSidebar();
                             loadModule(subitem.id);
                             if (isMobileView()) closeMobileSidebar();
                         });
@@ -266,10 +267,12 @@ function renderSidebar() {
                     }
                 });
 
-                dropdownBtn.addEventListener('click', () => {
-                    submenuContainer.classList.toggle('hidden');
-                    dropdownBtn.querySelector('.dropdown-arrow').classList.toggle('rotate-180');
-                    if (typeof refreshAdminNotificationBadges === 'function') refreshAdminNotificationBadges();
+                dropdownBtn.addEventListener('click', (e) => {
+                    // Clicking now toggles the sidebar expansion if collapsed, 
+                    // but the hover handles the menu display.
+                    if (document.body.classList.contains('sidebar-collapsed')) {
+                        if (typeof window.expandSidebar === 'function') window.expandSidebar();
+                    }
                 });
 
                 dropdownContainer.appendChild(dropdownBtn);
@@ -282,13 +285,14 @@ function renderSidebar() {
                 link.className = 'flex items-center space-x-3 px-4 py-3 text-gray-400 hover:bg-gray-800 hover:text-white rounded-lg transition-all group border-l-4 border-transparent';
                 link.dataset.module = item.id;
                 link.innerHTML = `
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500 group-hover:text-primary-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 flex-shrink-0 text-gray-500 group-hover:text-primary-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${item.icon}" />
                     </svg>
-                    <span class="font-medium tracking-wide">${item.label}</span>
+                    <span class="sidebar-label font-medium tracking-wide truncate">${item.label}</span>
                 `;
                 link.addEventListener('click', (e) => {
                     e.preventDefault();
+                    if (typeof window.expandSidebar === 'function') window.expandSidebar();
                     loadModule(item.id);
                     if (isMobileView()) closeMobileSidebar();
                 });
@@ -1055,6 +1059,46 @@ closeSidebarBtn.addEventListener('click', closeMobileSidebar);
 if (sidebarBackdrop) {
     sidebarBackdrop.addEventListener('click', closeMobileSidebar);
 }
+
+// Collapsible sidebar (desktop only): persist state in localStorage, resize main content
+const SIDEBAR_COLLAPSED_KEY = 'suffah_sidebar_collapsed';
+function applySidebarCollapsed(collapsed) {
+    const iconOpen = document.getElementById('sidebarCollapseIconOpen');
+    const iconClosed = document.getElementById('sidebarCollapseIconClosed');
+    if (collapsed) {
+        document.body.classList.add('sidebar-collapsed');
+        if (iconOpen) iconOpen.classList.add('hidden');
+        if (iconClosed) iconClosed.classList.remove('hidden');
+        // Close any open dropdown submenus so they don't overflow
+        document.querySelectorAll('#navLinks .relative .hidden').forEach(el => el.classList.add('hidden'));
+        document.querySelectorAll('#navLinks .dropdown-arrow').forEach(el => el.classList.remove('rotate-180'));
+    } else {
+        document.body.classList.remove('sidebar-collapsed');
+        if (iconOpen) iconOpen.classList.remove('hidden');
+        if (iconClosed) iconClosed.classList.add('hidden');
+    }
+}
+const sidebarCollapseBtn = document.getElementById('sidebarCollapseBtn');
+if (sidebarCollapseBtn) {
+    const initialCollapsed = localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === 'true';
+    applySidebarCollapsed(initialCollapsed);
+    sidebarCollapseBtn.addEventListener('click', () => {
+        const collapsed = document.body.classList.toggle('sidebar-collapsed');
+        localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(collapsed));
+        const iconOpen = document.getElementById('sidebarCollapseIconOpen');
+        const iconClosed = document.getElementById('sidebarCollapseIconClosed');
+        if (iconOpen) iconOpen.classList.toggle('hidden', collapsed);
+        if (iconClosed) iconClosed.classList.toggle('hidden', !collapsed);
+    });
+}
+
+/** Forced expansion when an icon is clicked while collapsed */
+window.expandSidebar = function () {
+    if (document.body.classList.contains('sidebar-collapsed')) {
+        applySidebarCollapsed(false);
+        localStorage.setItem(SIDEBAR_COLLAPSED_KEY, 'false');
+    }
+};
 
 // Theme Toggle Logic
 // Theme Toggle Logic

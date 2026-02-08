@@ -18,17 +18,39 @@
     <link rel="stylesheet" href="assets/css/styles.css?v=1770403152377">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        .login-role-card { transition: border-color 0.2s, color 0.2s, background-color 0.2s; }
-        .login-role-card.selected { border-color: rgb(59 130 246); background-color: rgb(239 246 255); }
-        .dark .login-role-card.selected { border-color: rgb(96 165 250); background-color: rgb(30 58 138 / 0.3); }
+        .login-role-card {
+            transition: border-color 0.2s, color 0.2s, background-color 0.2s;
+        }
+
+        .login-role-card.selected {
+            border-color: rgb(59 130 246);
+            background-color: rgb(239 246 255);
+        }
+
+        .dark .login-role-card.selected {
+            border-color: rgb(96 165 250);
+            background-color: rgb(30 58 138 / 0.3);
+        }
+
         .login-role-card.selected .role-icon,
-        .login-role-card.selected .role-label { color: rgb(37 99 235); }
+        .login-role-card.selected .role-label {
+            color: rgb(37 99 235);
+        }
+
         .dark .login-role-card.selected .role-icon,
-        .dark .login-role-card.selected .role-label { color: rgb(96 165 250); }
+        .dark .login-role-card.selected .role-label {
+            color: rgb(96 165 250);
+        }
 
         /* Remember me: circular control + click animation */
-        .remember-label { -webkit-tap-highlight-color: transparent; }
-        .remember-label:active .remember-circle { transform: scale(0.82); }
+        .remember-label {
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .remember-label:active .remember-circle {
+            transform: scale(0.82);
+        }
+
         .remember-circle {
             width: 1.25rem;
             height: 1.25rem;
@@ -41,17 +63,24 @@
             justify-content: center;
             transition: transform 0.18s ease-out, border-color 0.2s, background-color 0.2s, box-shadow 0.2s;
         }
-        .dark .remember-circle { border-color: rgb(75 85 99); background: rgb(31 41 55); }
-        #rememberMe:checked ~ .remember-circle {
+
+        .dark .remember-circle {
+            border-color: rgb(75 85 99);
+            background: rgb(31 41 55);
+        }
+
+        #rememberMe:checked~.remember-circle {
             border-color: rgb(59 130 246);
             background-color: rgb(59 130 246);
             box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
         }
-        .dark #rememberMe:checked ~ .remember-circle {
+
+        .dark #rememberMe:checked~.remember-circle {
             border-color: rgb(96 165 250);
             background-color: rgb(96 165 250);
             box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.3);
         }
+
         .remember-dot {
             width: 0.375rem;
             height: 0.375rem;
@@ -61,22 +90,38 @@
             opacity: 0;
             transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.15s ease;
         }
-        #rememberMe:checked ~ .remember-circle .remember-dot {
+
+        #rememberMe:checked~.remember-circle .remember-dot {
             transform: scale(1);
             opacity: 1;
         }
+
         /* Mobile: safe areas and touch-friendly */
         @media (max-width: 767px) {
-            .login-left-mobile { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); padding-top: env(safe-area-inset-top); }
-            .login-right-mobile { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); padding-bottom: env(safe-area-inset-bottom); }
-            .login-role-card { min-height: 72px; }
+            .login-left-mobile {
+                padding-left: env(safe-area-inset-left);
+                padding-right: env(safe-area-inset-right);
+                padding-top: env(safe-area-inset-top);
+            }
+
+            .login-right-mobile {
+                padding-left: env(safe-area-inset-left);
+                padding-right: env(safe-area-inset-right);
+                padding-bottom: env(safe-area-inset-bottom);
+            }
+
+            .login-role-card {
+                min-height: 72px;
+            }
         }
     </style>
 </head>
 
-<body class="min-h-screen flex flex-col md:flex-row overflow-x-hidden bg-white dark:bg-gray-950 transition-colors duration-200">
+<body
+    class="min-h-screen flex flex-col md:flex-row overflow-x-hidden bg-white dark:bg-gray-950 transition-colors duration-200">
     <!-- Left panel: branding (hidden on mobile, shown from md up) -->
-    <div class="login-left-mobile hidden md:flex flex-shrink-0 md:min-w-[42%] md:w-2/5 lg:w-[44%] md:min-h-screen flex-col bg-primary-800 dark:bg-primary-950 text-white px-5 pt-5 pb-6 sm:p-6 md:p-10">
+    <div
+        class="login-left-mobile hidden md:flex flex-shrink-0 md:min-w-[42%] md:w-2/5 lg:w-[44%] md:min-h-screen flex-col bg-primary-800 dark:bg-primary-950 text-white px-5 pt-5 pb-6 sm:p-6 md:p-10">
         <a href="index.html" class="flex items-center gap-2 mb-4 sm:mb-6 md:mb-12">
             <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-lg overflow-hidden flex-shrink-0 shadow">
                 <img src="assets/images/school-logo.jpg" alt="The Suffah School" class="w-full h-full object-cover">
@@ -84,22 +129,38 @@
             <span class="font-bold text-base sm:text-lg tracking-tight">The Suffah School</span>
         </a>
         <div class="flex-1 flex flex-col justify-center max-w-md min-h-0">
-            <h2 class="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold leading-tight mb-2 sm:mb-4">Empowering the future of education</h2>
-            <p class="text-white/90 text-xs sm:text-sm md:text-base leading-relaxed">Manage your school ecosystem with efficiency and ease. Our platform ensures seamless communication and robust data management for everyone.</p>
+            <h2 class="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold leading-tight mb-2 sm:mb-4">Empowering the
+                future of education</h2>
+            <p class="text-white/90 text-xs sm:text-sm md:text-base leading-relaxed">Manage your school ecosystem with
+                efficiency and ease. Our platform ensures seamless communication and robust data management for
+                everyone.</p>
         </div>
         <div class="mt-4 sm:mt-6 md:mt-0 pt-4 sm:pt-6 md:pt-8 border-t border-white/20 md:border-0">
-            <p class="text-[10px] sm:text-xs font-semibold tracking-wider text-white/80 mb-2 sm:mb-4">TRUSTED PLATFORM</p>
+            <p class="text-[10px] sm:text-xs font-semibold tracking-wider text-white/80 mb-2 sm:mb-4">TRUSTED PLATFORM
+            </p>
             <div class="flex flex-wrap gap-4 sm:gap-6 md:gap-8">
                 <div class="flex items-center gap-1.5 sm:gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 sm:h-5 sm:w-5 text-white/90 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 sm:h-5 sm:w-5 text-white/90 flex-shrink-0"
+                        fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
                     <span class="text-xs sm:text-sm text-white/90">Secure</span>
                 </div>
                 <div class="flex items-center gap-1.5 sm:gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 sm:h-5 sm:w-5 text-white/90 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 sm:h-5 sm:w-5 text-white/90 flex-shrink-0"
+                        fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
                     <span class="text-xs sm:text-sm text-white/90">Fast</span>
                 </div>
                 <div class="flex items-center gap-1.5 sm:gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 sm:h-5 sm:w-5 text-white/90 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 sm:h-5 sm:w-5 text-white/90 flex-shrink-0"
+                        fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
                     <span class="text-xs sm:text-sm text-white/90">Reliable</span>
                 </div>
             </div>
@@ -108,105 +169,183 @@
     </div>
 
     <!-- Right panel: form -->
-    <div class="login-right-mobile flex-1 flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200 relative">
-        <div class="absolute top-3 right-3 sm:top-4 sm:right-4 md:top-6 md:right-6 z-10" style="top: max(0.75rem, env(safe-area-inset-top));">
-            <button type="button" id="loginThemeToggle" aria-label="Toggle theme" class="p-2.5 rounded-xl text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-800 active:scale-95 transition-all touch-manipulation">
-                <svg id="loginThemeDarkIcon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>
-                <svg id="loginThemeLightIcon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+    <div
+        class="login-right-mobile flex-1 flex flex-col h-[100dvh] bg-gray-50 dark:bg-gray-900 transition-colors duration-200 relative overflow-hidden">
+        <div class="absolute top-3 right-3 sm:top-4 sm:right-4 z-10"
+            style="top: max(0.75rem, env(safe-area-inset-top));">
+            <button type="button" id="loginThemeToggle" aria-label="Toggle theme"
+                class="p-2 rounded-xl text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-800 active:scale-95 transition-all touch-manipulation">
+                <svg id="loginThemeDarkIcon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path>
+                </svg>
+                <svg id="loginThemeLightIcon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
             </button>
         </div>
-        <div class="flex-1 flex items-center justify-center px-4 py-6 sm:p-6 md:p-10 overflow-y-auto" style="padding-left: max(1rem, env(safe-area-inset-left)); padding-right: max(1rem, env(safe-area-inset-right));">
+        <div class="flex-1 flex items-center justify-center px-4 py-2 sm:px-6 overflow-y-auto"
+            style="padding-left: max(1rem, env(safe-area-inset-left)); padding-right: max(1rem, env(safe-area-inset-right));">
             <div class="w-full max-w-md">
                 <!-- Back link -->
-                <a href="index.html" class="inline-flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white mb-6 sm:mb-8 transition-colors focus:outline-none py-1 -ml-1 touch-manipulation">
-                    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                <a href="index.html"
+                    class="inline-flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white mb-4 sm:mb-6 transition-colors focus:outline-none py-1 -ml-1 touch-manipulation">
+                    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                    </svg>
                     Back to Home Page
                 </a>
 
                 <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-1">Welcome back</h1>
-                <p class="text-sm text-gray-500 dark:text-gray-400 mb-6 sm:mb-8">Please enter your details to sign in.</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mb-5 sm:mb-6">Please enter your details to sign in.
+                </p>
 
-            <!-- Role selection: 2x2 on mobile for larger touch targets, 4 in a row on desktop -->
-            <p class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Select your role</p>
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
-                <button type="button" id="btn-admin" onclick="selectRole('admin')" class="login-role-card flex flex-col items-center justify-center py-4 px-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/80 text-gray-600 dark:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-950">
-                    <svg class="role-icon h-7 w-7 mb-2 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
-                    <span class="role-label text-sm font-medium">Admin</span>
-                </button>
-                <button type="button" id="btn-teacher" onclick="selectRole('teacher')" class="login-role-card flex flex-col items-center justify-center py-4 px-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/80 text-gray-600 dark:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-950">
-                    <svg class="role-icon h-7 w-7 mb-2 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
-                    <span class="role-label text-sm font-medium">Teacher</span>
-                </button>
-                <button type="button" id="btn-accountant" onclick="selectRole('accountant')" class="login-role-card flex flex-col items-center justify-center py-4 px-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/80 text-gray-600 dark:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-950">
-                    <svg class="role-icon h-7 w-7 mb-2 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
-                    <span class="role-label text-sm font-medium">Accountant</span>
-                </button>
-                <button type="button" id="btn-student" onclick="selectRole('student')" class="login-role-card selected flex flex-col items-center justify-center py-4 px-3 rounded-xl border-2 border-blue-300 dark:border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-950">
-                    <svg class="role-icon h-7 w-7 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" /></svg>
-                    <span class="role-label text-sm font-medium">Student</span>
-                </button>
-            </div>
+                <!-- Role selection: 2x2 on mobile for larger touch targets, 4 in a row on desktop -->
+                <p class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Select your role</p>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 mb-5 sm:mb-6">
+                    <button type="button" id="btn-admin" onclick="selectRole('admin')"
+                        class="login-role-card flex flex-col items-center justify-center py-3 px-2 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/80 text-gray-600 dark:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-950">
+                        <svg class="role-icon h-6 w-6 mb-1.5 text-gray-500 dark:text-gray-400" fill="none"
+                            viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                        </svg>
+                        <span class="role-label text-xs sm:text-sm font-medium">Admin</span>
+                    </button>
+                    <button type="button" id="btn-teacher" onclick="selectRole('teacher')"
+                        class="login-role-card flex flex-col items-center justify-center py-3 px-2 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/80 text-gray-600 dark:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-950">
+                        <svg class="role-icon h-6 w-6 mb-1.5 text-gray-500 dark:text-gray-400" fill="none"
+                            viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                        </svg>
+                        <span class="role-label text-xs sm:text-sm font-medium">Teacher</span>
+                    </button>
+                    <button type="button" id="btn-accountant" onclick="selectRole('accountant')"
+                        class="login-role-card flex flex-col items-center justify-center py-3 px-2 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/80 text-gray-600 dark:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-950">
+                        <svg class="role-icon h-6 w-6 mb-1.5 text-gray-500 dark:text-gray-400" fill="none"
+                            viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                        </svg>
+                        <span class="role-label text-xs sm:text-sm font-medium">Accountant</span>
+                    </button>
+                    <button type="button" id="btn-student" onclick="selectRole('student')"
+                        class="login-role-card flex flex-col items-center justify-center py-3 px-2 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/80 text-gray-600 dark:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-950">
+                        <svg class="role-icon h-6 w-6 mb-1.5 text-gray-500 dark:text-gray-400" fill="none"
+                            viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 14l9-5-9-5-9 5 9 5z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" />
+                        </svg>
+                        <span class="role-label text-xs sm:text-sm font-medium">Student</span>
+                    </button>
+                </div>
 
-            <!-- Form -->
-            <form id="loginForm" class="space-y-5">
-                <div>
-                    <label for="email" id="emailLabel" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Email or Username</label>
-                    <div class="relative">
-                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                <!-- Form -->
+                <form id="loginForm" class="space-y-4">
+                    <div>
+                        <label for="email" id="emailLabel"
+                            class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email or
+                            Username</label>
+                        <div class="relative">
+                            <div
+                                class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                </svg>
+                            </div>
+                            <input type="text" id="email" name="username" required autocomplete="username"
+                                class="w-full pl-10 pr-4 py-3 sm:py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors text-base"
+                                placeholder="Select a role above...">
                         </div>
-                        <input type="text" id="email" name="username" required autocomplete="username" class="w-full pl-10 pr-4 py-3.5 sm:py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors text-base" placeholder="e.g. student@suffah.edu">
                     </div>
-                </div>
-                <div>
-                    <label for="password" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Password</label>
-                    <div class="relative">
-                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                    <div>
+                        <label for="password"
+                            class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Password</label>
+                        <div class="relative">
+                            <div
+                                class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                </svg>
+                            </div>
+                            <input type="password" id="password" name="password" required
+                                autocomplete="current-password"
+                                class="w-full pl-10 pr-11 py-3 sm:py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors text-base"
+                                placeholder="Enter your password">
+                            <button type="button" id="togglePassword"
+                                class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                                <svg id="eyeIcon" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                </svg>
+                            </button>
                         </div>
-                        <input type="password" id="password" name="password" required autocomplete="current-password" class="w-full pl-10 pr-11 py-3.5 sm:py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors text-base" placeholder="Enter your password">
-                        <button type="button" id="togglePassword" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-                            <svg id="eyeIcon" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
-                        </button>
                     </div>
-                </div>
-                <div class="flex items-center justify-between">
-                    <label for="rememberMe" class="remember-label flex items-center gap-2.5 cursor-pointer select-none">
-                        <input type="checkbox" id="rememberMe" name="remember" class="sr-only">
-                        <span class="remember-circle">
-                            <span class="remember-dot"></span>
-                        </span>
-                        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Remember me</span>
-                    </label>
-                    <a href="#" class="text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline">Forgot Password?</a>
-                </div>
-                <div id="errorMessage" class="hidden p-3 rounded-xl bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-sm flex items-center">
-                    <svg class="h-5 w-5 mr-2 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>
-                    <span id="errorText">Authentication failed</span>
-                </div>
-                <button type="submit" id="loginBtn" class="w-full bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white font-bold py-4 sm:py-3.5 rounded-xl transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-950 flex items-center justify-center gap-2 touch-manipulation active:scale-[0.98] min-h-[48px]">
-                    <span id="loginBtnText">Sign In</span>
-                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
-                </button>
-            </form>
+                    <div class="flex items-center justify-between">
+                        <label for="rememberMe"
+                            class="remember-label flex items-center gap-2.5 cursor-pointer select-none">
+                            <input type="checkbox" id="rememberMe" name="remember" class="sr-only">
+                            <span class="remember-circle">
+                                <span class="remember-dot"></span>
+                            </span>
+                            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Remember me</span>
+                        </label>
+                        <a href="#" class="text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline">Forgot
+                            Password?</a>
+                    </div>
+                    <div id="errorMessage"
+                        class="hidden p-3 rounded-xl bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-sm flex items-center">
+                        <svg class="h-5 w-5 mr-2 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd"
+                                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                                clip-rule="evenodd" />
+                        </svg>
+                        <span id="errorText">Authentication failed</span>
+                    </div>
+                    <button type="submit" id="loginBtn"
+                        class="w-full bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white font-bold py-3 sm:py-3 rounded-xl transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-950 flex items-center justify-center gap-2 touch-manipulation active:scale-[0.98] min-h-[44px]">
+                        <span id="loginBtnText">Sign In</span>
+                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                        </svg>
+                    </button>
+                </form>
 
-            <!-- Success overlay -->
-            <div id="successOverlay" class="fixed inset-0 bg-white/90 dark:bg-gray-950/90 flex items-center justify-center z-50 hidden opacity-0 transition-opacity duration-300 pointer-events-none">
-                <div class="flex flex-col items-center max-w-xs text-center">
-                    <div class="w-14 h-14 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center mb-3">
-                        <svg class="h-7 w-7 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
-                    </div>
-                    <p class="text-base font-medium text-gray-800 dark:text-gray-100">Signed in successfully</p>
-                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Taking you to the dashboard…</p>
-                    <div class="mt-5 w-full h-1 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden max-w-[200px]">
-                        <div id="successProgressBar" class="h-full bg-blue-500 rounded-full transition-all duration-[1500ms] ease-out" style="width: 0%"></div>
+                <!-- Success overlay -->
+                <div id="successOverlay"
+                    class="fixed inset-0 bg-white/90 dark:bg-gray-950/90 flex items-center justify-center z-50 hidden opacity-0 transition-opacity duration-300 pointer-events-none">
+                    <div class="flex flex-col items-center max-w-xs text-center">
+                        <div
+                            class="w-14 h-14 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center mb-3">
+                            <svg class="h-7 w-7 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24"
+                                stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                            </svg>
+                        </div>
+                        <p class="text-base font-medium text-gray-800 dark:text-gray-100">Signed in successfully</p>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Taking you to the dashboard…</p>
+                        <div
+                            class="mt-5 w-full h-1 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden max-w-[200px]">
+                            <div id="successProgressBar"
+                                class="h-full bg-blue-500 rounded-full transition-all duration-[1500ms] ease-out"
+                                style="width: 0%"></div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-        </div>
-        <footer class="py-5 sm:py-6 md:py-8 border-t border-gray-200 dark:border-gray-800 text-center text-sm text-gray-500 dark:text-gray-400" style="padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); padding-bottom: max(1.25rem, env(safe-area-inset-bottom));">
-            Don't have an account? <a href="#" class="font-semibold text-gray-900 dark:text-white hover:underline">Contact Administrator</a>
+        <footer
+            class="py-4 sm:py-5 md:py-6 border-t border-gray-200 dark:border-gray-800 text-center text-sm text-gray-500 dark:text-gray-400"
+            style="padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); padding-bottom: max(1rem, env(safe-area-inset-bottom));">
+            Don't have an account? <a href="#"
+                class="font-semibold text-gray-900 dark:text-white hover:underline">Contact Administrator</a>
         </footer>
     </div>
 
@@ -223,12 +362,12 @@
             var loginBtn = document.getElementById('loginBtn');
             var loginBtnText = document.getElementById('loginBtnText');
             var successOverlay = document.getElementById('successOverlay');
-            var selectedRole = 'student';
+            var selectedRole = null;
 
             var roleDisplayNames = { admin: 'Admin', teacher: 'Teacher', accountant: 'Accountant', student: 'Student' };
 
             function setRoleSelected(role) {
-                selectedRole = role || 'student';
+                selectedRole = role;
                 document.querySelectorAll('.login-role-card').forEach(function (card) {
                     var id = card.id;
                     var r = id === 'btn-admin' ? 'admin' : id === 'btn-teacher' ? 'teacher' : id === 'btn-accountant' ? 'accountant' : 'student';
@@ -254,9 +393,12 @@
                     emailInput.placeholder = 'e.g. EMP-002';
                     var pw = document.getElementById('password');
                     if (pw) pw.placeholder = 'e.g. 05022026 (DDMMYYYY)';
-                } else {
+                } else if (selectedRole === 'admin') {
                     emailLabel.textContent = 'Email or Username';
                     emailInput.placeholder = 'e.g. admin@suffah.edu';
+                } else {
+                    emailLabel.textContent = 'Email or Username';
+                    emailInput.placeholder = 'Select a role to continue...';
                 }
             }
 
@@ -307,7 +449,7 @@
                 var supabase = window.supabase;
                 var urlParams = new URLSearchParams(window.location.search);
                 if (urlParams.get('action') === 'logout') {
-                    try { await supabase.auth.signOut(); } catch (e) {}
+                    try { await supabase.auth.signOut(); } catch (e) { }
                     window.sessionStorage.clear();
                     window.history.replaceState({}, document.title, window.location.pathname);
                 }
@@ -330,6 +472,17 @@
                         alert('System Error: Database connection failed. Please check your internet connection.');
                         return;
                     }
+
+                    // Check if role is selected
+                    if (!selectedRole) {
+                        errorText.textContent = 'Please select a role to sign in.';
+                        errorMessage.classList.remove('hidden');
+                        // Add shake animation or highlight roles
+                        document.querySelector('.grid').classList.add('animate-pulse');
+                        setTimeout(function () { document.querySelector('.grid').classList.remove('animate-pulse'); }, 500);
+                        return;
+                    }
+
                     errorMessage.classList.add('hidden');
                     loginBtn.disabled = true;
                     var originalHtml = loginBtn.innerHTML;
@@ -340,6 +493,7 @@
                     try {
                         // Set remember-me choice before sign-in so session is stored in localStorage (persist) or sessionStorage (logout on close)
                         localStorage.setItem('suffah_remember_me', rememberMe && rememberMe.checked ? 'true' : 'false');
+
 
                         if (selectedRole === 'student' && !email.includes('@')) email = email + '@student.suffah.school';
                         else if ((selectedRole === 'teacher' || selectedRole === 'accountant') && !email.includes('@')) email = email + '@' + (selectedRole === 'teacher' ? 'teacher' : 'staff') + '.suffah.school';
@@ -388,7 +542,7 @@
                 var dateStr = raw ? raw.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) + ', ' + raw.toLocaleTimeString('en-GB', { hour: 'numeric', minute: '2-digit', hour12: true }) : '';
                 var parts = [v, dateStr ? 'Updated ' + dateStr : ''].filter(Boolean);
                 el.textContent = parts.length ? 'Website ' + parts.join(' · ') : '';
-            }).catch(function () {});
+            }).catch(function () { });
         })();
     </script>
 </body>

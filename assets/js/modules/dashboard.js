@@ -56,8 +56,8 @@ export async function render(container) {
                     <!-- Tile 2: Monthly Fees -->
                     <div onclick="window.openDashboardReport && window.openDashboardReport('monthly_collection')" class="bg-white dark:bg-[#1e293b] border border-gray-200 dark:border-[#334155]/50 rounded-2xl p-5 relative overflow-hidden cursor-pointer group hover:border-gray-300 dark:hover:border-[#475569] transition-all shadow-sm">
                         <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1" id="feesPeriodLabel">Monthly Fees</p>
-                        <div class="mt-1 mb-4 flex items-baseline gap-1">
-                            <p class="text-[10px] text-gray-500 font-semibold mb-0.5">PKR</p>
+                        <div class="mt-1 mb-4 flex items-baseline gap-1.5">
+                            <p class="text-lg font-bold text-gray-600 dark:text-gray-400 mb-0.5">PKR</p>
                             <p class="text-4xl font-bold text-gray-900 dark:text-white leading-none" id="statFeesCollectedVal">0</p>
                         </div>
                         <div class="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-1.5 mb-2 overflow-hidden">
@@ -69,8 +69,8 @@ export async function render(container) {
                     <!-- Tile 3: Monthly Expenses -->
                     <div class="bg-white dark:bg-[#1e293b] border border-gray-200 dark:border-[#334155]/50 rounded-2xl p-5 relative overflow-hidden group hover:border-gray-300 dark:hover:border-[#475569] transition-all shadow-sm">
                         <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1" id="expensesPeriodLabel">Monthly Expenses</p>
-                        <div class="mt-1 mb-4 flex items-baseline gap-1">
-                            <p class="text-[10px] text-gray-500 font-semibold mb-0.5">PKR</p>
+                        <div class="mt-1 mb-4 flex items-baseline gap-1.5">
+                            <p class="text-lg font-bold text-gray-600 dark:text-gray-400 mb-0.5">PKR</p>
                             <p class="text-4xl font-bold text-gray-900 dark:text-white leading-none" id="statMonthlyExpensesVal">0</p>
                         </div>
                         <div class="flex items-center text-xs text-red-500 font-medium">
@@ -82,8 +82,8 @@ export async function render(container) {
                     <!-- Tile 4: Income Today -->
                     <div onclick="window.openDashboardReport && window.openDashboardReport('daily_collection')" class="bg-white dark:bg-[#1e293b] border border-gray-200 dark:border-[#334155]/50 rounded-2xl p-5 relative overflow-hidden cursor-pointer group hover:border-gray-300 dark:hover:border-[#475569] transition-all shadow-sm">
                         <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1" id="todayIncomeLabel">Income Today</p>
-                        <div class="mb-3 flex items-baseline gap-1">
-                            <span class="text-xs font-bold text-emerald-600/70">PKR</span>
+                        <div class="mb-3 flex items-baseline gap-1.5">
+                            <span class="text-lg font-bold text-emerald-600 dark:text-emerald-400">PKR</span>
                             <p class="text-4xl font-bold text-emerald-500" id="statCollectedToday">0</p>
                         </div>
                         <div class="flex items-center text-xs text-emerald-500 font-medium">
@@ -95,8 +95,8 @@ export async function render(container) {
                     <!-- Tile 5: Expense Today -->
                     <div onclick="window.openDashboardReport && window.openDashboardReport('daily_voucher_detail')" class="bg-white dark:bg-[#1e293b] border border-gray-200 dark:border-[#334155]/50 rounded-2xl p-5 relative overflow-hidden cursor-pointer group hover:border-gray-300 dark:hover:border-[#475569] transition-all shadow-sm">
                         <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1" id="todayExpenseLabel">Expense Today</p>
-                        <div class="mb-3 flex items-baseline gap-1">
-                            <span class="text-xs font-bold text-rose-600/70">PKR</span>
+                        <div class="mb-3 flex items-baseline gap-1.5">
+                            <span class="text-lg font-bold text-rose-600 dark:text-rose-400">PKR</span>
                             <p class="text-4xl font-bold text-rose-500" id="statExpensesToday">0</p>
                         </div>
                         <div class="flex items-center text-xs text-rose-500 font-medium">
@@ -108,8 +108,8 @@ export async function render(container) {
                     <!-- Tile 6: Net Today -->
                     <div id="netTodayCard" onclick="window.openDashboardReport && window.openDashboardReport('daily_summary')" class="bg-white dark:bg-[#1e293b] border border-gray-200 dark:border-[#334155]/50 rounded-2xl p-5 relative overflow-hidden cursor-pointer group hover:border-gray-300 dark:hover:border-[#475569] transition-all shadow-sm">
                         <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1" id="todayNetLabel">Net Today</p>
-                        <div class="mb-3 flex items-baseline gap-1">
-                            <span class="text-xs font-bold text-gray-500">PKR</span>
+                        <div class="mb-3 flex items-baseline gap-1.5">
+                            <span class="text-lg font-bold text-gray-600 dark:text-gray-400">PKR</span>
                             <p class="text-4xl font-bold text-gray-900 dark:text-white" id="statNetToday">0</p>
                         </div>
                         <div class="flex items-center text-xs text-gray-500 font-medium">
@@ -279,24 +279,6 @@ export async function render(container) {
                 </div>
             </div>
 
-            <!-- Version Info Footer -->
-            <div class="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700/50">
-                <div class="flex items-center justify-end gap-3 text-sm text-gray-600 dark:text-gray-400">
-                    <div class="flex items-center gap-1.5">
-                        <svg class="w-4 h-4 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
-                        </svg>
-                        <span>Version <span id="appVersion" class="font-bold text-gray-900 dark:text-white">...</span></span>
-                    </div>
-                    <span class="text-gray-400 dark:text-gray-600">•</span>
-                    <div class="flex items-center gap-1.5">
-                        <svg class="w-4 h-4 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <span>Last Updated <span id="appLastUpdated" class="font-bold text-gray-900 dark:text-white">...</span></span>
-                    </div>
-                </div>
-            </div>
         </div>
 
         <style>
@@ -324,8 +306,7 @@ export async function render(container) {
         startClock(),
         checkAttendanceSMS(),
         loadUrgentFollowups(),
-        loadRecentActivity(),
-        loadVersionInfo()
+        loadRecentActivity()
     ]);
 
     window.activityChannel = supabase.channel('dashboard-feed')
@@ -1187,32 +1168,4 @@ function getTimeAgo(date) {
 }
 
 window.formatCurrency = formatCurrency;
-
-// Load and display version information
-async function loadVersionInfo() {
-    try {
-        const response = await fetch(`version.json?t=${Date.now()}`, { cache: 'no-store' });
-        if (!response.ok) throw new Error('Failed to fetch version');
-
-        const data = await response.json();
-
-        // Update version number
-        const versionEl = document.getElementById('appVersion');
-        if (versionEl && data.version) {
-            versionEl.textContent = data.version;
-        }
-
-        // Update last updated time (exact date and time, 12-hour with AM/PM)
-        const lastUpdatedEl = document.getElementById('appLastUpdated');
-        if (lastUpdatedEl && data.updated_at) {
-            const updatedDate = new Date(data.updated_at);
-            const dateStr = updatedDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-            const timeStr = updatedDate.toLocaleTimeString('en-GB', { hour: 'numeric', minute: '2-digit', hour12: true });
-            lastUpdatedEl.textContent = `${dateStr}, ${timeStr}`;
-        }
-    } catch (error) {
-        console.error('Error loading version info:', error);
-        // Silently fail - version info is not critical
-    }
-}
 

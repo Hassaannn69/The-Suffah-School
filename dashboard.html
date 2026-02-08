@@ -18,37 +18,52 @@
     <div id="sidebarBackdrop" class="fixed inset-0 bg-black/50 z-10 hidden transition-opacity duration-200"
         aria-hidden="true"></div>
 
-    <!-- Sidebar -->
+    <!-- Sidebar (collapsible on desktop: w-64 expanded, w-20 collapsed) -->
     <aside
-        class="w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col fixed h-full z-20 transition-transform transform -translate-x-full md:translate-x-0 shadow-xl"
+        class="w-72 md:w-72 sidebar-width flex-shrink-0 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col fixed h-full z-20 transition-[transform,width] duration-200 ease-in-out transform -translate-x-full md:translate-x-0 shadow-xl overflow-hidden"
         id="sidebar">
         <div
-            class="p-6 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm">
-            <div class="flex items-center space-x-3">
+            class="p-4 md:p-4 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm flex-shrink-0">
+            <div class="flex items-center min-w-0 flex-1">
                 <img src="assets/images/school-logo.jpg" alt="The Suffah School"
-                    class="w-10 h-10 rounded-lg object-cover ring-2 ring-primary-500/50 shadow-lg shadow-primary-500/20">
-                <span class="font-bold text-gray-900 dark:text-white text-lg tracking-tight">The Suffah School</span>
+                    class="w-10 h-10 rounded-lg object-cover ring-2 ring-primary-500/50 shadow-lg shadow-primary-500/20 flex-shrink-0">
+                <span id="sidebarBrandLabel"
+                    class="sidebar-label font-bold text-gray-900 dark:text-white text-lg tracking-tight ml-3 whitespace-nowrap">The
+                    Suffah School</span>
             </div>
-            <button class="md:hidden text-gray-500 dark:text-gray-400" id="closeSidebar">
+            <button class="md:hidden text-gray-500 dark:text-gray-400 flex-shrink-0" id="closeSidebar">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
                     stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                 </svg>
             </button>
+            <button type="button" id="sidebarCollapseBtn" aria-label="Collapse sidebar"
+                class="hidden md:flex flex-shrink-0 p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white transition-colors">
+                <svg id="sidebarCollapseIconOpen" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                    title="Collapse sidebar">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+                </svg>
+                <svg id="sidebarCollapseIconClosed" class="w-5 h-5 hidden" fill="none" stroke="currentColor"
+                    viewBox="0 0 24 24" title="Expand sidebar">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+                </svg>
+            </button>
         </div>
 
-        <nav class="flex-1 overflow-y-auto p-4 space-y-1" id="navLinks">
+        <nav class="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-1" id="navLinks">
             <!-- Nav links will be injected here based on role -->
         </nav>
 
-        <div class="p-4 border-t border-gray-200 dark:border-gray-800 bg-white/50 dark:bg-gray-900/50">
+        <div class="p-4 border-t border-gray-200 dark:border-gray-800 bg-white/50 dark:bg-gray-900/50 flex-shrink-0">
             <div
-                class="flex items-center space-x-3 mb-4 px-2 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer group">
-                <div class="w-10 h-10 rounded-full bg-gradient-to-br from-primary-500 to-indigo-600 flex items-center justify-center text-white font-bold text-sm shadow-lg shadow-primary-500/30 group-hover:scale-105 transition-transform"
+                class="flex items-center space-x-3 mb-4 px-2 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer group min-w-0">
+                <div class="w-10 h-10 rounded-full bg-gradient-to-br from-primary-500 to-indigo-600 flex items-center justify-center text-white font-bold text-sm shadow-lg shadow-primary-500/30 group-hover:scale-105 transition-transform flex-shrink-0"
                     id="userAvatar">
                     U
                 </div>
-                <div class="flex-1 min-w-0">
+                <div class="flex-1 min-w-0 sidebar-label overflow-hidden">
                     <p class="text-sm font-medium text-gray-900 dark:text-white truncate group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors"
                         id="userName">User</p>
                     <p class="text-xs text-gray-500 dark:text-gray-400 truncate" id="userRole">Role</p>
@@ -57,19 +72,19 @@
             <button id="logoutBtn"
                 class="w-full flex items-center justify-center space-x-2 px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10 dark:hover:text-red-400 hover:border-red-200 dark:hover:border-red-500/30 transition-all group">
                 <svg xmlns="http://www.w3.org/2000/svg"
-                    class="h-4 w-4 group-hover:rotate-180 transition-transform duration-500" fill="none"
+                    class="h-4 w-4 flex-shrink-0 group-hover:rotate-180 transition-transform duration-500" fill="none"
                     viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                 </svg>
-                <span>Sign Out</span>
+                <span class="sidebar-label">Sign Out</span>
             </button>
         </div>
     </aside>
 
-    <!-- Main Content -->
-    <main
-        class="flex-1 md:ml-64 min-h-screen min-h-0 flex flex-col bg-gray-50 dark:bg-gray-950 transition-colors duration-200 relative overflow-x-hidden">
+    <!-- Main Content (margin resizes with sidebar: ml-64 expanded, ml-20 collapsed) -->
+    <main id="mainContentWrap"
+        class="flex-1 md:ml-72 min-h-screen min-h-0 flex flex-col bg-gray-50 dark:bg-gray-950 transition-[margin] duration-200 ease-in-out relative overflow-x-hidden">
         <!-- Background Glow -->
         <div
             class="absolute top-0 left-0 w-full h-96 bg-gradient-to-b from-primary-500/5 dark:from-primary-900/10 to-transparent pointer-events-none">
@@ -104,7 +119,8 @@
                     </svg>
                     <span class="font-medium">v<span id="headerAppVersion">...</span></span>
                     <span class="text-gray-400 dark:text-gray-600">·</span>
-                    <span class="text-[11px]">Website updated <span id="headerAppLastUpdated" class="font-semibold text-gray-700 dark:text-gray-300">...</span></span>
+                    <span class="text-[11px]">Website updated <span id="headerAppLastUpdated"
+                            class="font-semibold text-gray-700 dark:text-gray-300">...</span></span>
                 </div>
             </div>
             <div class="flex items-center space-x-4">
@@ -167,6 +183,81 @@
 
     </main>
 
+    <!-- Collapsed sidebar: narrow width, hide labels, main content uses smaller margin -->
+    <style>
+        #sidebar,
+        #sidebar * {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        body.sidebar-collapsed #sidebar {
+            width: 5rem;
+        }
+
+        body.sidebar-collapsed #mainContentWrap {
+            margin-left: 5rem;
+        }
+
+        body.sidebar-collapsed #sidebar .sidebar-label {
+            display: none;
+        }
+
+        body.sidebar-collapsed #sidebar .dropdown-arrow {
+            display: none;
+        }
+
+        body.sidebar-collapsed #sidebarBrandLabel {
+            display: none !important;
+        }
+
+        body.sidebar-collapsed #sidebar>div:first-of-type {
+            flex-direction: column;
+            gap: 1.5rem;
+            padding: 2rem 0.5rem;
+        }
+
+        body.sidebar-collapsed #sidebar>div:first-of-type>div:first-child {
+            padding: 0;
+            justify-content: center;
+        }
+
+        body.sidebar-collapsed #sidebarCollapseBtn {
+            /* Transform removed to use consistent gap */
+        }
+
+        /* Hover-based Sidebar Dropdowns */
+        .dropdown-group:hover .submenu-wrapper {
+            max-height: 500px;
+            opacity: 1;
+            margin-top: 0.25rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .dropdown-group:hover .dropdown-arrow {
+            transform: rotate(180deg);
+        }
+
+        /* Prevent submenus from showing in collapsed mode unless we want floating menus */
+        body.sidebar-collapsed #sidebar .submenu-wrapper {
+            display: none !important;
+        }
+
+        body.sidebar-collapsed #navLinks .relative>button {
+            justify-content: center;
+            padding-left: 0.75rem;
+            padding-right: 0.75rem;
+        }
+
+        body.sidebar-collapsed #navLinks a {
+            justify-content: center;
+            padding-left: 0.75rem;
+            padding-right: 0.75rem;
+        }
+
+        body.sidebar-collapsed #navLinks .relative>div {
+            display: none !important;
+        }
+    </style>
     <!-- UI Components MUST load before app.js -->
     <script src="assets/js/ui-components.js?v=1770495781648"></script>
     <!-- Load Supabase from CDN -->
