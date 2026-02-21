@@ -930,19 +930,7 @@ document.addEventListener('click', (e) => {
 });
 
 // --- Update check: show "Website updated" banner when new code is deployed; do NOT auto-refresh ---
-function getCurrentAppVersion() {
-    try {
-        const url = new URL(import.meta.url);
-        const v = url.searchParams.get('v');
-        if (v) return v;
-    } catch (e) {
-        const script = document.querySelector('script[src*="app.js"]');
-        const m = script && script.getAttribute('src') && script.getAttribute('src').match(/[?&]v=([^&]+)/);
-        if (m && m[1]) return m[1];
-    }
-    // Fallback: If we can't find version in URL, check what we last acknowledged
-    return localStorage.getItem('suffah_client_version') || '0';
-}
+let sessionAppVersion = null; // Track version loaded in current session
 
 function showUpdateBanner(newVersion) {
     if (document.getElementById('suffah-update-banner')) return;
@@ -982,35 +970,43 @@ function showUpdateBanner(newVersion) {
 }
 
 function startUpdateCheck() {
-    const currentVersion = getCurrentAppVersion();
     let checkInterval;
 
     function check() {
         if (document.hidden) return; // Don't check if tab is not visible/active
 
-        // If we just reloaded, give browser cache a moment to settle or verify we are "good"
-        // But getCurrentAppVersion() now includes localStorage check, so we are safe.
-
         fetch(`version.json?t=${Date.now()}`, { cache: 'no-store' })
             .then((r) => (r.ok ? r.json() : null))
             .then((data) => {
-                const currentVersion = getCurrentAppVersion(); // Re-read in case it changed (unlikely without reload)
+                if (!data) return;
 
-                if (data && data.version && String(data.version) !== String(currentVersion)) {
+                // Use updated_at as the most reliable indicator of a new deployment, fallback to version
+                const serverVersion = String(data.updated_at || data.version);
+                if (!serverVersion || serverVersion === 'undefined') return;
+
+                if (!sessionAppVersion) {
+                    // First check on page load: establish what version we are currently running
+                    // We assume the currently loaded page is this version. 
+                    sessionAppVersion = serverVersion;
+                    localStorage.setItem('suffah_client_version', sessionAppVersion);
+                    return;
+                }
+
+                if (serverVersion !== sessionAppVersion) {
                     // Check if user already dismissed this specific version in THIS session
                     const dismissedVersion = sessionStorage.getItem('suffah_update_dismissed_version');
-                    if (dismissedVersion === String(data.version)) {
+                    if (dismissedVersion === serverVersion) {
                         return; // User dismissed this update, don't show again in this session
                     }
 
                     // Check if user already acknowledged (refreshed) for this version
                     // This prevents the loop where the HTML/JS caching keeps 'currentVersion' old
                     const acknowledgedVersion = localStorage.getItem('suffah_client_version');
-                    if (acknowledgedVersion === String(data.version)) {
+                    if (acknowledgedVersion === serverVersion) {
                         return; // User already refreshed for this version, suppress banner
                     }
 
-                    showUpdateBanner(String(data.version));
+                    showUpdateBanner(serverVersion);
                     if (checkInterval) clearInterval(checkInterval);
                 }
             })

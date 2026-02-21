@@ -319,7 +319,7 @@ var App = (() => {
       });
     }
   }
-  window.markAdminNotificationsSeen = function() {
+  window.markAdminNotificationsSeen = function () {
     adminNotificationsLastSeenTotal = adminNotificationsCurrentTotal;
     refreshAdminNotificationBadges();
   };
@@ -523,11 +523,11 @@ var App = (() => {
     });
   }
   window.loadModule = loadModule;
-  window.openDashboardReport = function(reportId) {
+  window.openDashboardReport = function (reportId) {
     window.dashboardReportTarget = reportId;
     loadModule("fee_reports");
   };
-  window.sortClassesNatural = function(arr, key) {
+  window.sortClassesNatural = function (arr, key) {
     const rank = (name) => {
       if (!name)
         return 9999;
@@ -547,7 +547,7 @@ var App = (() => {
       return rank(nameA) - rank(nameB);
     });
   };
-  window.backfillFamilyCodes = function() {
+  window.backfillFamilyCodes = function () {
     return __async(this, null, function* () {
       const MIGRATION_KEY = "suffah_family_code_backfill_v1";
       if (localStorage.getItem(MIGRATION_KEY))
@@ -603,7 +603,7 @@ var App = (() => {
       }
     });
   };
-  window.backfillFamilyCodesV2 = function() {
+  window.backfillFamilyCodesV2 = function () {
     return __async(this, null, function* () {
       const MIGRATION_KEY = "suffah_family_code_backfill_v2";
       if (localStorage.getItem(MIGRATION_KEY))
@@ -661,17 +661,8 @@ var App = (() => {
       }
     });
   };
-  function getCurrentAppVersion() {
-    try {
-      const url = new URL("https://example.com");
-      return url.searchParams.get("v") || "0";
-    } catch (e) {
-      const script = document.querySelector('script[src*="app.js"]');
-      const m = script && script.getAttribute("src") && script.getAttribute("src").match(/[?&]v=([^&]+)/);
-      return m && m[1] ? m[1] : "0";
-    }
-  }
-  function showUpdateBanner() {
+  let sessionAppVersion = null;
+  function showUpdateBanner(newVersion) {
     if (document.getElementById("suffah-update-banner"))
       return;
     const banner = document.createElement("div");
@@ -687,34 +678,47 @@ var App = (() => {
     `;
     document.body.appendChild(banner);
     document.getElementById("suffah-update-dismiss").addEventListener("click", () => {
+      try { sessionStorage.setItem('suffah_update_dismissed_version', newVersion); } catch (e) { }
       banner.remove();
     });
     document.getElementById("suffah-update-refresh").addEventListener("click", () => {
+      try { localStorage.setItem('suffah_client_version', newVersion); } catch (e) { }
       window.location.reload();
     });
   }
   function startUpdateCheck() {
-    const currentVersion = getCurrentAppVersion();
     let checkInterval;
     function check() {
+      if (document.hidden) return;
       fetch(`version.json?t=${Date.now()}`, { cache: "no-store" }).then((r) => r.ok ? r.json() : null).then((data) => {
-        if (data && data.version && String(data.version) !== String(currentVersion)) {
-          showUpdateBanner();
-          if (checkInterval)
-            clearInterval(checkInterval);
+        if (!data) return;
+        const serverVersion = String(data.updated_at || data.version);
+        if (!serverVersion || serverVersion === 'undefined') return;
+
+        if (!sessionAppVersion) {
+          sessionAppVersion = serverVersion;
+          localStorage.setItem('suffah_client_version', sessionAppVersion);
+          return;
         }
-      }).catch(() => {
-      });
+
+        if (serverVersion !== sessionAppVersion) {
+          const dismissedVersion = sessionStorage.getItem('suffah_update_dismissed_version');
+          if (dismissedVersion === serverVersion) return;
+          const acknowledgedVersion = localStorage.getItem('suffah_client_version');
+          if (acknowledgedVersion === serverVersion) return;
+          showUpdateBanner(serverVersion);
+          if (checkInterval) clearInterval(checkInterval);
+        }
+      }).catch(() => { });
     }
     document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "visible")
-        check();
+      if (document.visibilityState === "visible") check();
     });
     checkInterval = setInterval(check, 3e4);
-    setTimeout(check, 2e3);
-    window.__showUpdateBanner = showUpdateBanner;
+    setTimeout(check, 1e3);
+    window.__showUpdateBanner = (v) => showUpdateBanner(v || '9.9.9');
     if (new URLSearchParams(window.location.search).get("testUpdate") === "1") {
-      setTimeout(showUpdateBanner, 1e3);
+      setTimeout(() => showUpdateBanner('9.9.9'), 1e3);
     }
   }
   logoutBtn.addEventListener("click", () => __async(void 0, null, function* () {
@@ -758,7 +762,7 @@ var App = (() => {
       themeToggleDarkIcon.classList.remove("hidden");
       themeToggleLightIcon.classList.add("hidden");
     }
-    themeToggleBtn.addEventListener("click", function() {
+    themeToggleBtn.addEventListener("click", function () {
       themeToggleDarkIcon.classList.toggle("hidden");
       themeToggleLightIcon.classList.toggle("hidden");
       if (document.documentElement.classList.contains("dark")) {
