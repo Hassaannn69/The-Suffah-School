@@ -1184,3 +1184,4 @@ initTheme();
 
 // Initialize
 initApp();
+console.log("Suffah School Management System v1.0.1 loaded.");
