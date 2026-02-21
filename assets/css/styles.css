@@ -55,10 +55,11 @@ input[type="number"] {
 /* Stat card glassmorphism + 12px radius */
 .dashboard-stat-card {
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.45);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: rgba(255, 255, 255, 0.6); /* Increased opacity to compensate for lower blur */
+  backdrop-filter: blur(8px); /* Reduced from 16px */
+  -webkit-backdrop-filter: blur(8px);
   border: 1px solid rgba(255, 255, 255, 0.12);
+  will-change: transform; /* Hint for card hover transitions */
 }
 
 .dark .dashboard-stat-card {
@@ -109,9 +110,9 @@ input[type="number"] {
 
 /* Glassmorphism Utilities */
 .glass {
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(6px); /* Reduced from 10px */
+  -webkit-backdrop-filter: blur(6px);
   border: 1px solid rgba(255, 255, 255, 0.18);
 }
 
@@ -122,8 +123,8 @@ input[type="number"] {
 }
 
 .glass-panel {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(20px);
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(12px); /* Reduced from 20px */
 }
 
 .dark .glass-panel {
@@ -185,6 +186,7 @@ select,
   font-weight: 600 !important;
   color: #1e293b !important;
   box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05) !important;
+  will-change: border-color, transform;
 }
 
 .dark select,
@@ -330,6 +332,7 @@ textarea:focus,
   box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.05);
   overflow: hidden;
   transition: background-color 0.2s, border-color 0.2s;
+  will-change: opacity, transform;
 }
 
 .dark .app-page-tile {

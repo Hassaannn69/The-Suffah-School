@@ -815,21 +815,28 @@ window.backfillFamilyCodesV2 = async function () {
     }
 };
 
-// ── Premium Dropdown Enhancement Engine ──
+// --- Premium Dropdown Enhancement Engine ---
 window.initializePremiumDropdowns = function (container = document) {
+    // Only process selects that haven't been enhanced yet and aren't already wrapped
     const selects = container.querySelectorAll('select:not(.enhanced)');
 
     selects.forEach(select => {
-        if (select.closest('.custom-select-wrapper')) return;
+        if (select.closest('.custom-select-wrapper')) {
+            select.classList.add('enhanced'); // Mark as processed if already wrapped
+            return;
+        }
+
         select.classList.add('enhanced');
 
-        // Hide native select completely
-        select.style.opacity = '0';
-        select.style.position = 'absolute';
-        select.style.pointerEvents = 'none';
-        select.style.width = '1px';
-        select.style.height = '1px';
-        select.style.overflow = 'hidden';
+        // Hide native select completely but keep it in the DOM for form submission
+        Object.assign(select.style, {
+            opacity: '0',
+            position: 'absolute',
+            pointerEvents: 'none',
+            width: '1px',
+            height: '1px',
+            overflow: 'hidden'
+        });
 
         // Create wrapper
         const wrapper = document.createElement('div');
@@ -854,7 +861,8 @@ window.initializePremiumDropdowns = function (container = document) {
         const listContainer = document.createElement('div');
         listContainer.className = 'custom-select-list';
 
-        const updateList = () => {
+        const updateList = (e) => {
+            if (e) e.stopPropagation();
             listContainer.innerHTML = '';
             Array.from(select.options).forEach((opt, idx) => {
                 const item = document.createElement('div');
@@ -863,19 +871,19 @@ window.initializePremiumDropdowns = function (container = document) {
                 item.dataset.value = opt.value;
                 item.dataset.index = idx;
 
-                item.onclick = (e) => {
-                    e.stopPropagation();
+                item.onclick = (ev) => {
+                    ev.stopPropagation();
                     select.selectedIndex = idx;
                     select.dispatchEvent(new Event('change', { bubbles: true }));
                     wrapper.classList.remove('open');
                     updateTriggerText();
-                    updateList();
                 };
                 listContainer.appendChild(item);
             });
             updateTriggerText();
         };
 
+        // Initialize list content
         updateList();
         wrapper.appendChild(listContainer);
 
@@ -883,42 +891,48 @@ window.initializePremiumDropdowns = function (container = document) {
         trigger.onclick = (e) => {
             e.stopPropagation();
             const isOpen = wrapper.classList.contains('open');
+            // Close all other open dropdowns
             document.querySelectorAll('.custom-select-wrapper.open').forEach(w => {
                 if (w !== wrapper) w.classList.remove('open');
             });
             wrapper.classList.toggle('open');
+            // Re-render list only when opening to save DOM operations
             if (wrapper.classList.contains('open')) updateList();
         };
 
-        // Sync with native select changes
-        const observer = new MutationObserver(() => {
-            updateList();
-        });
-        observer.observe(select, { childList: true, subtree: true, attributes: true });
+        // Sync with native select changes (e.g. dynamic option loading)
+        const selectObserver = new MutationObserver(() => updateList());
+        selectObserver.observe(select, { childList: true, subtree: true, attributes: true });
 
-        select.addEventListener('change', () => {
-            updateTriggerText();
-            updateList();
-        });
+        select.addEventListener('change', () => updateTriggerText());
     });
 };
 
-// Auto-run on document changes for dynamic content
+// Optimized Auto-run for dynamic content: Debounced and targeted
 if (!window.globalSelectObserverInitialized) {
+    let debounceTimer;
     const globalSelectObserver = new MutationObserver((mutations) => {
-        let shouldInit = false;
-        mutations.forEach(mutation => {
-            if (mutation.addedNodes.length) {
-                mutation.addedNodes.forEach(node => {
-                    if (node.nodeType === 1 && (node.tagName === 'SELECT' || node.querySelector?.('select'))) {
-                        shouldInit = true;
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+            let shouldInit = false;
+            for (const mutation of mutations) {
+                if (mutation.addedNodes.length) {
+                    for (const node of mutation.addedNodes) {
+                        if (node.nodeType === 1 && (node.tagName === 'SELECT' || node.querySelector?.('select'))) {
+                            shouldInit = true;
+                            break;
+                        }
                     }
-                });
+                }
+                if (shouldInit) break;
             }
-        });
-        if (shouldInit) window.initializePremiumDropdowns();
+            if (shouldInit) window.initializePremiumDropdowns(mainContent || document);
+        }, 100); // 100ms debounce
     });
-    globalSelectObserver.observe(document.body, { childList: true, subtree: true });
+
+    // Only observe the mainContent area which is where most dynamic updates happen
+    const observationTarget = document.getElementById('mainContent') || document.body;
+    globalSelectObserver.observe(observationTarget, { childList: true, subtree: true });
     window.globalSelectObserverInitialized = true;
 }
 
